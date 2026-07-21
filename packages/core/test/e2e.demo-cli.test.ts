@@ -161,7 +161,7 @@ describe("e2e spawn demo-cli", () => {
     expect(stdout).toBe("1.2.3\n");
   });
 
-  it("runs users list", async () => {
+  it("runs users list --json", async () => {
     const { stdout, code } = await spawnTsx(demoBin, [
       "users",
       "list",

@@ -10,8 +10,8 @@ List users in the workspace
 Options:
       --status <value>  Filter by status (active|churned)
       --limit <value>   Max rows [default: 50]
-      --json            Emit JSON [default: false]
   -h, --help            Show help
   -V, --version         Show version
+      --json            Emit JSON
 "
 `;

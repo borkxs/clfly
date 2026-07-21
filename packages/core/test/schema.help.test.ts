@@ -12,7 +12,6 @@ describe("schema → JSON Schema → help", () => {
       .optional()
       .describe("Filter by status"),
     limit: z.coerce.number().default(50).describe("Max rows"),
-    json: z.boolean().default(false).describe("Emit JSON"),
   });
 
   it("projects to JSON Schema with descriptions", () => {
@@ -42,6 +41,17 @@ describe("schema → JSON Schema → help", () => {
     const flags = projectFlags(
       z.object({
         version: z.boolean().optional(),
+      }),
+    );
+    expect(() => assertNoReservedFlags(["users", "list"], flags)).toThrow(
+      ReservedFlagError,
+    );
+  });
+
+  it("hard-errors on reserved json flag", () => {
+    const flags = projectFlags(
+      z.object({
+        json: z.boolean().optional(),
       }),
     );
     expect(() => assertNoReservedFlags(["users", "list"], flags)).toThrow(

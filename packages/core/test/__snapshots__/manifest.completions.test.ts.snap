@@ -1,0 +1,20 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`completions > generates bash/zsh/fish scripts from the manifest 1`] = `
+"# clfly fish completion for demo
+
+complete -c demo -f
+complete -c demo -s h -l help -d 'Show help'
+complete -c demo -s V -l version -d 'Show version'
+complete -c demo -l json -d 'Emit JSON'
+complete -c demo -n __fish_use_subcommand -a deploy -d 'Deploy the current workspace'
+complete -c demo -n __fish_use_subcommand -a users -d 'Show a single user'
+complete -c demo -n '__fish_seen_subcommand_from deploy' -l env -d 'Target environment' -xa 'staging production'
+complete -c demo -n '__fish_seen_subcommand_from deploy' -l dryRun -d 'Print actions without applying'
+complete -c demo -n '__fish_seen_subcommand_from users' -a show -d 'Show a single user'
+complete -c demo -n '__fish_seen_subcommand_from users; and __fish_seen_subcommand_from show' -l id -d 'User id' -r
+complete -c demo -n '__fish_seen_subcommand_from users' -a list -d 'List users in the workspace'
+complete -c demo -n '__fish_seen_subcommand_from users; and __fish_seen_subcommand_from list' -l status -d 'Filter by status' -xa 'active churned'
+complete -c demo -n '__fish_seen_subcommand_from users; and __fish_seen_subcommand_from list' -l limit -d 'Max rows' -r
+"
+`;
