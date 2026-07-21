@@ -8,6 +8,7 @@
   },
   "scripts": {
     "demo": "tsx bin/demo.ts",
+    "mcp": "tsx bin/demo.ts mcp serve",
     "build:manifest": "clfly build --dir commands --out .clfly/manifest.js",
     "completions": "clfly completions",
     "typecheck": "tsc -p tsconfig.json --noEmit",
