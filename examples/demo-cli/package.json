@@ -1,0 +1,23 @@
+{
+  "name": "demo-cli",
+  "version": "1.2.3",
+  "private": true,
+  "type": "module",
+  "bin": {
+    "demo": "./bin/demo.ts"
+  },
+  "scripts": {
+    "demo": "tsx bin/demo.ts",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "test": "node -e \"console.log('tested via @clfly/core e2e')\""
+  },
+  "dependencies": {
+    "@clfly/core": "workspace:*",
+    "zod": "^4.0.5"
+  },
+  "devDependencies": {
+    "@types/node": "^22.15.3",
+    "tsx": "^4.19.4",
+    "typescript": "^5.8.3"
+  }
+}
