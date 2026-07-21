@@ -1,0 +1,45 @@
+{
+  "name": "@clfly/core",
+  "version": "0.1.0",
+  "description": "PostgREST for CLIs — filesystem command trees projected to CLI, help, completions, and MCP",
+  "type": "module",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    }
+  },
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "build": "tsup",
+    "test": "vitest run",
+    "typecheck": "tsc -p tsconfig.json --noEmit"
+  },
+  "dependencies": {
+    "@standard-schema/spec": "^1.0.0",
+    "yargs-parser": "^22.0.0"
+  },
+  "peerDependencies": {
+    "zod": "^4"
+  },
+  "peerDependenciesMeta": {
+    "zod": {
+      "optional": true
+    }
+  },
+  "devDependencies": {
+    "@types/node": "^22.15.3",
+    "@types/yargs-parser": "^21.0.3",
+    "tsup": "^8.5.0",
+    "tsx": "^4.19.4",
+    "typescript": "^5.8.3",
+    "vitest": "^3.1.3",
+    "zod": "^4.0.5"
+  },
+  "engines": {
+    "node": ">=20"
+  },
+  "license": "MIT"
+}
