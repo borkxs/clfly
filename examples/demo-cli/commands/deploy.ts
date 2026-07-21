@@ -17,7 +17,7 @@ export default async function (
   opts: z.infer<typeof args>,
   ctx: Context,
 ) {
-  ctx.stdout.write(
-    `deploy env=${opts.env} dryRun=${opts.dryRun}\n`,
-  );
+  const result = { env: opts.env, dryRun: opts.dryRun };
+  if (ctx.json) return result;
+  ctx.stdout.write(`deploy env=${opts.env} dryRun=${opts.dryRun}\n`);
 }

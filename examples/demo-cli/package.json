@@ -8,6 +8,8 @@
   },
   "scripts": {
     "demo": "tsx bin/demo.ts",
+    "build:manifest": "clfly build --dir commands --out .clfly/manifest.js",
+    "completions": "clfly completions",
     "typecheck": "tsc -p tsconfig.json --noEmit",
     "test": "node -e \"console.log('tested via @clfly/core e2e')\""
   },

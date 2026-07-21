@@ -11,7 +11,6 @@ export const args = z.object({
     .optional()
     .describe("Filter by status"),
   limit: z.coerce.number().default(50).describe("Max rows"),
-  json: z.boolean().default(false).describe("Emit JSON"),
 });
 
 export default async function (
@@ -25,10 +24,8 @@ export default async function (
     .filter((r) => !opts.status || r.status === opts.status)
     .slice(0, opts.limit);
 
-  if (opts.json) {
-    ctx.stdout.write(JSON.stringify(rows, null, 2) + "\n");
-    return;
-  }
+  if (ctx.json) return rows;
+
   for (const row of rows) {
     ctx.stdout.write(`${row.id}\t${row.status}\n`);
   }

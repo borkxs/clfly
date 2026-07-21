@@ -7,7 +7,6 @@ export const meta = {
 
 export const args = z.object({
   id: z.string().describe("User id"),
-  json: z.boolean().default(false).describe("Emit JSON"),
 });
 
 export default async function (
@@ -15,9 +14,6 @@ export default async function (
   ctx: Context,
 ) {
   const user = { id: opts.id, status: "active" };
-  if (opts.json) {
-    ctx.stdout.write(JSON.stringify(user, null, 2) + "\n");
-    return;
-  }
+  if (ctx.json) return user;
   ctx.stdout.write(`${user.id}\t${user.status}\n`);
 }
