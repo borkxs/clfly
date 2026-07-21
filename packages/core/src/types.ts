@@ -1,11 +1,9 @@
-import type { StandardSchemaV1 } from "@standard-schema/spec";
-
 /** Integer stamp on codegen'd manifests. Bumps with @clfly/core major (or an explicit breaking manifest change). */
 export const MANIFEST_FORMAT_VERSION = 1;
 
 /**
- * Compiled route manifest (M2). Spec'd in M1 so the loader contract is stable
- * before codegen lands. Loader must hard-fail on formatVersion mismatch.
+ * Compiled route manifest. Loader must hard-fail on formatVersion mismatch.
+ * `load` thunks are present at runtime; codegen writes them as `() => import(...)`.
  */
 export interface Manifest {
   formatVersion: number;
@@ -18,7 +16,12 @@ export interface ManifestRoute {
   /** Path segments; dynamic segments are stored as `":name"`. */
   path: string[];
   /** Lazy import thunk — emitted by `clfly build`. */
-  load: () => Promise<CommandModule>;
+  load: () => Promise<unknown>;
+  meta?: Meta;
+  /** Serializable flag projection for completions / help without loading the module. */
+  flags: FlagInfo[];
+  /** Import specifier written into the generated file (relative to the manifest). */
+  importPath?: string;
 }
 
 export interface Meta {
@@ -36,6 +39,8 @@ export interface Context {
   env: NodeJS.ProcessEnv;
   commandPath: string[];
   meta: Meta;
+  /** True when the global `--json` flag was passed. */
+  json: boolean;
   stdout: NodeJS.WritableStream;
   stderr: NodeJS.WritableStream;
 }
@@ -44,8 +49,14 @@ export interface Context {
  * Anything implementing Standard Schema (+ ideally Standard JSON Schema).
  * Zod 4 is the documented first-class path; Valibot/ArkType work via the same contract.
  */
-export type AnySchema = StandardSchemaV1<unknown, unknown> & {
-  readonly "~standard": StandardSchemaV1.Props<unknown, unknown> & {
+export type AnySchema = import("@standard-schema/spec").StandardSchemaV1<
+  unknown,
+  unknown
+> & {
+  readonly "~standard": import("@standard-schema/spec").StandardSchemaV1.Props<
+    unknown,
+    unknown
+  > & {
     readonly jsonSchema?: {
       input: (params?: { target?: string }) => Record<string, unknown>;
       output: (params?: { target?: string }) => Record<string, unknown>;
@@ -66,15 +77,20 @@ export interface DefineCommandInput<TSchema extends AnySchema> {
   args: TSchema;
   positionals?: AnySchema;
   run: (
-    opts: StandardSchemaV1.InferOutput<TSchema>,
+    opts: import("@standard-schema/spec").StandardSchemaV1.InferOutput<TSchema>,
     ctx: Context,
   ) => unknown | Promise<unknown>;
 }
 
 export interface CreateCliOptions {
   name: string;
-  /** Absolute path or file URL to the commands directory. */
-  commandsDir: string | URL;
+  /** Absolute path or file URL to the commands directory (dev-mode scan). */
+  commandsDir?: string | URL;
+  /**
+   * Prebuilt manifest (prod). Takes precedence over live scan.
+   * Hard-fails if `formatVersion` mismatches this runtime.
+   */
+  manifest?: Manifest;
   /** Override version string. Defaults to nearest package.json `version`. */
   version?: string;
   /** Path to package.json used for `--version` (default: walk up from cwd / commandsDir). */
@@ -111,10 +127,16 @@ export interface RouteNode {
   segment: RouteSegment | null;
   /** Child static/dynamic segments keyed by name (dynamic keyed as `:${name}`). */
   children: Map<string, RouteNode>;
-  /** Leaf command module path, if this node is executable. */
+  /** Leaf command module path, if this node is executable (dev scan). */
   commandFile?: string;
+  /** Lazy loader from a codegen'd manifest (prod). */
+  load?: () => Promise<CommandModule>;
   /** True when this node is an `index` command for its directory. */
   isIndex?: boolean;
+  /** Baked meta from manifest (optional; module meta wins when loaded). */
+  manifestMeta?: Meta;
+  /** Baked flags from manifest for help/completions before load. */
+  manifestFlags?: FlagInfo[];
 }
 
 export interface ResolvedRoute {
@@ -125,3 +147,5 @@ export interface ResolvedRoute {
   /** Remaining argv tokens after the command path. */
   rest: string[];
 }
+
+export type CompletionShell = "bash" | "zsh" | "fish";

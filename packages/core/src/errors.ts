@@ -39,7 +39,7 @@ export class ReservedFlagError extends ClflyError {
     const cmd = commandPath.join(" ") || "(root)";
     super(
       `Command "${cmd}" defines "${flag}", which is reserved. ` +
-        `Remove it from the args schema (reserved: help, version, -h, -V).`,
+        `Remove it from the args schema (reserved: help, version, json, -h, -V).`,
     );
     this.name = "ReservedFlagError";
   }

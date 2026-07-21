@@ -20,28 +20,54 @@ import {
 } from "./parse/tokenize.js";
 import { projectFlags, validateSchema } from "./schema/to-json-schema.js";
 import { renderHelp, renderHelpExcerpt } from "./help/render.js";
-import { fileUrlToPath, resolvePackageVersion } from "./version.js";
+import {
+  fileUrlToPath,
+  resolvePackageVersion,
+} from "./version.js";
+import { treeFromManifest } from "./manifest/load.js";
+import { writeJsonError, writeJsonResult } from "./json/output.js";
+import { readFileSync } from "node:fs";
+import { dirname, join } from "node:path";
+import { fileURLToPath } from "node:url";
 
 export interface Cli {
   run: (argv?: string[]) => Promise<RunResult>;
-  /** Dev-mode scanned tree (exposed for tests). */
+  /** Resolved route tree (dev scan or manifest). */
   readonly tree: RouteNode;
 }
 
 export function createCli(options: CreateCliOptions): Cli {
-  const commandsDir = fileUrlToPath(options.commandsDir);
-  const tree = scanCommandsDir(commandsDir);
+  if (!options.commandsDir && !options.manifest) {
+    throw new ClflyError("createCli requires commandsDir and/or manifest");
+  }
+
   const cwd = options.cwd ?? process.cwd();
   const stdout = options.stdout ?? process.stdout;
   const stderr = options.stderr ?? process.stderr;
   const env = options.env ?? process.env;
+  const coreVersion = readInstalledCoreVersion();
+
+  const commandsDir = options.commandsDir
+    ? fileUrlToPath(options.commandsDir)
+    : undefined;
+
+  const tree = options.manifest
+    ? treeFromManifest(options.manifest, coreVersion)
+    : scanCommandsDir(commandsDir!);
+
   const version =
     options.version ??
-    resolvePackageVersion(options.packageJsonPath ? cwd : commandsDir, options.packageJsonPath);
+    resolvePackageVersion(
+      options.packageJsonPath
+        ? dirname(options.packageJsonPath)
+        : (commandsDir ?? cwd),
+      options.packageJsonPath,
+    );
 
   return {
     tree,
     async run(argv = process.argv.slice(2)): Promise<RunResult> {
+      const json = wantsJson(argv);
       try {
         return await runCli({
           name: options.name,
@@ -53,10 +79,23 @@ export function createCli(options: CreateCliOptions): Cli {
           stderr,
           env,
           version,
+          json,
         });
       } catch (err) {
+        if (err instanceof ValidationError) {
+          if (json) {
+            writeJsonError(stderr, "Invalid arguments", err.issues);
+          } else {
+            stderr.write(err.message + "\n");
+          }
+          return { exitCode: err.exitCode };
+        }
         if (err instanceof ClflyError) {
-          stderr.write(err.message + "\n");
+          if (json) {
+            writeJsonError(stderr, err.message);
+          } else {
+            stderr.write(err.message + "\n");
+          }
           return { exitCode: err.exitCode };
         }
         throw err;
@@ -68,24 +107,26 @@ export function createCli(options: CreateCliOptions): Cli {
 async function runCli(ctx: {
   name: string;
   tree: RouteNode;
-  commandsDir: string;
+  commandsDir?: string;
   argv: string[];
   cwd: string;
   stdout: NodeJS.WritableStream;
   stderr: NodeJS.WritableStream;
   env: NodeJS.ProcessEnv;
   version: string;
+  json: boolean;
 }): Promise<RunResult> {
-  // Global reserved flags before routing when asked at root with no command path
   if (wantsVersion(ctx.argv)) {
-    // Bare version string — script-friendly; no name prefix, no ANSI.
-    ctx.stdout.write(`${ctx.version}\n`);
+    if (ctx.json) {
+      writeJsonResult(ctx.stdout, { version: ctx.version });
+    } else {
+      ctx.stdout.write(`${ctx.version}\n`);
+    }
     return { exitCode: 0 };
   }
 
   const pathTokens = stripReserved(ctx.argv);
 
-  // Root help with no subcommand
   if (wantsHelp(ctx.argv) && pathTokens.length === 0) {
     const help = renderHelp({
       name: ctx.name,
@@ -95,7 +136,11 @@ async function runCli(ctx: {
       pathParamNames: [],
       subcommands: listSubcommands(ctx.tree),
     });
-    ctx.stdout.write(help);
+    if (ctx.json) {
+      writeJsonResult(ctx.stdout, { help });
+    } else {
+      ctx.stdout.write(help);
+    }
     return { exitCode: 0 };
   }
 
@@ -117,22 +162,22 @@ async function runCli(ctx: {
     throw err;
   }
 
-  const file = resolved.node.commandFile!;
-  const commandPath = resolved.commandPath.filter((p) => !p.startsWith("<"));
-  // For reserved-flag errors, use human path including dynamic labels
   const labelPath = resolved.commandPath.map((p) =>
     p.startsWith("<") ? p.slice(1, -1) : p,
   );
 
-  const mod = await loadAndValidateCommand(file, labelPath);
-  const flags = mod.args ? projectFlags(mod.args) : [];
+  const mod = await loadResolvedCommand(resolved, labelPath);
+  const flags =
+    mod.args != null
+      ? projectFlags(mod.args)
+      : (resolved.node.manifestFlags ?? []);
   const pathParamNames = Object.keys(resolved.pathParams);
 
   if (wantsHelp(ctx.argv)) {
     const help = renderHelp({
       name: ctx.name,
       commandPath: resolved.commandPath,
-      meta: mod.meta,
+      meta: mod.meta ?? resolved.node.manifestMeta,
       flags,
       pathParamNames,
       subcommands:
@@ -140,15 +185,16 @@ async function runCli(ctx: {
           ? listSubcommands(resolved.node)
           : undefined,
     });
-    ctx.stdout.write(help);
+    if (ctx.json) {
+      writeJsonResult(ctx.stdout, { help });
+    } else {
+      ctx.stdout.write(help);
+    }
     return { exitCode: 0 };
   }
 
-  // Tokens after the command path (resolved.rest still includes flags)
   const { flags: parsedFlags, positionals } = tokenize(resolved.rest, flags);
 
-  // Positionals from tokenize are leftover non-flag tokens under the command;
-  // path params were already consumed during resolve.
   const candidate = mapToArgs({
     pathParams: resolved.pathParams,
     positionals,
@@ -156,12 +202,10 @@ async function runCli(ctx: {
     pathParamNames,
   });
 
-  // Fold path params into the object the command sees
   const argsInput: Record<string, unknown> = { ...candidate };
   for (const [k, v] of Object.entries(resolved.pathParams)) {
     argsInput[k] = v;
   }
-  // Don't pass internal `_` unless positionals schema expects it — strip for args validate
   const { _: _extra, ...forArgs } = argsInput;
 
   let opts: unknown = forArgs;
@@ -184,7 +228,6 @@ async function runCli(ctx: {
     opts = validated.value;
   }
 
-  // Merge path params into validated opts if schema didn't include them
   if (typeof opts === "object" && opts !== null) {
     opts = { ...resolved.pathParams, ...opts };
   }
@@ -195,11 +238,34 @@ async function runCli(ctx: {
     env: ctx.env,
     commandPath: resolved.commandPath,
     meta: mod.meta ?? {},
+    json: ctx.json,
     stdout: ctx.stdout,
     stderr: ctx.stderr,
   });
 
+  if (ctx.json && result !== undefined) {
+    writeJsonResult(ctx.stdout, result);
+  }
+
   return { exitCode: 0, value: result };
+}
+
+async function loadResolvedCommand(
+  resolved: ResolvedRoute,
+  labelPath: string[],
+): Promise<CommandModule> {
+  if (resolved.node.load) {
+    const mod = await resolved.node.load();
+    if (mod.args) {
+      const { assertSchemaNoReservedFlags } = await import("./schema/reserved.js");
+      assertSchemaNoReservedFlags(labelPath, mod.args);
+    }
+    return mod;
+  }
+  if (resolved.node.commandFile) {
+    return loadAndValidateCommand(resolved.node.commandFile, labelPath);
+  }
+  throw new ClflyError(`No loader for command ${labelPath.join(" ") || "(root)"}`);
 }
 
 function stripReserved(argv: string[]): string[] {
@@ -209,8 +275,13 @@ function stripReserved(argv: string[]): string[] {
       t !== "--help" &&
       t !== "-h" &&
       t !== "--version" &&
-      t !== "-V",
+      t !== "-V" &&
+      t !== "--json",
   );
+}
+
+export function wantsJson(argv: string[]): boolean {
+  return argv.includes("--json");
 }
 
 function expectedFromFlags(
@@ -225,6 +296,28 @@ function expectedFromFlags(
   return flag.type;
 }
 
+function readInstalledCoreVersion(): string {
+  try {
+    const here = dirname(fileURLToPath(import.meta.url));
+    // dist/ or src/
+    for (const candidate of [
+      join(here, "..", "package.json"),
+      join(here, "..", "..", "package.json"),
+    ]) {
+      try {
+        const raw = readFileSync(candidate, "utf8");
+        const v = (JSON.parse(raw) as { name?: string; version?: string }).version;
+        if (v) return v;
+      } catch {
+        /* try next */
+      }
+    }
+  } catch {
+    /* fallthrough */
+  }
+  return "0.0.0";
+}
+
 /** Programmatic helper for tests: resolve + load without running. */
 export async function resolveCommand(
   tree: RouteNode,
@@ -235,7 +328,7 @@ export async function resolveCommand(
   const labelPath = resolved.commandPath.map((p) =>
     p.startsWith("<") ? p.slice(1, -1) : p,
   );
-  const mod = await loadAndValidateCommand(resolved.node.commandFile!, labelPath);
+  const mod = await loadResolvedCommand(resolved, labelPath);
   void commandsDir;
   return { resolved, mod };
 }

@@ -69,6 +69,12 @@ export function renderHelp(opts: HelpOptions): string {
       optional: true,
       alias: "V",
     },
+    {
+      name: "json",
+      type: "boolean",
+      description: "Emit JSON",
+      optional: true,
+    },
   ];
 
   const flagWidth = Math.max(

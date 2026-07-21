@@ -3,7 +3,7 @@ import { ReservedFlagError } from "../errors.js";
 import { projectFlags } from "./to-json-schema.js";
 
 /** Framework-owned flags. Commands must not claim these names or aliases. */
-export const RESERVED_FLAGS = new Set(["help", "version"]);
+export const RESERVED_FLAGS = new Set(["help", "version", "json"]);
 export const RESERVED_ALIASES = new Set(["h", "V"]);
 
 export function assertNoReservedFlags(

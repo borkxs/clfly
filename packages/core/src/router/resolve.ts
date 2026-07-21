@@ -51,8 +51,8 @@ export function resolveRoute(
     break;
   }
 
-  // Prefer deepest command file; fall back to current node's index
-  if (!node.commandFile) {
+  // Prefer deepest executable node (dev file or manifest load thunk)
+  if (!node.commandFile && !node.load) {
     const suggestion = suggest(root, tokens);
     throw new ClflyError(
       `Unknown command: ${tokens.slice(0, i + 1).join(" ") || "(root)"}` +

@@ -1,4 +1,4 @@
-export { createCli, resolveCommand, type Cli } from "./run.js";
+export { createCli, resolveCommand, wantsJson, type Cli } from "./run.js";
 export { defineCommand } from "./define-command.js";
 export {
   ClflyError,
@@ -19,6 +19,7 @@ export {
   type FlagInfo,
   type RouteNode,
   type ResolvedRoute,
+  type CompletionShell,
 } from "./types.js";
 export { assertManifestCompatible, coreMajorFromVersion } from "./version.js";
 export { scanCommandsDir, loadCommandModule, listCommandFiles } from "./router/scan.js";
@@ -27,3 +28,7 @@ export { tokenize, mapToArgs, wantsHelp, wantsVersion } from "./parse/tokenize.j
 export { projectFlags, toJsonSchema, validateSchema } from "./schema/to-json-schema.js";
 export { assertNoReservedFlags, RESERVED_FLAGS, RESERVED_ALIASES } from "./schema/reserved.js";
 export { renderHelp, renderHelpExcerpt } from "./help/render.js";
+export { buildManifest, type BuildManifestOptions, type BuildManifestResult } from "./build/manifest.js";
+export { treeFromManifest, completionIndexFromManifest } from "./manifest/load.js";
+export { generateCompletions } from "./completions/generate.js";
+export { writeJsonResult, writeJsonError } from "./json/output.js";

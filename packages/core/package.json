@@ -3,6 +3,9 @@
   "version": "0.1.0",
   "description": "PostgREST for CLIs — filesystem command trees projected to CLI, help, completions, and MCP",
   "type": "module",
+  "bin": {
+    "clfly": "./dist/cli.js"
+  },
   "exports": {
     ".": {
       "types": "./dist/index.d.ts",
@@ -19,6 +22,7 @@
   },
   "dependencies": {
     "@standard-schema/spec": "^1.0.0",
+    "tsx": "^4.19.4",
     "yargs-parser": "^22.0.0"
   },
   "peerDependencies": {
@@ -33,7 +37,6 @@
     "@types/node": "^22.15.3",
     "@types/yargs-parser": "^21.0.3",
     "tsup": "^8.5.0",
-    "tsx": "^4.19.4",
     "typescript": "^5.8.3",
     "vitest": "^3.1.3",
     "zod": "^4.0.5"
