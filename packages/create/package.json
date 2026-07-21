@@ -1,0 +1,30 @@
+{
+  "name": "@clfly/create",
+  "version": "0.1.0",
+  "description": "Scaffold a clfly CLI (stub)",
+  "type": "module",
+  "bin": {
+    "create-clfly": "./dist/index.js"
+  },
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    }
+  },
+  "files": ["dist"],
+  "scripts": {
+    "build": "tsup src/index.ts --format esm --dts --clean",
+    "test": "node -e \"console.log('no tests yet')\"",
+    "typecheck": "tsc -p tsconfig.json --noEmit"
+  },
+  "devDependencies": {
+    "@types/node": "^22.15.3",
+    "tsup": "^8.5.0",
+    "typescript": "^5.8.3"
+  },
+  "engines": {
+    "node": ">=20"
+  },
+  "license": "MIT"
+}
