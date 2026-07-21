@@ -32,3 +32,14 @@ export { buildManifest, type BuildManifestOptions, type BuildManifestResult } fr
 export { treeFromManifest, completionIndexFromManifest } from "./manifest/load.js";
 export { generateCompletions } from "./completions/generate.js";
 export { writeJsonResult, writeJsonError } from "./json/output.js";
+export {
+  listMcpTools,
+  createMcpServer,
+  serveMcpStdio,
+  invokeMcpTool,
+  toolNameFromPath,
+  mergePathParamsIntoSchema,
+  isMcpServeArgv,
+  type McpToolDef,
+  type CreateMcpOptions,
+} from "./mcp/serve.js";

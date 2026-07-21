@@ -8,7 +8,7 @@ import {
   loadAndValidateCommand,
   scanCommandsDir,
 } from "../router/scan.js";
-import { projectFlags } from "../schema/to-json-schema.js";
+import { projectFlags, toJsonSchema } from "../schema/to-json-schema.js";
 import { coreMajorFromVersion, fileUrlToPath } from "../version.js";
 
 export interface BuildManifestOptions {
@@ -47,6 +47,7 @@ export async function buildManifest(
     importPath: string;
     meta?: Meta;
     flags: FlagInfo[];
+    inputSchema?: Record<string, unknown>;
   }> = [];
 
   for (const entry of files) {
@@ -56,6 +57,9 @@ export async function buildManifest(
     );
     const mod = await loadAndValidateCommand(entry.file, labelPath);
     const flags = mod.args ? projectFlags(mod.args) : [];
+    const inputSchema = mod.args
+      ? (toJsonSchema(mod.args) as Record<string, unknown>)
+      : { type: "object", properties: {} };
     const importPath = (
       options.toImportPath ?? defaultImportPath
     )(entry.file, outFile);
@@ -65,6 +69,7 @@ export async function buildManifest(
       importPath,
       meta: mod.meta,
       flags,
+      inputSchema,
     });
 
     routes.push({
@@ -72,6 +77,7 @@ export async function buildManifest(
       importPath,
       meta: mod.meta,
       flags,
+      inputSchema,
       load: () => import(pathToFileURL(entry.file).href),
     });
   }
@@ -114,6 +120,7 @@ function renderManifestModule(
     importPath: string;
     meta?: Meta;
     flags: FlagInfo[];
+    inputSchema?: Record<string, unknown>;
   }>,
   header: { formatVersion: number; coreMajor: number; coreVersion: string },
 ): string {
@@ -124,6 +131,7 @@ function renderManifestModule(
     path: ${JSON.stringify(r.path)},
     ${meta}
     flags: ${JSON.stringify(r.flags, null, 2).replace(/\n/g, "\n    ")},
+    inputSchema: ${JSON.stringify(r.inputSchema ?? { type: "object", properties: {} }, null, 2).replace(/\n/g, "\n    ")},
     load: () => import(${JSON.stringify(r.importPath)}),
   }`;
     })

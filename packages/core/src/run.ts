@@ -26,6 +26,12 @@ import {
 } from "./version.js";
 import { treeFromManifest } from "./manifest/load.js";
 import { writeJsonError, writeJsonResult } from "./json/output.js";
+import {
+  isMcpArgv,
+  isMcpServeArgv,
+  mcpOptionsFromCli,
+  serveMcpStdio,
+} from "./mcp/serve.js";
 import { readFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -55,6 +61,12 @@ export function createCli(options: CreateCliOptions): Cli {
     ? treeFromManifest(options.manifest, coreVersion)
     : scanCommandsDir(commandsDir!);
 
+  if (tree.children.has("mcp")) {
+    throw new ClflyError(
+      'Command "mcp" is reserved for the MCP transport (`mcp serve`). Rename your commands/mcp path.',
+    );
+  }
+
   const version =
     options.version ??
     resolvePackageVersion(
@@ -80,6 +92,7 @@ export function createCli(options: CreateCliOptions): Cli {
           env,
           version,
           json,
+          cliOptions: options,
         });
       } catch (err) {
         if (err instanceof ValidationError) {
@@ -115,6 +128,7 @@ async function runCli(ctx: {
   env: NodeJS.ProcessEnv;
   version: string;
   json: boolean;
+  cliOptions: CreateCliOptions;
 }): Promise<RunResult> {
   if (wantsVersion(ctx.argv)) {
     if (ctx.json) {
@@ -122,6 +136,32 @@ async function runCli(ctx: {
     } else {
       ctx.stdout.write(`${ctx.version}\n`);
     }
+    return { exitCode: 0 };
+  }
+
+  // Framework-owned MCP transport — before FS routing.
+  if (isMcpServeArgv(ctx.argv)) {
+    if (wantsHelp(ctx.argv)) {
+      ctx.stdout.write(
+        `Usage: ${ctx.name} mcp serve\n\n` +
+          `Expose every command as an MCP tool over stdio.\n` +
+          `Tool names come from the command path; inputSchema from the args JSON Schema.\n`,
+      );
+      return { exitCode: 0 };
+    }
+    // stderr only — stdout is the MCP JSON-RPC channel.
+    ctx.stderr.write(
+      `${ctx.name} mcp serve listening on stdio (${ctx.version})\n`,
+    );
+    await serveMcpStdio(mcpOptionsFromCli(ctx.cliOptions));
+    return { exitCode: 0 };
+  }
+
+  if (isMcpArgv(ctx.argv)) {
+    ctx.stdout.write(
+      `Usage: ${ctx.name} mcp serve\n\n` +
+        `Start an MCP server (stdio) projecting this CLI's command tree as tools.\n`,
+    );
     return { exitCode: 0 };
   }
 
@@ -134,7 +174,13 @@ async function runCli(ctx: {
       meta: { description: `${ctx.name} CLI` },
       flags: [],
       pathParamNames: [],
-      subcommands: listSubcommands(ctx.tree),
+      subcommands: [
+        ...listSubcommands(ctx.tree),
+        {
+          name: "mcp",
+          description: "MCP transport (mcp serve)",
+        },
+      ],
     });
     if (ctx.json) {
       writeJsonResult(ctx.stdout, { help });

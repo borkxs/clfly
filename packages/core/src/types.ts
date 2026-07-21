@@ -20,6 +20,8 @@ export interface ManifestRoute {
   meta?: Meta;
   /** Serializable flag projection for completions / help without loading the module. */
   flags: FlagInfo[];
+  /** JSON Schema projection of `args` (plus path params merged at MCP serve time). */
+  inputSchema?: Record<string, unknown>;
   /** Import specifier written into the generated file (relative to the manifest). */
   importPath?: string;
 }
