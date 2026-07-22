@@ -49,6 +49,12 @@ function walk(commandsDir: string, dir: string, parent: RouteNode): void {
     const name = basename(entry, ext);
 
     if (name === "index") {
+      if (parent.commandFile) {
+        throw new ClflyError(
+          `Command path collision: both "${parent.commandFile}" and "${full}" ` +
+            `map to the same route. Remove one (nested index vs sibling file).`,
+        );
+      }
       parent.commandFile = full;
       parent.isIndex = true;
       continue;
@@ -60,6 +66,12 @@ function walk(commandsDir: string, dir: string, parent: RouteNode): void {
     if (!child) {
       child = { segment: seg, children: new Map() };
       parent.children.set(key, child);
+    }
+    if (child.commandFile) {
+      throw new ClflyError(
+        `Command path collision: both "${child.commandFile}" and "${full}" ` +
+          `map to the same route. Remove one (nested index vs sibling file).`,
+      );
     }
     child.commandFile = full;
   }

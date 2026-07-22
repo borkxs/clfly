@@ -8,6 +8,7 @@ import type {
 } from "./types.js";
 import { ClflyError, ValidationError } from "./errors.js";
 import {
+  listCommandFiles,
   loadAndValidateCommand,
   scanCommandsDir,
 } from "./router/scan.js";
@@ -32,6 +33,8 @@ import {
   mcpOptionsFromCli,
   serveMcpStdio,
 } from "./mcp/serve.js";
+import { assertUniqueToolNames } from "./mcp/tool-names.js";
+import { assignRestPositionals } from "./parse/rest-positionals.js";
 import { readFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -66,6 +69,16 @@ export function createCli(options: CreateCliOptions): Cli {
       'Command "mcp" is reserved for the MCP transport (`mcp serve`). Rename your commands/mcp path.',
     );
   }
+
+  assertUniqueToolNames(
+    listCommandFiles(tree).map((e) => ({
+      path: e.path.map((p) => {
+        const m = /^\[([^\]]+)\]$/.exec(p);
+        return m?.[1] ? `:${m[1]}` : p;
+      }),
+      file: e.file,
+    })),
+  );
 
   const version =
     options.version ??
@@ -252,7 +265,12 @@ async function runCli(ctx: {
   for (const [k, v] of Object.entries(resolved.pathParams)) {
     argsInput[k] = v;
   }
-  const { _: _extra, ...forArgs } = argsInput;
+  const { _: _extra, ...stripped } = argsInput;
+  const forArgs = assignRestPositionals(
+    stripped,
+    Array.isArray(_extra) ? _extra.map(String) : [],
+    mod.args,
+  );
 
   let opts: unknown = forArgs;
   if (mod.args) {

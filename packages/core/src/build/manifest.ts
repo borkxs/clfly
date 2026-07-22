@@ -10,6 +10,8 @@ import {
 } from "../router/scan.js";
 import { projectFlags, toJsonSchema } from "../schema/to-json-schema.js";
 import { coreMajorFromVersion, fileUrlToPath } from "../version.js";
+import { assertUniqueToolNames } from "../mcp/tool-names.js";
+import { ClflyError } from "../errors.js";
 
 export interface BuildManifestOptions {
   /** Commands directory (path or file URL). */
@@ -81,6 +83,18 @@ export async function buildManifest(
       load: () => import(pathToFileURL(entry.file).href),
     });
   }
+
+  if (tree.children.has("mcp")) {
+    throw new ClflyError(
+      'Command "mcp" is reserved for the MCP transport (`mcp serve`). Rename your commands/mcp path.',
+    );
+  }
+  assertUniqueToolNames(
+    files.map((e) => ({
+      path: toManifestPath(e.path),
+      file: e.file,
+    })),
+  );
 
   const manifest: Manifest = {
     formatVersion: MANIFEST_FORMAT_VERSION,

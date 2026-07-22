@@ -1,7 +1,7 @@
 {
   "name": "@clfly/create",
-  "version": "0.1.0",
-  "description": "Scaffold a clfly CLI (stub)",
+  "version": "0.0.3",
+  "description": "Scaffold a clfly CLI (npm create clfly)",
   "type": "module",
   "bin": {
     "create-clfly": "./dist/index.js"
@@ -14,9 +14,12 @@
   },
   "files": ["dist"],
   "scripts": {
-    "build": "tsup src/index.ts --format esm --dts --clean",
-    "test": "node -e \"console.log('no tests yet')\"",
+    "build": "tsup && node -e \"import('node:fs').then(fs => fs.chmodSync('dist/index.js', 0o755))\"",
+    "test": "node -e \"console.log('covered via @clfly/cli init tests')\"",
     "typecheck": "tsc -p tsconfig.json --noEmit"
+  },
+  "dependencies": {
+    "@clfly/cli": "workspace:*"
   },
   "devDependencies": {
     "@types/node": "^22.15.3",

@@ -1,11 +1,17 @@
 {
   "name": "@clfly/cli",
-  "version": "0.0.2",
-  "description": "File-based routing for CLIs — one commands/ tree becomes a CLI, shell completions, and an MCP server. Pre-release.",
+  "version": "0.0.3",
+  "description": "File-based routing for CLIs — one commands/ tree becomes a CLI, shell completions, and an MCP server.",
   "type": "module",
   "license": "MIT",
   "bin": {
     "clfly": "./dist/bin.js"
+  },
+  "exports": {
+    "./scaffold": {
+      "types": "./dist/scaffold/index.d.ts",
+      "import": "./dist/scaffold/index.js"
+    }
   },
   "publishConfig": {
     "access": "public"
@@ -44,6 +50,10 @@
     "build": "tsup && node -e \"import('node:fs').then(fs => fs.chmodSync('dist/bin.js', 0o755))\"",
     "test": "vitest run",
     "typecheck": "tsc -p tsconfig.json --noEmit"
+  },
+  "dependencies": {
+    "@clfly/core": "workspace:*",
+    "zod": "^4.0.5"
   },
   "devDependencies": {
     "@types/node": "^22.15.3",

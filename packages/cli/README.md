@@ -1,12 +1,21 @@
 # clfly
 
-> ⚠️ **Pre-release** — install as `@clfly/cli`; the `clfly` binary is included. Watch the repo for the real release.
-
-clfly is a TypeScript CLI framework where a `commands/` directory is the single source of truth. Each file exports a schema (Zod 4, Valibot, ArkType — anything [Standard Schema](https://standardschema.dev)) and a default function. Everything else is derived: argument parsing, validation, help text, completions, and an MCP server that exposes every command as a tool AI agents can call.
+> The real CLI — `init`, `add`, `build`, `completions`, and inherited `mcp serve`.
 
 ```bash
 npm i -g @clfly/cli
-clfly --help
+# or: pnpm add -g @clfly/cli
+
+clfly init mycli
+cd mycli && pnpm install
+pnpm exec tsx bin/mycli.ts --help
+```
+
+Scaffold into the current directory, or retrofit safely:
+
+```bash
+clfly init --force
+clfly add user/list user/:id/report
 ```
 
 **Repository:** https://github.com/borkxs/clfly

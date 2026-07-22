@@ -22,9 +22,10 @@ const demoPkg = fileURLToPath(
 
 describe("toolNameFromPath", () => {
   it("maps paths to MCP tool names", () => {
-    expect(toolNameFromPath([])).toBe("index");
+    expect(toolNameFromPath([])).toBeNull();
     expect(toolNameFromPath(["users", "list"])).toBe("users_list");
     expect(toolNameFromPath(["users", ":id", "show"])).toBe("users_show");
+    expect(toolNameFromPath(["users"])).toBe("users");
   });
 });
 
@@ -52,7 +53,7 @@ describe("listMcpTools", () => {
     expect(names).toContain("users_list");
     expect(names).toContain("users_show");
     expect(names).toContain("deploy");
-    expect(names).toContain("index");
+    expect(names).not.toContain("index");
 
     const list = tools.find((t) => t.name === "users_list")!;
     expect(list.description).toContain("List users");

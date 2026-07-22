@@ -24,6 +24,9 @@ importers:
         specifier: ^4.0.5
         version: 4.4.3
     devDependencies:
+      '@clfly/cli':
+        specifier: workspace:*
+        version: link:../../packages/cli
       '@types/node':
         specifier: ^22.15.3
         version: 22.20.1
@@ -35,6 +38,13 @@ importers:
         version: 5.9.3
 
   packages/cli:
+    dependencies:
+      '@clfly/core':
+        specifier: workspace:*
+        version: link:../core
+      zod:
+        specifier: ^4.0.5
+        version: 4.4.3
     devDependencies:
       '@types/node':
         specifier: ^22.15.3
@@ -84,6 +94,10 @@ importers:
         version: 4.4.3
 
   packages/create:
+    dependencies:
+      '@clfly/cli':
+        specifier: workspace:*
+        version: link:../cli
     devDependencies:
       '@types/node':
         specifier: ^22.15.3

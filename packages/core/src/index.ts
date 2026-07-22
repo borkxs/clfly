@@ -38,8 +38,10 @@ export {
   serveMcpStdio,
   invokeMcpTool,
   toolNameFromPath,
+  assertUniqueToolNames,
   mergePathParamsIntoSchema,
   isMcpServeArgv,
   type McpToolDef,
   type CreateMcpOptions,
 } from "./mcp/serve.js";
+export { assignRestPositionals } from "./parse/rest-positionals.js";

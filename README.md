@@ -50,6 +50,15 @@ The schema is portable JSON Schema all the way down. The same file that answers 
 ## Quick start
 
 ```bash
+npm create clfly mycli
+# or: clfly init mycli   (from @clfly/cli)
+cd mycli && pnpm install
+pnpm exec tsx bin/mycli.ts --help
+```
+
+Or wire core yourself:
+
+```bash
 pnpm add @clfly/core zod
 ```
 
@@ -88,7 +97,7 @@ Command modules are plain data plus a function — no classes, no builder chains
 - **Deprecation is a first-class field.** `meta.deprecated` projects into help output, JSON Schema's `deprecated` keyword, and MCP tool descriptions — a graceful path before removal, for humans and agents alike.
 - **Testable core.** Commands return values or throw typed errors; the bin wrapper owns `process.exit`. `--json` mode serializes return values; errors become `{ "error": … }` on stderr.
 
-clfly is dogfooded: the `clfly` binary itself (`build`, `completions`, `mcp`) is defined as a clfly command tree in this repo.
+clfly is dogfooded: the `clfly` binary itself (`init`, `add`, `build`, `completions`, `mcp`) is defined as a clfly command tree in [`packages/cli`](./packages/cli).
 
 ## Prior art
 
@@ -106,7 +115,7 @@ The gap all of them leave: no package treats a directory of `(schema, function)`
 
 - ✅ **M1** — router, parsing, validation, `--help`/`--version`, reserved-flag errors
 - ✅ **M2** — `clfly build` manifest, bash/zsh/fish completions, global `--json`
-- ✅ **M3** — `mycli mcp serve`: every command as an MCP tool
+- 🔄 **M3** — `mycli mcp serve`: every command as an MCP tool — *in progress* (minimal: stdio projection of the tree; generalized later: harden, `outputSchema`/structured content, `listChanged` posture)
 - ⬜ **M4a** — `clfly export openapi`: OpenAPI 3.1 from the tree (RPC-over-POST paths; no server)
 - ⬜ **M4b** — `clfly http serve`: the same mapping as a live JSON API (auth on by default)
 - ⬜ **M5** — ecosystem packages: `@clfly/docs`, `clfly palette` (TUI), `@clfly/palette` (web ⌘K)
@@ -115,12 +124,13 @@ Ecosystem packages consume only the [build manifest](./docs/manifest.md) and the
 
 ### Non-goals
 
-Plugins, interactive prompts, i18n, config-file merging, telemetry. Also out of scope: GET/query-param HTTP mapping, content negotiation, streaming responses; web palette auth flows beyond passing a bearer token through; hosted anything — every transport is self-serve.
+Plugins, i18n, config-file merging, telemetry. The framework does not ship interactive prompts; the resolver seam for them is reserved (command bodies stay args → result). Also out of scope: GET/query-param HTTP mapping, content negotiation, streaming responses; web palette auth flows beyond passing a bearer token through; hosted anything — every transport is self-serve.
 
 ## Packages
 
 | Package | Role |
 |---|---|
 | [`@clfly/core`](./packages/core) | Router, parser, help, build, completions, `mcp serve` |
-| [`@clfly/create`](./packages/create) | Project scaffolder |
+| [`@clfly/cli`](./packages/cli) | Product binary `clfly` (`init`, `add`, `build`, `completions`) |
+| [`@clfly/create`](./packages/create) | Thin `npm create clfly` alias for `init` |
 | [`examples/demo-cli`](./examples/demo-cli) | Reference CLI + MCP server |

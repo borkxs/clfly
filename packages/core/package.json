@@ -3,9 +3,6 @@
   "version": "0.1.0",
   "description": "PostgREST for CLIs — filesystem command trees projected to CLI, help, completions, and MCP",
   "type": "module",
-  "bin": {
-    "clfly": "./dist/cli.js"
-  },
   "exports": {
     ".": {
       "types": "./dist/index.d.ts",

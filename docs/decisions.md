@@ -54,14 +54,7 @@ Status: **Accepted** unless marked **Open**.
 
 ### When to validate `output` return values
 
-**Open — choose one:**
-
-| Option | Pros | Cons |
-|---|---|---|
-| **A. Always validate** in `--json` mode (dev and prod) | Same behavior everywhere; agents/clients never see schema-violating payloads; bugs surface at the boundary | Extra CPU on every JSON response; large payloads pay a tax in prod |
-| **B. Dev-only validation** (skip in prod / compiled manifest runs) | Keeps prod hot path cheap; still catches drift during development | Prod can emit invalid JSON that MCP/OpenAPI consumers reject; “works in prod, fails in the client” class of bug |
-
-Call needed before M3 wires `outputSchema` and before M4a freezes response schemas.
+**Accepted.** Always validate when `output` is exported, on all transports (MCP, HTTP later, `--json`). Rationale: output is opt-in, payloads are CLI-scale, and machine consumers must never receive schema-violating structured content. No dev/prod divergence.
 
 ---
 
@@ -72,3 +65,15 @@ Call needed before M3 wires `outputSchema` and before M4a freezes response schem
 ### Public CLI package is `@clfly/cli` (bin still `clfly`)
 
 **Accepted.** npm rejected the unscoped name `clfly` as too similar to existing `mlly` (typosquat / similarity policy). Ship the CLI as `@clfly/cli` under the `clfly` org, with `bin.clfly` so installs still expose the `clfly` command. Revisit a bare-name appeal with npm support later if desired; do not block the release on it.
+
+---
+
+### Product binary vs library (`@clfly/cli` vs `@clfly/core`)
+
+**Accepted.** `@clfly/core` is library-only (no `bin`). The `clfly` product binary lives in `@clfly/cli` as a dogfooded `createCli` command tree. `@clfly/create` is a thin alias over the same `init` implementation (`npm create clfly`). Scaffolder details: [scaffolder.md](./scaffolder.md).
+
+---
+
+### MCP tool naming — hard-fail collisions; exclude root index
+
+**Accepted.** Tool names are public API: path segments minus dynamics, joined with `_`; sanitize non `[a-zA-Z0-9_-]` to `_`. Root `commands/index.ts` is **not** projected (no tool named `index`). Nested `users/index.ts` → `users`. Two files mapping to the same name hard-fail at scan/build/add with both files named in the error — never `_2` suffixes. Full MCP harden remains v0.0.4; the naming rule is enforced wherever tools are projected or `add` validates.

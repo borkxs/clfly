@@ -23,6 +23,12 @@ import { dirname } from "node:path";
 import { readFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import { join } from "node:path";
+import {
+  assertUniqueToolNames,
+  toolNameFromPath,
+} from "./tool-names.js";
+
+export { toolNameFromPath, assertUniqueToolNames } from "./tool-names.js";
 
 export type JsonSchemaObject = {
   type?: string;
@@ -39,6 +45,8 @@ export interface McpToolDef {
   inputSchema: JsonSchemaObject;
   /** Manifest-style path (`:id` for dynamics). */
   path: string[];
+  /** Source file path when known (dev scan); used in collision errors. */
+  file?: string;
   meta?: Meta;
   load: () => Promise<CommandModule>;
 }
@@ -211,15 +219,6 @@ export async function invokeMcpTool(
   return { content: [{ type: "text", text }] };
 }
 
-/** Map a command path to an MCP tool name. */
-export function toolNameFromPath(path: string[]): string {
-  if (path.length === 0) return "index";
-  return path
-    .filter((p) => !p.startsWith(":"))
-    .map((p) => p.replace(/[^a-zA-Z0-9_-]/g, "_"))
-    .join("_");
-}
-
 export function mergePathParamsIntoSchema(
   schema: JsonSchemaObject,
   pathParams: string[],
@@ -269,14 +268,18 @@ async function toolsFromCommandsDir(commandsDir: string): Promise<McpToolDef[]> 
       const m = /^\[([^\]]+)\]$/.exec(p);
       return m?.[1] ? `:${m[1]}` : p;
     });
+    if (toolNameFromPath(manifestPath) === null) continue;
     const labelPath = manifestPath.map((p) =>
       p.startsWith(":") ? p.slice(1) : p,
     );
     const mod = await loadAndValidateCommand(entry.file, labelPath);
-    tools.push(toolDefFromModule(manifestPath, mod));
+    tools.push(toolDefFromModule(manifestPath, mod, entry.file));
   }
 
-  return dedupeToolNames(tools);
+  assertUniqueToolNames(
+    tools.map((t) => ({ path: t.path, file: t.file ?? t.name })),
+  );
+  return tools;
 }
 
 function toolsFromManifest(
@@ -285,7 +288,10 @@ function toolsFromManifest(
 ): McpToolDef[] {
   // Validate format; tree build also asserts.
   treeFromManifest(manifest, coreVersion);
-  const tools = manifest.routes.map((route) => {
+  const tools: McpToolDef[] = [];
+  for (const route of manifest.routes) {
+    const name = toolNameFromPath(route.path);
+    if (name === null) continue;
     const pathParams = route.path
       .filter((p) => p.startsWith(":"))
       .map((p) => p.slice(1));
@@ -305,18 +311,20 @@ function toolsFromManifest(
       ),
     };
     const description = describeMeta(route.meta, route.path);
-    return {
-      name: toolNameFromPath(route.path),
+    const file = route.importPath ?? name;
+    tools.push({
+      name,
       description,
       inputSchema: mergePathParamsIntoSchema(baseSchema, pathParams),
       path: route.path,
+      file,
       meta: route.meta,
       load: async () => {
         const mod = (await route.load()) as CommandModule & {
           default: CommandModule["default"];
         };
         if (typeof mod.default !== "function") {
-          throw new ClflyError(`Tool ${toolNameFromPath(route.path)} missing default export`);
+          throw new ClflyError(`Tool ${name} missing default export`);
         }
         return {
           meta: mod.meta,
@@ -325,21 +333,33 @@ function toolsFromManifest(
           default: mod.default,
         };
       },
-    } satisfies McpToolDef;
-  });
-  return dedupeToolNames(tools);
+    });
+  }
+  assertUniqueToolNames(
+    tools.map((t) => ({ path: t.path, file: t.file ?? t.name })),
+  );
+  return tools;
 }
 
-function toolDefFromModule(path: string[], mod: CommandModule): McpToolDef {
+function toolDefFromModule(
+  path: string[],
+  mod: CommandModule,
+  file: string,
+): McpToolDef {
+  const name = toolNameFromPath(path);
+  if (name === null) {
+    throw new ClflyError(`Refusing to project root index as an MCP tool (${file})`);
+  }
   const pathParams = path.filter((p) => p.startsWith(":")).map((p) => p.slice(1));
   const base: JsonSchemaObject = mod.args
     ? (toJsonSchema(mod.args) as JsonSchemaObject)
     : { type: "object", properties: {} };
   return {
-    name: toolNameFromPath(path),
+    name,
     description: describeMeta(mod.meta, path),
     inputSchema: mergePathParamsIntoSchema(base, pathParams),
     path,
+    file,
     meta: mod.meta,
     load: async () => mod,
   };
@@ -353,16 +373,6 @@ function describeMeta(meta: Meta | undefined, path: string[]): string {
   const reason =
     typeof meta.deprecated === "string" ? ` — ${meta.deprecated}` : "";
   return `DEPRECATED${reason}. ${base}`;
-}
-
-function dedupeToolNames(tools: McpToolDef[]): McpToolDef[] {
-  const seen = new Map<string, number>();
-  return tools.map((t) => {
-    const n = (seen.get(t.name) ?? 0) + 1;
-    seen.set(t.name, n);
-    if (n === 1) return t;
-    return { ...t, name: `${t.name}_${n}` };
-  });
 }
 
 function assertNoReservedMcpCollision(options: CreateMcpOptions): void {

@@ -4,8 +4,8 @@ export default defineConfig({
   entry: ["src/index.ts"],
   format: ["esm"],
   dts: true,
-  sourcemap: true,
-  target: "node20",
-  splitting: false,
   clean: true,
+  target: "node20",
+  banner: { js: "#!/usr/bin/env node" },
+  external: ["@clfly/cli"],
 });
