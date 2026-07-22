@@ -2,6 +2,7 @@ import type {
   CommandModule,
   CreateCliOptions,
   FlagInfo,
+  PositionalInfo,
   ResolvedRoute,
   RouteNode,
   RunResult,
@@ -19,7 +20,13 @@ import {
   wantsHelp,
   wantsVersion,
 } from "./parse/tokenize.js";
+import { nearestMatch } from "./parse/suggest.js";
 import { projectFlags, validateSchema } from "./schema/to-json-schema.js";
+import {
+  parseFlagAllowlist,
+  positionalNames,
+  projectPositionals,
+} from "./schema/project-positionals.js";
 import { renderHelp, renderHelpExcerpt } from "./help/render.js";
 import {
   fileUrlToPath,
@@ -191,7 +198,7 @@ async function runCli(ctx: {
       commandPath: [],
       meta: { description: `${ctx.name} CLI` },
       flags: [],
-      pathParamNames: [],
+      positionals: [],
       subcommands: [
         ...listSubcommands(ctx.tree),
         {
@@ -217,7 +224,7 @@ async function runCli(ctx: {
         name: ctx.name,
         commandPath: [],
         flags: [],
-        pathParamNames: [],
+        positionals: [],
         subcommands: listSubcommands(ctx.tree),
       });
       ctx.stdout.write(help);
@@ -231,11 +238,12 @@ async function runCli(ctx: {
   );
 
   const mod = await loadResolvedCommand(resolved, labelPath);
-  const flags =
-    mod.args != null
-      ? projectFlags(mod.args)
-      : (resolved.node.manifestFlags ?? []);
   const pathParamNames = Object.keys(resolved.pathParams);
+  const { flags, positionals, tokenizeFlags } = projectCommandSurface(
+    mod,
+    pathParamNames,
+    resolved.node,
+  );
 
   if (wantsHelp(ctx.argv)) {
     const help = renderHelp({
@@ -243,7 +251,7 @@ async function runCli(ctx: {
       commandPath: resolved.commandPath,
       meta: mod.meta ?? resolved.node.manifestMeta,
       flags,
-      pathParamNames,
+      positionals,
       subcommands:
         resolved.node.children.size > 0
           ? listSubcommands(resolved.node)
@@ -257,11 +265,16 @@ async function runCli(ctx: {
     return { exitCode: 0 };
   }
 
-  const { flags: parsedFlags, positionals } = tokenize(resolved.rest, flags);
+  const { flags: parsedFlags, positionals: restTokens } = tokenize(
+    resolved.rest,
+    tokenizeFlags,
+  );
+
+  assertKnownFlags(parsedFlags, flags, positionals);
 
   const candidate = mapToArgs({
     pathParams: resolved.pathParams,
-    positionals,
+    positionals: restTokens,
     flags: parsedFlags,
     pathParamNames,
   });
@@ -286,7 +299,7 @@ async function runCli(ctx: {
         commandPath: resolved.commandPath,
         meta: mod.meta,
         flags,
-        pathParamNames,
+        positionals,
       });
       const issues = validated.issues.map((issue) => ({
         ...issue,
@@ -317,6 +330,77 @@ async function runCli(ctx: {
   }
 
   return { exitCode: 0, value: result };
+}
+
+function projectCommandSurface(
+  mod: CommandModule,
+  pathParamNames: string[],
+  node: RouteNode,
+): {
+  flags: FlagInfo[];
+  positionals: PositionalInfo[];
+  /** Flags taught to the tokenizer, including alsoFlag positionals. */
+  tokenizeFlags: FlagInfo[];
+} {
+  const positionals =
+    mod.args != null || mod.positionals != null || pathParamNames.length > 0
+      ? projectPositionals({
+          pathParamNames,
+          args: mod.args,
+          positionals: mod.positionals,
+        })
+      : (node.manifestPositionals ?? []);
+
+  const excluded = positionalNames(positionals);
+  const allFromArgs = mod.args != null ? projectFlags(mod.args) : [];
+  const flags =
+    mod.args != null
+      ? allFromArgs.filter((f) => !excluded.has(f.name))
+      : (node.manifestFlags ?? []);
+
+  // Tokenizer must still accept `--name` for positionals with alsoFlag.
+  const alsoFlagInfos = allFromArgs.filter(
+    (f) => excluded.has(f.name) && positionals.some((p) => p.name === f.name && p.alsoFlag),
+  );
+  const tokenizeFlags =
+    mod.args != null
+      ? [...flags, ...alsoFlagInfos]
+      : [
+          ...flags,
+          ...positionals
+            .filter((p) => p.alsoFlag)
+            .map(
+              (p): FlagInfo => ({
+                name: p.name,
+                type: "string",
+                optional: p.optional,
+                description: p.description,
+              }),
+            ),
+        ];
+
+  return { flags, positionals, tokenizeFlags };
+}
+
+function assertKnownFlags(
+  parsed: Record<string, unknown>,
+  flags: FlagInfo[],
+  positionals: PositionalInfo[],
+): void {
+  const known = parseFlagAllowlist(flags, positionals);
+  const candidates = [...known].filter(
+    (n) => n !== "h" && n !== "V" && n.length > 1,
+  );
+  for (const key of Object.keys(parsed)) {
+    if (known.has(key)) continue;
+    const display = key.length === 1 ? `-${key}` : `--${key}`;
+    const suggestion = nearestMatch(key, candidates);
+    throw new ClflyError(
+      `Unknown option: ${display}` +
+        (suggestion ? `\nDid you mean: --${suggestion}?` : "") +
+        `\nRun with --help to see available options.`,
+    );
+  }
 }
 
 async function loadResolvedCommand(

@@ -55,6 +55,13 @@ describe("router resolve", () => {
     expect(() => resolveRoute(tree, ["nope"])).toThrow(ClflyError);
   });
 
+  it("suggests nearest command via Levenshtein", () => {
+    expect(() => resolveRoute(tree, ["deply"])).toThrow(/Did you mean: deploy/);
+    expect(() => resolveRoute(tree, ["users", "lst"])).toThrow(
+      /Did you mean: list/,
+    );
+  });
+
   it("skips TypeScript declaration emit next to command modules", () => {
     const root = mkdtempSync(join(tmpdir(), "clfly-dts-"));
     const commands = join(root, "commands");

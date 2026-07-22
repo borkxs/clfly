@@ -3,6 +3,7 @@ import type {
   FlagInfo,
   Manifest,
   Meta,
+  PositionalInfo,
   RouteNode,
   RouteSegment,
 } from "../types.js";
@@ -36,6 +37,7 @@ export function treeFromManifest(
     node.load = async () => normalizeLoadedModule(await route.load());
     node.manifestMeta = route.meta;
     node.manifestFlags = route.flags;
+    node.manifestPositionals = route.positionals ?? [];
     if (route.path.length === 0) node.isIndex = true;
   }
 
@@ -70,6 +72,7 @@ export function completionIndexFromManifest(manifest: Manifest): CompletionComma
     description: r.meta?.description,
     deprecated: r.meta?.deprecated,
     flags: r.flags,
+    positionals: r.positionals ?? [],
   }));
 }
 
@@ -79,5 +82,6 @@ export interface CompletionCommand {
   description?: string;
   deprecated?: boolean | string;
   flags: FlagInfo[];
+  positionals: PositionalInfo[];
   meta?: Meta;
 }

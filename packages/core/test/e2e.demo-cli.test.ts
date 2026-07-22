@@ -107,6 +107,7 @@ describe("createCli integration", () => {
     expect(result.exitCode).toBe(0);
     expect(out.text()).toContain("List users in the workspace");
     expect(out.text()).toContain("--status");
+    expect(out.text()).toContain("Options:");
   });
 
   it("runs root index on bare argv", async () => {

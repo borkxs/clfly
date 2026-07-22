@@ -17,6 +17,8 @@ export {
   type RunResult,
   type AnySchema,
   type FlagInfo,
+  type PositionalInfo,
+  type PositionalSource,
   type RouteNode,
   type ResolvedRoute,
   type CompletionShell,
@@ -25,9 +27,15 @@ export { assertManifestCompatible, coreMajorFromVersion } from "./version.js";
 export { scanCommandsDir, loadCommandModule, listCommandFiles } from "./router/scan.js";
 export { resolveRoute, listSubcommands } from "./router/resolve.js";
 export { tokenize, mapToArgs, wantsHelp, wantsVersion } from "./parse/tokenize.js";
+export { nearestMatch, levenshtein } from "./parse/suggest.js";
 export { projectFlags, toJsonSchema, validateSchema } from "./schema/to-json-schema.js";
+export {
+  projectPositionals,
+  positionalNames,
+  parseFlagAllowlist,
+} from "./schema/project-positionals.js";
 export { assertNoReservedFlags, RESERVED_FLAGS, RESERVED_ALIASES } from "./schema/reserved.js";
-export { renderHelp, renderHelpExcerpt } from "./help/render.js";
+export { renderHelp, renderHelpExcerpt, formatPositionalToken } from "./help/render.js";
 export { buildManifest, type BuildManifestOptions, type BuildManifestResult } from "./build/manifest.js";
 export { treeFromManifest, completionIndexFromManifest } from "./manifest/load.js";
 export { generateCompletions } from "./completions/generate.js";

@@ -1,7 +1,13 @@
 import { mkdirSync, writeFileSync, readFileSync } from "node:fs";
 import { dirname, join, relative } from "node:path";
 import { pathToFileURL, fileURLToPath } from "node:url";
-import type { FlagInfo, Manifest, ManifestRoute, Meta } from "../types.js";
+import type {
+  FlagInfo,
+  Manifest,
+  ManifestRoute,
+  Meta,
+  PositionalInfo,
+} from "../types.js";
 import { MANIFEST_FORMAT_VERSION } from "../types.js";
 import {
   listCommandFiles,
@@ -9,6 +15,10 @@ import {
   scanCommandsDir,
 } from "../router/scan.js";
 import { projectFlags, toJsonSchema } from "../schema/to-json-schema.js";
+import {
+  positionalNames,
+  projectPositionals,
+} from "../schema/project-positionals.js";
 import { coreMajorFromVersion, fileUrlToPath } from "../version.js";
 import { assertUniqueToolNames } from "../mcp/tool-names.js";
 import { ClflyError } from "../errors.js";
@@ -49,6 +59,7 @@ export async function buildManifest(
     importPath: string;
     meta?: Meta;
     flags: FlagInfo[];
+    positionals: PositionalInfo[];
     inputSchema?: Record<string, unknown>;
   }> = [];
 
@@ -57,8 +68,19 @@ export async function buildManifest(
     const labelPath = manifestPath.map((p) =>
       p.startsWith(":") ? p.slice(1) : p,
     );
+    const pathParamNames = manifestPath
+      .filter((p) => p.startsWith(":"))
+      .map((p) => p.slice(1));
     const mod = await loadAndValidateCommand(entry.file, labelPath);
-    const flags = mod.args ? projectFlags(mod.args) : [];
+    const positionals = projectPositionals({
+      pathParamNames,
+      args: mod.args,
+      positionals: mod.positionals,
+    });
+    const excluded = positionalNames(positionals);
+    const flags = (mod.args ? projectFlags(mod.args) : []).filter(
+      (f) => !excluded.has(f.name),
+    );
     const inputSchema = mod.args
       ? (toJsonSchema(mod.args) as Record<string, unknown>)
       : { type: "object", properties: {} };
@@ -71,6 +93,7 @@ export async function buildManifest(
       importPath,
       meta: mod.meta,
       flags,
+      positionals,
       inputSchema,
     });
 
@@ -79,6 +102,7 @@ export async function buildManifest(
       importPath,
       meta: mod.meta,
       flags,
+      positionals,
       inputSchema,
       load: () => import(pathToFileURL(entry.file).href),
     });
@@ -134,6 +158,7 @@ function renderManifestModule(
     importPath: string;
     meta?: Meta;
     flags: FlagInfo[];
+    positionals: PositionalInfo[];
     inputSchema?: Record<string, unknown>;
   }>,
   header: { formatVersion: number; coreMajor: number; coreVersion: string },
@@ -145,6 +170,7 @@ function renderManifestModule(
     path: ${JSON.stringify(r.path)},
     ${meta}
     flags: ${JSON.stringify(r.flags, null, 2).replace(/\n/g, "\n    ")},
+    positionals: ${JSON.stringify(r.positionals, null, 2).replace(/\n/g, "\n    ")},
     inputSchema: ${JSON.stringify(r.inputSchema ?? { type: "object", properties: {} }, null, 2).replace(/\n/g, "\n    ")},
     load: () => import(${JSON.stringify(r.importPath)}),
   }`;

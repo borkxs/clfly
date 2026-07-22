@@ -18,8 +18,16 @@ export interface ManifestRoute {
   /** Lazy import thunk — emitted by `clfly build`. */
   load: () => Promise<unknown>;
   meta?: Meta;
-  /** Serializable flag projection for completions / help without loading the module. */
+  /**
+   * Serializable flag projection of `args` for completions / help without loading
+   * the module. Excludes keys that are positionals (path params / `positionals` export).
+   */
   flags: FlagInfo[];
+  /**
+   * Positional args distinct from flags: `[segment]` path params and the optional
+   * `positionals` export. Additive in formatVersion 1 — see docs/manifest.md.
+   */
+  positionals: PositionalInfo[];
   /** JSON Schema projection of `args` (plus path params merged at MCP serve time). */
   inputSchema?: Record<string, unknown>;
   /** Import specifier written into the generated file (relative to the manifest). */
@@ -120,6 +128,29 @@ export interface FlagInfo {
   deprecated?: boolean;
 }
 
+/** Where a positional comes from in the command module / route tree. */
+export type PositionalSource = "path" | "export";
+
+/**
+ * Serializable positional projection — never listed under Options in help.
+ * Additive on ManifestRoute in formatVersion 1.
+ */
+export interface PositionalInfo {
+  name: string;
+  description?: string;
+  /** `path` = `[name]` directory segment; `export` = `positionals` schema export. */
+  source: PositionalSource;
+  /** When true, synopsis uses `[name]`; otherwise `<name>`. */
+  optional: boolean;
+  /** Variadic rest — synopsis uses `name...`. */
+  variadic?: boolean;
+  /**
+   * When true, `--name` is still accepted at parse time (same key present on `args`).
+   * Help renders `(also --name)`.
+   */
+  alsoFlag?: boolean;
+}
+
 export interface RouteSegment {
   type: "static" | "dynamic";
   name: string;
@@ -139,6 +170,8 @@ export interface RouteNode {
   manifestMeta?: Meta;
   /** Baked flags from manifest for help/completions before load. */
   manifestFlags?: FlagInfo[];
+  /** Baked positionals from manifest for help before load. */
+  manifestPositionals?: PositionalInfo[];
 }
 
 export interface ResolvedRoute {

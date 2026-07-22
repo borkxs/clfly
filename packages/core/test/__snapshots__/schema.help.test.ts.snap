@@ -1,5 +1,20 @@
 // Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
 
+exports[`schema → JSON Schema → help > snapshots Arguments section for path params (not as flags) 1`] = `
+"Usage: demo users <id> show [options]
+
+Show a single user
+
+Arguments:
+  <id>  User id (also --id)
+
+Options:
+  -h, --help     Show help
+  -V, --version  Show version
+      --json     Emit JSON
+"
+`;
+
 exports[`schema → JSON Schema → help > snapshots help text 1`] = `
 "Usage: demo users list [options]
 
@@ -13,5 +28,21 @@ Options:
   -h, --help            Show help
   -V, --version         Show version
       --json            Emit JSON
+"
+`;
+
+exports[`schema → JSON Schema → help > snapshots optional + variadic export positionals in synopsis 1`] = `
+"Usage: demo search [query] [paths...] [options]
+
+Search the workspace
+
+Arguments:
+  [query]     Search query
+  [paths...]  File paths
+
+Options:
+  -h, --help     Show help
+  -V, --version  Show version
+      --json     Emit JSON
 "
 `;

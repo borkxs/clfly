@@ -32,7 +32,8 @@ interface Manifest {
 |---|---|---|---|
 | `path` | `string[]` | yes | Path segments from the commands tree. Static segments are bare names (`"users"`). Dynamic `[param]` directory segments are stored as `":param"` (e.g. `":id"`). Root `index` is represented as an empty path `[]`. |
 | `meta` | `Meta` | no | Command metadata. Absent when the module exports none. |
-| `flags` | `FlagInfo[]` | yes | Flat flag projection of `args` for completions/help without loading the module. Empty array when there is no `args` schema. |
+| `flags` | `FlagInfo[]` | yes | Flat flag projection of `args` for completions/help without loading the module. **Excludes** keys that are positionals (path params / `positionals` export). Empty array when there are no flag args. |
+| `positionals` | `PositionalInfo[]` | yes | **Additive in formatVersion 1.** Path params and the optional `positionals` export, distinct from `flags`. Empty array when the command has neither. Older manifests may omit this field; loaders should treat absence as `[]`. |
 | `inputSchema` | `object` | no | JSON Schema projection of the command's `args` schema. When `args` is absent, codegen emits `{ type: "object", properties: {} }`. Path params are **not** merged into this object in the manifest (MCP may merge them at serve time). |
 | `outputSchema` | `object` | no | **Planned (additive in v1).** JSON Schema projection of an optional `output` export. Absent means the return value is untyped JSON everywhere. |
 | `importPath` | `string` | no | Relative import specifier written by codegen (for the generated module). Ecosystem UIs should not rely on this. |
@@ -47,7 +48,7 @@ interface Manifest {
 
 ### `FlagInfo`
 
-Derived convenience view of `args` properties (not a second source of truth — prefer `inputSchema` when you need full schema fidelity).
+Derived convenience view of `args` properties that are **not** positionals (not a second source of truth — prefer `inputSchema` when you need full schema fidelity).
 
 | Field | Type | Required | Description |
 |---|---|---|---|
@@ -59,6 +60,19 @@ Derived convenience view of `args` properties (not a second source of truth — 
 | `enum` | `unknown[]` | no | Allowed values when enumerable. |
 | `alias` | `string` | no | Short alias if any. |
 | `deprecated` | `boolean` | no | Flag-level deprecation. |
+
+### `PositionalInfo`
+
+**Additive in formatVersion 1** (no bump). Distinct from `flags` so help, docs, and completions do not project path params as `--flags`.
+
+| Field | Type | Required | Description |
+|---|---|---|---|
+| `name` | `string` | yes | Positional name (no brackets). |
+| `source` | `"path" \| "export"` | yes | `path` = `[name]` directory segment; `export` = command module `positionals` schema. |
+| `optional` | `boolean` | yes | Synopsis: `<name>` when false, `[name]` when true. |
+| `variadic` | `boolean` | no | When true, synopsis uses `name...`. |
+| `description` | `string` | no | From args / positionals schema descriptions when available. |
+| `alsoFlag` | `boolean` | no | When true, `--name` is still accepted at parse time (same key on `args`). Help shows `(also --name)`. |
 
 ## Naming projections (derived, not stored)
 
@@ -84,7 +98,7 @@ Audit against the ecosystem UI checklist (command paths, names, descriptions, de
 | Deprecation | ✅ `meta.deprecated` |
 | Args JSON Schema | ✅ `inputSchema` |
 | Output JSON Schema | ❌ Planned via optional `output` → `outputSchema` |
-| Positional / path-param info | ⚠️ Dynamics appear only as `":name"` in `path`. No descriptions, no separate param list, no projection of the optional `positionals` export |
+| Positional / path-param info | ✅ `positionals: PositionalInfo[]` (additive; older files may omit → treat as `[]`). Dynamics also remain as `":name"` in `path`. |
 | CLI binary name | ❌ Not on the manifest (comes from `createCli({ name })` / package bin) |
 
 Gaps above are candidates for additive fields before palette/docs ship — never for coupling to core.

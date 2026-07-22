@@ -1,0 +1,61 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`demo-cli help snapshots > deploy --help 1`] = `
+"Usage: demo deploy [options]
+
+Deploy the current workspace
+
+Options:
+      --env <value>  Target environment (staging|production) [default: staging]
+      --dryRun       Print actions without applying [default: false]
+  -h, --help         Show help
+  -V, --version      Show version
+      --json         Emit JSON
+"
+`;
+
+exports[`demo-cli help snapshots > root --help 1`] = `
+"Usage: demo <command> [options]
+
+demo CLI
+
+Commands:
+  deploy
+  users
+  mcp     MCP transport (mcp serve)
+
+Options:
+  -h, --help     Show help
+  -V, --version  Show version
+      --json     Emit JSON
+"
+`;
+
+exports[`demo-cli help snapshots > users <id> show --help (path param as Argument, not Option) 1`] = `
+"Usage: demo users <id> show [options]
+
+Show a single user
+
+Arguments:
+  <id>  User id (also --id)
+
+Options:
+  -h, --help     Show help
+  -V, --version  Show version
+      --json     Emit JSON
+"
+`;
+
+exports[`demo-cli help snapshots > users list --help 1`] = `
+"Usage: demo users list [options]
+
+List users in the workspace
+
+Options:
+      --status <value>  Filter by status (active|churned)
+      --limit <value>   Max rows [default: 50]
+  -h, --help            Show help
+  -V, --version         Show version
+      --json            Emit JSON
+"
+`;

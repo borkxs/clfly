@@ -1,5 +1,6 @@
 import type { ResolvedRoute, RouteNode } from "../types.js";
 import { ClflyError } from "../errors.js";
+import { nearestMatch } from "../parse/suggest.js";
 
 /**
  * Walk argv tokens against the route tree.
@@ -40,7 +41,7 @@ export function resolveRoute(
     // Subcommands exist but token matched none — hard error (no silent
     // fallback to an index/leaf that shares the node).
     if (node.children.size > 0) {
-      const suggestion = suggest(root, tokens);
+      const suggestion = suggestCommand(root, token);
       throw new ClflyError(
         `Unknown command: ${[...commandPath, token].join(" ")}` +
           (suggestion ? `\nDid you mean: ${suggestion}?` : "") +
@@ -53,7 +54,8 @@ export function resolveRoute(
 
   // Prefer deepest executable node (dev file or manifest load thunk)
   if (!node.commandFile && !node.load) {
-    const suggestion = suggest(root, tokens);
+    const needle = tokens[i] ?? tokens[tokens.length - 1];
+    const suggestion = needle ? suggestCommand(root, needle) : undefined;
     throw new ClflyError(
       `Unknown command: ${tokens.slice(0, i + 1).join(" ") || "(root)"}` +
         (suggestion ? `\nDid you mean: ${suggestion}?` : "") +
@@ -76,20 +78,8 @@ function findDynamicChild(node: RouteNode): RouteNode | undefined {
   return undefined;
 }
 
-function suggest(root: RouteNode, tokens: string[]): string | undefined {
-  const names = collectStaticNames(root);
-  const needle = tokens.find((t) => !t.startsWith("-"));
-  if (!needle) return undefined;
-  let best: string | undefined;
-  let bestDist = Infinity;
-  for (const name of names) {
-    const d = levenshtein(needle, name);
-    if (d < bestDist && d <= 2) {
-      bestDist = d;
-      best = name;
-    }
-  }
-  return best;
+function suggestCommand(root: RouteNode, needle: string): string | undefined {
+  return nearestMatch(needle, collectStaticNames(root));
 }
 
 function collectStaticNames(node: RouteNode, out: string[] = []): string[] {
@@ -98,27 +88,6 @@ function collectStaticNames(node: RouteNode, out: string[] = []): string[] {
     collectStaticNames(child, out);
   }
   return out;
-}
-
-function levenshtein(a: string, b: string): number {
-  const m = a.length;
-  const n = b.length;
-  const dp: number[][] = Array.from({ length: m + 1 }, () =>
-    Array.from({ length: n + 1 }, () => 0),
-  );
-  for (let i = 0; i <= m; i++) dp[i]![0] = i;
-  for (let j = 0; j <= n; j++) dp[0]![j] = j;
-  for (let i = 1; i <= m; i++) {
-    for (let j = 1; j <= n; j++) {
-      const cost = a[i - 1] === b[j - 1] ? 0 : 1;
-      dp[i]![j] = Math.min(
-        dp[i - 1]![j]! + 1,
-        dp[i]![j - 1]! + 1,
-        dp[i - 1]![j - 1]! + cost,
-      );
-    }
-  }
-  return dp[m]![n]!;
 }
 
 /** List top-level / nested subcommand names for help. */
