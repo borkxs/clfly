@@ -25,20 +25,18 @@ export default async function (opts: z.infer<typeof args>, ctx) {
 ```
 commands/
   users/
-    list.ts              → demo users list       → MCP tool users_list
+    list.ts              → mycli users list       → MCP tool users_list
     [id]/
-      show.ts            → demo users <id> show  → MCP tool users_show
-  deploy.ts              → demo deploy           → MCP tool deploy
+      show.ts            → mycli users <id> show  → MCP tool users_show
+  deploy.ts              → mycli deploy           → MCP tool deploy
 ```
 
 ```bash
-cd examples/demo-cli && npm link
+mycli users list --status active
+mycli users list --json
 
-demo users list --status active
-demo users list --json
-
-# Same folder → MCP server (stdio)
-demo mcp serve
+# Same commands/ tree → MCP server (stdio)
+mycli mcp serve
 ```
 
 **Write a folder of functions, get a CLI and an MCP server.**
@@ -81,25 +79,22 @@ What no package does: treat a directory of `(schema, function)` pairs as the **s
 
 ## Quick start
 
-```bash
-pnpm install
-pnpm --filter @clfly/core build
-pnpm --filter demo-cli demo -- users list --help
-pnpm --filter demo-cli demo -- mcp serve   # point an MCP host at this process
-```
+To run the reference CLI in this repo, see [`examples/demo-cli`](./examples/demo-cli).
+
+Wire your own:
 
 ```ts
 import { createCli, listMcpTools, serveMcpStdio } from "@clfly/core";
 
 const cli = createCli({
-  name: "demo",
+  name: "mycli",
   commandsDir: new URL("./commands", import.meta.url),
 });
 
 await cli.run(process.argv.slice(2));
-// demo mcp serve → same tree as MCP tools over stdio
+// mycli mcp serve → same tree as MCP tools over stdio
 
 // Or programmatically:
-const tools = await listMcpTools({ name: "demo", commandsDir: "./commands" });
-// await serveMcpStdio({ name: "demo", commandsDir: "./commands" });
+const tools = await listMcpTools({ name: "mycli", commandsDir: "./commands" });
+// await serveMcpStdio({ name: "mycli", commandsDir: "./commands" });
 ```
