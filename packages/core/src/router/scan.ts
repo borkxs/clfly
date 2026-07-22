@@ -6,6 +6,8 @@ import { ClflyError } from "../errors.js";
 import { assertSchemaNoReservedFlags } from "../schema/reserved.js";
 
 const COMMAND_EXTS = new Set([".ts", ".js", ".mts", ".mjs"]);
+/** Declaration emit (e.g. add.d.ts) — extname is `.ts`, so skip explicitly. */
+const DECLARATION_FILE = /\.d\.(ts|mts|cts|js|mjs|cjs)$/;
 
 export function scanCommandsDir(commandsDir: string): RouteNode {
   const root: RouteNode = {
@@ -14,6 +16,11 @@ export function scanCommandsDir(commandsDir: string): RouteNode {
   };
   walk(commandsDir, commandsDir, root);
   return root;
+}
+
+function isCommandModuleFile(entry: string): boolean {
+  if (DECLARATION_FILE.test(entry)) return false;
+  return COMMAND_EXTS.has(extname(entry));
 }
 
 function walk(commandsDir: string, dir: string, parent: RouteNode): void {
@@ -44,8 +51,8 @@ function walk(commandsDir: string, dir: string, parent: RouteNode): void {
     }
 
     if (!st.isFile()) continue;
+    if (!isCommandModuleFile(entry)) continue;
     const ext = extname(entry);
-    if (!COMMAND_EXTS.has(ext)) continue;
     const name = basename(entry, ext);
 
     if (name === "index") {

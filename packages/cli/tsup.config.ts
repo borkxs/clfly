@@ -2,7 +2,6 @@ import { defineConfig } from "tsup";
 
 const shared = {
   format: ["esm"] as const,
-  dts: true,
   sourcemap: true,
   target: "node20" as const,
   splitting: false,
@@ -19,13 +18,22 @@ export default defineConfig([
   },
   {
     ...shared,
+    // Runtime-scanned modules — no .d.ts beside them (would become fake routes).
     entry: {
       "commands/init": "src/commands/init.ts",
       "commands/add": "src/commands/add.ts",
       "commands/build": "src/commands/build.ts",
       "commands/completions": "src/commands/completions.ts",
+    },
+    clean: false,
+    dts: false,
+  },
+  {
+    ...shared,
+    entry: {
       "scaffold/index": "src/scaffold/index.ts",
     },
     clean: false,
+    dts: true,
   },
 ]);

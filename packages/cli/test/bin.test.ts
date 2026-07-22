@@ -90,6 +90,17 @@ describe("clfly bin", () => {
     expect(stdout).toContain("build");
     expect(stdout).toContain("completions");
     expect(stdout).toContain("mcp");
+    expect(stdout).not.toMatch(/\badd\.d\b/);
+    expect(stdout).not.toMatch(/\bbuild\.d\b/);
+  });
+
+  it("bare invocation prints help when there is no root index", async () => {
+    const { stdout, stderr, code } = await run([]);
+    expect(code).toBe(0);
+    expect(stderr).toBe("");
+    expect(stdout).toContain("Usage: clfly");
+    expect(stdout).toContain("init");
+    expect(stdout).not.toMatch(/Unknown command/);
   });
 
   it("init scaffolds a runnable project", async () => {

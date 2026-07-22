@@ -109,6 +109,20 @@ describe("createCli integration", () => {
     expect(out.text()).toContain("--status");
   });
 
+  it("runs root index on bare argv", async () => {
+    const out = collectStream();
+    const cli = createCli({
+      name: "demo",
+      commandsDir: demoCommands,
+      packageJsonPath: demoPkg,
+      stdout: out.stream,
+      stderr: collectStream().stream,
+    });
+    const result = await cli.run([]);
+    expect(result.exitCode).toBe(0);
+    expect(out.text()).toContain("demo — try");
+  });
+
   it("reports validation errors with flag + help excerpt", async () => {
     const err = collectStream();
     const cli = createCli({

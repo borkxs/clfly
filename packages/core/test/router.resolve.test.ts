@@ -54,4 +54,18 @@ describe("router resolve", () => {
   it("errors on unknown command", () => {
     expect(() => resolveRoute(tree, ["nope"])).toThrow(ClflyError);
   });
+
+  it("skips TypeScript declaration emit next to command modules", () => {
+    const root = mkdtempSync(join(tmpdir(), "clfly-dts-"));
+    const commands = join(root, "commands");
+    mkdirSync(commands, { recursive: true });
+    writeFileSync(join(commands, "add.js"), "export default async () => {}");
+    writeFileSync(join(commands, "add.d.ts"), "export {};");
+    writeFileSync(join(commands, "build.d.ts"), "export {};");
+    const scanned = scanCommandsDir(commands);
+    expect([...scanned.children.keys()].sort()).toEqual(["add"]);
+    expect(scanned.children.get("add")?.commandFile?.endsWith("add.js")).toBe(
+      true,
+    );
+  });
 });

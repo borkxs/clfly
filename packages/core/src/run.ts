@@ -180,7 +180,12 @@ async function runCli(ctx: {
 
   const pathTokens = stripReserved(ctx.argv);
 
-  if (wantsHelp(ctx.argv) && pathTokens.length === 0) {
+  // Root help: explicit --help, or bare invocation with no root index command.
+  const noRootCommand = !ctx.tree.commandFile && !ctx.tree.load;
+  if (
+    pathTokens.length === 0 &&
+    (wantsHelp(ctx.argv) || noRootCommand)
+  ) {
     const help = renderHelp({
       name: ctx.name,
       commandPath: [],
