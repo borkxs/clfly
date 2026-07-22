@@ -32,12 +32,13 @@ commands/
 ```
 
 ```bash
-# CLI
-pnpm --filter demo-cli demo -- users list --status active
-pnpm --filter demo-cli demo -- users list --json
+cd examples/demo-cli && npm link
+
+demo users list --status active
+demo users list --json
 
 # Same folder → MCP server (stdio)
-pnpm --filter demo-cli demo -- mcp serve
+demo mcp serve
 ```
 
 **Write a folder of functions, get a CLI and an MCP server.**
