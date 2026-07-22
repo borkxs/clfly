@@ -1,0 +1,54 @@
+{
+  "name": "@clfly/cli",
+  "version": "0.0.2",
+  "description": "File-based routing for CLIs — one commands/ tree becomes a CLI, shell completions, and an MCP server. Pre-release.",
+  "type": "module",
+  "license": "MIT",
+  "bin": {
+    "clfly": "./dist/bin.js"
+  },
+  "publishConfig": {
+    "access": "public"
+  },
+  "files": [
+    "dist",
+    "README.md",
+    "LICENSE"
+  ],
+  "keywords": [
+    "cli",
+    "cli-framework",
+    "mcp",
+    "mcp-server",
+    "zod",
+    "standard-schema",
+    "json-schema",
+    "file-based-routing",
+    "openapi",
+    "typescript",
+    "agents"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/borkxs/clfly.git",
+    "directory": "packages/cli"
+  },
+  "homepage": "https://github.com/borkxs/clfly#readme",
+  "bugs": {
+    "url": "https://github.com/borkxs/clfly/issues"
+  },
+  "engines": {
+    "node": ">=20"
+  },
+  "scripts": {
+    "build": "tsup && node -e \"import('node:fs').then(fs => fs.chmodSync('dist/bin.js', 0o755))\"",
+    "test": "vitest run",
+    "typecheck": "tsc -p tsconfig.json --noEmit"
+  },
+  "devDependencies": {
+    "@types/node": "^22.15.3",
+    "tsup": "^8.5.0",
+    "typescript": "^5.8.3",
+    "vitest": "^3.1.3"
+  }
+}

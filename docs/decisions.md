@@ -62,3 +62,13 @@ Status: **Accepted** unless marked **Open**.
 | **B. Dev-only validation** (skip in prod / compiled manifest runs) | Keeps prod hot path cheap; still catches drift during development | Prod can emit invalid JSON that MCP/OpenAPI consumers reject; “works in prod, fails in the client” class of bug |
 
 Call needed before M3 wires `outputSchema` and before M4a freezes response schemas.
+
+---
+
+### First npm publish (`0.0.1`) is manual; changesets start afterward
+
+**Accepted.** The initial `0.0.1` publish of the public CLI package is a pre-release stub and predates the changesets release flow. Publish that version manually (`npm publish` from the package directory). Do not drive it through changesets, and do not add CI publish scripts for it. Starting at the next version, bumps and changelogs go through `@changesets/cli` as usual.
+
+### Public CLI package is `@clfly/cli` (bin still `clfly`)
+
+**Accepted.** npm rejected the unscoped name `clfly` as too similar to existing `mlly` (typosquat / similarity policy). Ship the CLI as `@clfly/cli` under the `clfly` org, with `bin.clfly` so installs still expose the `clfly` command. Revisit a bare-name appeal with npm support later if desired; do not block the release on it.
