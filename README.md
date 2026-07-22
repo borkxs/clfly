@@ -35,6 +35,8 @@ commands/
 
 ```bash
 mycli users list --status active
+mycli users u_1 show
+mycli deploy --env staging --dryRun
 mycli users list --json
 mycli mcp serve          # same tree, now it's an MCP server over stdio
 ```
