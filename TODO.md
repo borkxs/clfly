@@ -4,8 +4,8 @@
 
 See `docs/decisions.md`, `docs/manifest.md`, `docs/ecosystem.md`, `docs/conventions.md`, `docs/scaffolder.md`.
 
-- **v0.0.4** — root scoping, agent conventions, MCP harden (outputSchema, collision ADR docs, SDK lazy-import / `@clfly/core/mcp`), real MCP E2E against init/add. See conversation lock-ins.
-- **Optional `output` export** — types + projection (validation: always when exported). Part of v0.0.4 / M3 generalized.
+- **v0.0.6** — root scoping, agent conventions, MCP harden (outputSchema, collision ADR docs, SDK lazy-import / `@clfly/core/mcp`), real MCP E2E against init/add. See conversation lock-ins.
+- **Optional `output` export** — types + projection (validation: always when exported). Part of v0.0.6 / M3 generalized.
 - **HTTP mapping** — RPC `POST /…` only; document now, implement at M4a/M4b.
 - **Manifest gaps for palette/docs** — additive fields as needed; never couple ecosystem to core.
 - **`clfly dev mcp [dir]`** — backlog.

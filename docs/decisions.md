@@ -76,4 +76,4 @@ Status: **Accepted** unless marked **Open**.
 
 ### MCP tool naming — hard-fail collisions; exclude root index
 
-**Accepted.** Tool names are public API: path segments minus dynamics, joined with `_`; sanitize non `[a-zA-Z0-9_-]` to `_`. Root `commands/index.ts` is **not** projected (no tool named `index`). Nested `users/index.ts` → `users`. Two files mapping to the same name hard-fail at scan/build/add with both files named in the error — never `_2` suffixes. Full MCP harden remains v0.0.4; the naming rule is enforced wherever tools are projected or `add` validates.
+**Accepted.** Tool names are public API: path segments minus dynamics, joined with `_`; sanitize non `[a-zA-Z0-9_-]` to `_`. Root `commands/index.ts` is **not** projected (no tool named `index`). Nested `users/index.ts` → `users`. Two files mapping to the same name hard-fail at scan/build/add with both files named in the error — never `_2` suffixes. Full MCP harden remains v0.0.6; the naming rule is enforced wherever tools are projected or `add` validates.
