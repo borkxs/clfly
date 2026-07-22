@@ -48,6 +48,18 @@ pnpm --filter demo-cli demo -- mcp serve
 - **M2:** `clfly build` lazy manifest + formatVersion guard, bash/zsh/fish completions, global `--json`
 - **M3 (this release):** `mycli mcp serve` — every command is an MCP tool (name from path, `inputSchema` from JSON Schema, handler = default export)
 
+## Prior art (and why this exists)
+
+clfly stands on a lot of good work — none of it quite does this.
+
+- **[oclif](https://oclif.io)** proved filesystem routing for CLIs (`src/commands/foo/bar.ts` → `cli foo bar`) and manifests for fast startup. But commands are classes with framework-specific static flag definitions — the schema is entangled code you can't hand to anything else.
+- **[trpc-cli](https://github.com/mmkal/trpc-cli)** proved the schema pipeline: Standard Schema in, JSON Schema as the interchange, CLI flags out, validator-agnostic. But the command tree is a tRPC router object you assemble by hand.
+- **[stricli](https://bloomberg.github.io/stricli/)** wrote the best critique of filesystem routing — runtime directory scanning is slow and magic. We think the objection is right and the conclusion is wrong: clfly scans in dev and compiles a lazy, versioned manifest for production, the same answer Next.js gives for routes.
+- **[citty](https://github.com/unjs/citty), [brocli](https://github.com/drizzle-team/brocli), zod-opts** each nail a piece — `defineCommand` ergonomics, schema-driven flags, `.describe()` → help — without filesystem routing or a portable schema layer.
+- **[express-file-routing](https://github.com/matthiaaas/express-file-routing)** and Next.js showed that a file tree with `[param]` segments is a perfectly good router. For HTTP. Nobody applied it to argv.
+
+What no package does: treat a directory of `(schema, function)` pairs as the **single source of truth** and derive every interface from it. Your command modules export plain data — a Standard Schema and a default function — and clfly projects that tree into a CLI, `--help`, shell completions, and an MCP server, with an HTTP transport on the roadmap. The schema is portable JSON Schema all the way down, so the same file that answers `mycli users list --status active` is, unmodified, a validated MCP tool an agent can call. Everyone building agent tooling today writes that schema twice. You write a folder of functions once.
+
 ## Design notes
 
 - **Schema as portable data.** JSON Schema is the interchange format for help, completions, and MCP tool defs.
