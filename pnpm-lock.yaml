@@ -40,7 +40,7 @@ importers:
   packages/cli:
     dependencies:
       '@clfly/core':
-        specifier: workspace:*
+        specifier: workspace:^
         version: link:../core
       zod:
         specifier: ^4.0.5
@@ -96,7 +96,7 @@ importers:
   packages/create:
     dependencies:
       '@clfly/cli':
-        specifier: workspace:*
+        specifier: workspace:^
         version: link:../cli
     devDependencies:
       '@types/node':

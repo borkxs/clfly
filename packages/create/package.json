@@ -1,8 +1,9 @@
 {
   "name": "@clfly/create",
-  "version": "0.0.3",
+  "version": "0.0.4",
   "description": "Scaffold a clfly CLI (npm create clfly)",
   "type": "module",
+  "license": "MIT",
   "bin": {
     "create-clfly": "./dist/index.js"
   },
@@ -12,14 +13,27 @@
       "import": "./dist/index.js"
     }
   },
-  "files": ["dist"],
+  "publishConfig": {
+    "access": "public"
+  },
+  "files": ["dist", "LICENSE"],
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/borkxs/clfly.git",
+    "directory": "packages/create"
+  },
+  "homepage": "https://github.com/borkxs/clfly#readme",
+  "bugs": {
+    "url": "https://github.com/borkxs/clfly/issues"
+  },
   "scripts": {
     "build": "tsup && node -e \"import('node:fs').then(fs => fs.chmodSync('dist/index.js', 0o755))\"",
     "test": "node -e \"console.log('covered via @clfly/cli init tests')\"",
-    "typecheck": "tsc -p tsconfig.json --noEmit"
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "prepublishOnly": "pnpm run build"
   },
   "dependencies": {
-    "@clfly/cli": "workspace:*"
+    "@clfly/cli": "workspace:^"
   },
   "devDependencies": {
     "@types/node": "^22.15.3",
@@ -28,6 +42,5 @@
   },
   "engines": {
     "node": ">=20"
-  },
-  "license": "MIT"
+  }
 }
