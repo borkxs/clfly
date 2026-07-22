@@ -15,6 +15,19 @@
   "files": [
     "dist"
   ],
+  "keywords": [
+    "cli",
+    "cli-framework",
+    "mcp",
+    "mcp-server",
+    "zod",
+    "standard-schema",
+    "json-schema",
+    "file-based-routing",
+    "openapi",
+    "typescript",
+    "agents"
+  ],
   "scripts": {
     "build": "tsup",
     "test": "vitest run",

@@ -98,14 +98,22 @@ clfly stands on a lot of good work — none of it quite does this.
 - **[citty](https://github.com/unjs/citty)**, **[brocli](https://github.com/drizzle-team/brocli)**, **zod-opts** each nail a piece — `defineCommand` ergonomics, schema-driven flags, `.describe()` → help — without filesystem routing or a portable schema layer.
 - **Next.js / [express-file-routing](https://github.com/matthiaaas/express-file-routing)** showed a file tree with `[param]` segments is a perfectly good router. For HTTP. Nobody had applied it to argv.
 
-The gap all of them leave: no package treats a directory of `(schema, function)` pairs as the single source of truth and derives *every* interface — CLI, help, completions, MCP, and (roadmap) HTTP — from that one tree.
+The gap all of them leave: no package treats a directory of `(schema, function)` pairs as the single source of truth and derives *every* interface — CLI, help, completions, MCP, and (roadmap) HTTP / OpenAPI — from that one tree.
 
 ## Roadmap
 
 - ✅ **M1** — router, parsing, validation, `--help`/`--version`, reserved-flag errors
 - ✅ **M2** — `clfly build` manifest, bash/zsh/fish completions, global `--json`
 - ✅ **M3** — `mycli mcp serve`: every command as an MCP tool
-- ⬜ **M4** — HTTP transport: the same tree as a JSON API
+- ⬜ **M4a** — `clfly export openapi`: OpenAPI 3.1 from the tree (RPC-over-POST paths; no server)
+- ⬜ **M4b** — `clfly http serve`: the same mapping as a live JSON API (auth on by default)
+- ⬜ **M5** — ecosystem packages: `@clfly/docs`, `clfly palette` (TUI), `@clfly/palette` (web ⌘K)
+
+Ecosystem packages consume only the [build manifest](./docs/manifest.md) and the exported OpenAPI document — never `@clfly/core` internals ([ecosystem contract](./docs/ecosystem.md)). Decisions live in [`docs/decisions.md`](./docs/decisions.md).
+
+### Non-goals
+
+Plugins, interactive prompts, i18n, config-file merging, telemetry. Also out of scope: GET/query-param HTTP mapping, content negotiation, streaming responses; web palette auth flows beyond passing a bearer token through; hosted anything — every transport is self-serve.
 
 ## Packages
 
