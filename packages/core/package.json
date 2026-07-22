@@ -1,6 +1,6 @@
 {
   "name": "@clfly/core",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "PostgREST for CLIs — filesystem command trees projected to CLI, help, completions, and MCP",
   "type": "module",
   "license": "MIT",

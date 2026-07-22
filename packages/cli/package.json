@@ -1,6 +1,6 @@
 {
   "name": "@clfly/cli",
-  "version": "0.0.4",
+  "version": "0.0.5",
   "description": "File-based routing for CLIs — one commands/ tree becomes a CLI, shell completions, and an MCP server.",
   "type": "module",
   "license": "MIT",

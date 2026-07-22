@@ -79,7 +79,7 @@ describe("clfly bin", () => {
     const { stdout, stderr, code } = await run(["--version"]);
     expect(code).toBe(0);
     expect(stderr).toBe("");
-    expect(stdout).toBe("0.0.4\n");
+    expect(stdout).toBe("0.0.5\n");
   });
 
   it("--help lists real commands", async () => {

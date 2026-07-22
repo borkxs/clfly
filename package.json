@@ -11,5 +11,10 @@
   "devDependencies": {
     "@changesets/cli": "^2.29.5",
     "typescript": "^5.8.3"
+  },
+  "pnpm": {
+    "overrides": {
+      "human-id": "4.1.3"
+    }
   }
 }

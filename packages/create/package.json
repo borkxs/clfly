@@ -1,6 +1,6 @@
 {
   "name": "@clfly/create",
-  "version": "0.0.4",
+  "version": "0.0.5",
   "description": "Scaffold a clfly CLI (npm create clfly)",
   "type": "module",
   "license": "MIT",
@@ -16,7 +16,10 @@
   "publishConfig": {
     "access": "public"
   },
-  "files": ["dist", "LICENSE"],
+  "files": [
+    "dist",
+    "LICENSE"
+  ],
   "repository": {
     "type": "git",
     "url": "git+https://github.com/borkxs/clfly.git",
