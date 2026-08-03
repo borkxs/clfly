@@ -103,6 +103,17 @@ describe("schema → JSON Schema → help", () => {
     );
   });
 
+  it("hard-errors on reserved spool flag", () => {
+    const flags = projectFlags(
+      z.object({
+        spool: z.boolean().optional(),
+      }),
+    );
+    expect(() => assertNoReservedFlags(["users", "list"], flags)).toThrow(
+      ReservedFlagError,
+    );
+  });
+
   it("hard-errors on reserved aliases", () => {
     const flags = projectFlags(
       z.object({

@@ -5,7 +5,7 @@ import {
   listMcpTools,
   mergePathParamsIntoSchema,
   toolNameFromPath,
-} from "../src/mcp/serve.js";
+} from "../src/mcp/project.js";
 import { createCli } from "../src/run.js";
 import { Writable } from "node:stream";
 import { mkdirSync, writeFileSync, mkdtempSync, rmSync } from "node:fs";
@@ -99,6 +99,83 @@ describe("mcp serve wiring", () => {
     const result = await cli.run(["mcp"]);
     expect(result.exitCode).toBe(0);
     expect(out.text()).toContain("mcp serve");
+  });
+
+  it("documents --root on mcp serve --help", async () => {
+    const out = collectStream();
+    const cli = createCli({
+      name: "demo",
+      commandsDir: demoCommands,
+      packageJsonPath: demoPkg,
+      stdout: out.stream,
+      stderr: collectStream().stream,
+    });
+    const result = await cli.run(["mcp", "serve", "--help"]);
+    expect(result.exitCode).toBe(0);
+    expect(out.text()).toContain("--root");
+  });
+
+  it("excludes meta.interactive commands from tools", async () => {
+    const dir = mkdtempSync(join(tmpdir(), "clfly-mcp-interactive-"));
+    writeFileSync(
+      join(dir, "prompt.ts"),
+      `export const meta = { description: "TTY", interactive: true };
+export default async function () { return "nope"; }
+`,
+    );
+    writeFileSync(
+      join(dir, "ok.ts"),
+      `export const meta = { description: "ok" };
+export default async function () { return { ok: true }; }
+`,
+    );
+    const tools = await listMcpTools({ name: "t", commandsDir: dir });
+    expect(tools.map((t) => t.name).sort()).toEqual(["ok"]);
+    rmSync(dir, { recursive: true, force: true });
+  });
+
+  it("projects outputSchema and returns structuredContent", async () => {
+    const dir = mkdtempSync(join(tmpdir(), "clfly-mcp-output-"));
+    writeFileSync(
+      join(dir, "ping.ts"),
+      `import { z } from "zod";
+export const meta = { description: "ping" };
+export const args = z.object({});
+export const output = z.object({ pong: z.boolean() });
+export default async function () { return { pong: true }; }
+`,
+    );
+    const tools = await listMcpTools({ name: "t", commandsDir: dir });
+    const ping = tools.find((t) => t.name === "ping")!;
+    expect(ping.outputSchema).toBeTruthy();
+    const result = await invokeMcpTool(
+      ping,
+      {},
+      { cwd: dir, env: process.env, scoped: true },
+    );
+    expect(result.isError).toBeFalsy();
+    expect(result.structuredContent).toEqual({ pong: true });
+    rmSync(dir, { recursive: true, force: true });
+  });
+
+  it("notes interactive commands in help", async () => {
+    const dir = mkdtempSync(join(tmpdir(), "clfly-help-interactive-"));
+    writeFileSync(
+      join(dir, "prompt.ts"),
+      `export const meta = { description: "Ask", interactive: true };
+export default async function () {}
+`,
+    );
+    const out = collectStream();
+    const cli = createCli({
+      name: "t",
+      commandsDir: dir,
+      stdout: out.stream,
+      stderr: collectStream().stream,
+    });
+    await cli.run(["prompt", "--help"]);
+    expect(out.text()).toContain("CLI-only (interactive)");
+    rmSync(dir, { recursive: true, force: true });
   });
 
   it("lists mcp in root --help", async () => {

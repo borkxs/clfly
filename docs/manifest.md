@@ -35,7 +35,7 @@ interface Manifest {
 | `flags` | `FlagInfo[]` | yes | Flat flag projection of `args` for completions/help without loading the module. **Excludes** keys that are positionals (path params / `positionals` export). Empty array when there are no flag args. |
 | `positionals` | `PositionalInfo[]` | yes | **Additive in formatVersion 1.** Path params and the optional `positionals` export, distinct from `flags`. Empty array when the command has neither. Older manifests may omit this field; loaders should treat absence as `[]`. |
 | `inputSchema` | `object` | no | JSON Schema projection of the command's `args` schema. When `args` is absent, codegen emits `{ type: "object", properties: {} }`. Path params are **not** merged into this object in the manifest (MCP may merge them at serve time). |
-| `outputSchema` | `object` | no | **Planned (additive in v1).** JSON Schema projection of an optional `output` export. Absent means the return value is untyped JSON everywhere. |
+| `outputSchema` | `object` | no | **Additive in formatVersion 1.** JSON Schema projection of an optional `output` export. Absent means the return value is untyped JSON everywhere. |
 | `importPath` | `string` | no | Relative import specifier written by codegen (for the generated module). Ecosystem UIs should not rely on this. |
 | `load` | `() => Promise<unknown>` | runtime | Lazy import thunk. Present in the generated JS module; not a serializable JSON field for third parties. |
 
@@ -45,6 +45,7 @@ interface Manifest {
 |---|---|---|---|
 | `description` | `string` | no | Human/agent-facing summary. Projects into `--help`, MCP tool descriptions, and docs. |
 | `deprecated` | `boolean \| string` | no | `true` or a reason string. Projects into help, JSON Schema `deprecated`, and MCP descriptions. |
+| `interactive` | `boolean` | no | When true, command is CLI-only (TTY interaction in the body). Excluded from MCP tools and OpenAPI; noted in help. |
 
 ### `FlagInfo`
 
@@ -81,7 +82,7 @@ Consumers should use these conventions so they stay aligned with core transports
 | Surface | Rule | Example (`path: ["users", ":id", "show"]`) |
 |---|---|---|
 | CLI invocation | join statics with spaces; dynamics as `<name>` | `users <id> show` |
-| MCP tool name | join with `_`; strip leading `:` from dynamics | `users_id_show` |
+| MCP tool name | drop dynamic segments; join remaining with `_`; sanitize non `[a-zA-Z0-9_-]` → `_` | `users_show` |
 | HTTP (M4) | `POST /` + segments joined by `/`; `:name` → `{name}` | `POST /users/{id}/show` |
 
 If a consumer needs a derived name that isn't expressible from `path` + these rules, extend the manifest — do not special-case inside an ecosystem package.
@@ -97,7 +98,7 @@ Audit against the ecosystem UI checklist (command paths, names, descriptions, de
 | Descriptions | ✅ `meta.description` |
 | Deprecation | ✅ `meta.deprecated` |
 | Args JSON Schema | ✅ `inputSchema` |
-| Output JSON Schema | ❌ Planned via optional `output` → `outputSchema` |
+| Output JSON Schema | ✅ Optional `output` → `outputSchema` (absent when untyped) |
 | Positional / path-param info | ✅ `positionals: PositionalInfo[]` (additive; older files may omit → treat as `[]`). Dynamics also remain as `":name"` in `path`. |
 | CLI binary name | ❌ Not on the manifest (comes from `createCli({ name })` / package bin) |
 

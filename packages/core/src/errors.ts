@@ -21,7 +21,7 @@ export class ValidationError extends ClflyError {
       })
       .join("\n");
     const help = helpExcerpt ? `\n\n${helpExcerpt}` : "";
-    super(`Invalid arguments:\n${body}${help}`);
+    super(`Invalid arguments:\n${body}${help}`, 2);
     this.name = "ValidationError";
     this.issues = issues;
     this.helpExcerpt = helpExcerpt;

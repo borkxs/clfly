@@ -134,7 +134,7 @@ describe("createCli integration", () => {
       stderr: err.stream,
     });
     const result = await cli.run(["users", "list", "--status", "nope"]);
-    expect(result.exitCode).toBe(1);
+    expect(result.exitCode).toBe(2);
     expect(err.text()).toContain("--status");
     expect(err.text()).toMatch(/active|churned/);
     expect(err.text()).toContain("Options:");

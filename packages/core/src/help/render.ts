@@ -29,6 +29,11 @@ export function renderHelp(opts: HelpOptions): string {
     lines.push("");
   }
 
+  if (opts.meta?.interactive) {
+    lines.push("CLI-only (interactive) — not exposed as an MCP tool.");
+    lines.push("");
+  }
+
   if (opts.subcommands && opts.subcommands.length > 0) {
     lines.push("Commands:");
     const withDesc = opts.subcommands.some((s) => s.description);
@@ -81,6 +86,12 @@ export function renderHelp(opts: HelpOptions): string {
       name: "json",
       type: "boolean",
       description: "Emit JSON",
+      optional: true,
+    },
+    {
+      name: "spool",
+      type: "boolean",
+      description: "Write result to .clfly/sessions and print path/envelope",
       optional: true,
     },
   ];

@@ -14,7 +14,11 @@ import {
   loadAndValidateCommand,
   scanCommandsDir,
 } from "../router/scan.js";
-import { projectFlags, toJsonSchema } from "../schema/to-json-schema.js";
+import {
+  projectFlags,
+  toJsonSchema,
+  toOutputJsonSchema,
+} from "../schema/to-json-schema.js";
 import {
   positionalNames,
   projectPositionals,
@@ -61,6 +65,7 @@ export async function buildManifest(
     flags: FlagInfo[];
     positionals: PositionalInfo[];
     inputSchema?: Record<string, unknown>;
+    outputSchema?: Record<string, unknown>;
   }> = [];
 
   for (const entry of files) {
@@ -84,6 +89,9 @@ export async function buildManifest(
     const inputSchema = mod.args
       ? (toJsonSchema(mod.args) as Record<string, unknown>)
       : { type: "object", properties: {} };
+    const outputSchema = mod.output
+      ? (toOutputJsonSchema(mod.output) as Record<string, unknown>)
+      : undefined;
     const importPath = (
       options.toImportPath ?? defaultImportPath
     )(entry.file, outFile);
@@ -95,6 +103,7 @@ export async function buildManifest(
       flags,
       positionals,
       inputSchema,
+      ...(outputSchema ? { outputSchema } : {}),
     });
 
     routes.push({
@@ -104,6 +113,7 @@ export async function buildManifest(
       flags,
       positionals,
       inputSchema,
+      ...(outputSchema ? { outputSchema } : {}),
       load: () => import(pathToFileURL(entry.file).href),
     });
   }
@@ -111,6 +121,11 @@ export async function buildManifest(
   if (tree.children.has("mcp")) {
     throw new ClflyError(
       'Command "mcp" is reserved for the MCP transport (`mcp serve`). Rename your commands/mcp path.',
+    );
+  }
+  if (tree.children.has("sessions")) {
+    throw new ClflyError(
+      'Command "sessions" is reserved for the session store (`sessions list|clean`). Rename your commands/sessions path.',
     );
   }
   assertUniqueToolNames(
@@ -160,18 +175,23 @@ function renderManifestModule(
     flags: FlagInfo[];
     positionals: PositionalInfo[];
     inputSchema?: Record<string, unknown>;
+    outputSchema?: Record<string, unknown>;
   }>,
   header: { formatVersion: number; coreMajor: number; coreVersion: string },
 ): string {
   const routes = records
     .map((r) => {
       const meta = r.meta ? `meta: ${JSON.stringify(r.meta)},` : "";
+      const output = r.outputSchema
+        ? `outputSchema: ${JSON.stringify(r.outputSchema, null, 2).replace(/\n/g, "\n    ")},`
+        : "";
       return `  {
     path: ${JSON.stringify(r.path)},
     ${meta}
     flags: ${JSON.stringify(r.flags, null, 2).replace(/\n/g, "\n    ")},
     positionals: ${JSON.stringify(r.positionals, null, 2).replace(/\n/g, "\n    ")},
     inputSchema: ${JSON.stringify(r.inputSchema ?? { type: "object", properties: {} }, null, 2).replace(/\n/g, "\n    ")},
+    ${output}
     load: () => import(${JSON.stringify(r.importPath)}),
   }`;
     })

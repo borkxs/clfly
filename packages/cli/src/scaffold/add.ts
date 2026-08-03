@@ -1,5 +1,5 @@
 import { existsSync, mkdirSync, writeFileSync } from "node:fs";
-import { dirname, join, relative, resolve } from "node:path";
+import { dirname, join, relative } from "node:path";
 import {
   ClflyError,
   assertUniqueToolNames,
@@ -10,6 +10,7 @@ import {
 } from "@clfly/core";
 import { readProjectValidator } from "./detect.js";
 import { renderCommandStub } from "./template.js";
+import { ensureClflyGitignore } from "./gitignore.js";
 
 export interface AddOptions {
   paths: string[];
@@ -35,14 +36,14 @@ interface PlannedFile {
 
 export async function runAdd(
   opts: AddOptions,
-  ctx: Pick<Context, "cwd" | "stdout" | "stderr" | "json">,
+  ctx: Pick<Context, "cwd" | "stdout" | "stderr" | "json" | "resolvePath">,
 ): Promise<AddResult> {
   const paths = opts.paths ?? [];
   if (paths.length === 0) {
     throw new ClflyError("add requires at least one path (e.g. user/:id/report)", 2);
   }
 
-  const commandsDir = resolve(ctx.cwd, opts.commandsDir ?? "commands");
+  const commandsDir = ctx.resolvePath(opts.commandsDir ?? "commands");
   const force = opts.force ?? false;
   const withOutput = opts.output ?? false;
   const validator = readProjectValidator(ctx.cwd);
@@ -54,7 +55,7 @@ export async function runAdd(
     try {
       const parsed = parseCommandPathDsl(input);
       const relFile = join("commands", ...parsed.diskSegments) + ".ts";
-      const absFile = resolve(ctx.cwd, relFile);
+      const absFile = ctx.resolvePath(relFile);
       const toolName = toolNameFromPath(parsed.manifestPath);
       planned.push({
         input,
@@ -75,6 +76,11 @@ export async function runAdd(
     if (p.manifestPath[0] === "mcp") {
       errors.push(
         `${p.input}: top-level "mcp" is reserved for the MCP transport`,
+      );
+    }
+    if (p.manifestPath[0] === "sessions") {
+      errors.push(
+        `${p.input}: top-level "sessions" is reserved for the session store`,
       );
     }
     if (existsSync(p.absFile) && !force) {
@@ -149,6 +155,9 @@ export async function runAdd(
     );
     created.push(p.relFile);
   }
+
+  // Idempotent when a project already has (or lacks) .gitignore.
+  ensureClflyGitignore(ctx.cwd);
 
   if (!ctx.json) {
     for (const c of created) ctx.stdout.write(`${c}\n`);

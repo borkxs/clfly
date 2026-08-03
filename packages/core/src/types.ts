@@ -30,6 +30,12 @@ export interface ManifestRoute {
   positionals: PositionalInfo[];
   /** JSON Schema projection of `args` (plus path params merged at MCP serve time). */
   inputSchema?: Record<string, unknown>;
+  /**
+   * JSON Schema projection of an optional `output` export.
+   * Absent means the return value is untyped JSON everywhere.
+   * Additive in formatVersion 1.
+   */
+  outputSchema?: Record<string, unknown>;
   /** Import specifier written into the generated file (relative to the manifest). */
   importPath?: string;
 }
@@ -41,6 +47,26 @@ export interface Meta {
    * Projects into help text and JSON Schema `"deprecated": true`.
    */
   deprecated?: boolean | string;
+  /**
+   * Marks the command as CLI-only (body does its own TTY interaction).
+   * Excluded from MCP tools and OpenAPI export; noted in help.
+   */
+  interactive?: boolean;
+  /**
+   * Hint: command only reads data (no state changes).
+   * Projects to MCP `annotations.readOnlyHint`.
+   */
+  readOnly?: boolean;
+  /**
+   * Hint: command may destroy or irreversibly change state.
+   * Projects to MCP `annotations.destructiveHint`.
+   */
+  destructive?: boolean;
+  /**
+   * Hint: repeated identical calls have no additional effect.
+   * Projects to MCP `annotations.idempotentHint`.
+   */
+  idempotent?: boolean;
 }
 
 export interface Context {
@@ -53,6 +79,16 @@ export interface Context {
   json: boolean;
   stdout: NodeJS.WritableStream;
   stderr: NodeJS.WritableStream;
+  /**
+   * When true (MCP `--root`), filesystem access via {@link resolvePath} is
+   * jailed under `cwd`. CLI mode is unscoped — absolute paths are allowed.
+   */
+  scoped: boolean;
+  /**
+   * Resolve a user-supplied path relative to `cwd`.
+   * Under MCP (`scoped`), rejects escapes outside the root.
+   */
+  resolvePath: (userPath: string) => string;
 }
 
 /**
@@ -74,18 +110,28 @@ export type AnySchema = import("@standard-schema/spec").StandardSchemaV1<
   };
 };
 
-export interface CommandModule<TArgs = unknown> {
+export interface CommandModule<TArgs = unknown, TOutput = unknown> {
   meta?: Meta;
   args?: AnySchema;
   /** Extra positionals beyond `[segment]` directory params. */
   positionals?: AnySchema;
-  default: (opts: TArgs, ctx: Context) => unknown | Promise<unknown>;
+  /**
+   * Optional schema for the command's return value.
+   * When present: always validated on `--json` and MCP; projects to
+   * manifest `outputSchema` and MCP `outputSchema` / structured content.
+   */
+  output?: AnySchema;
+  default: (opts: TArgs, ctx: Context) => TOutput | Promise<TOutput>;
 }
 
-export interface DefineCommandInput<TSchema extends AnySchema> {
+export interface DefineCommandInput<
+  TSchema extends AnySchema,
+  TOutputSchema extends AnySchema | undefined = undefined,
+> {
   meta?: Meta;
   args: TSchema;
   positionals?: AnySchema;
+  output?: TOutputSchema;
   run: (
     opts: import("@standard-schema/spec").StandardSchemaV1.InferOutput<TSchema>,
     ctx: Context,

@@ -1,0 +1,150 @@
+{
+  "rule": "output.md#mcp-wrap-contract-result",
+  "summary": "MCP wraps valid non-object roots as { result }; object roots pass through; wrap never coerces invalid returns.",
+  "cases": [
+    {
+      "id": "array-root-wraps",
+      "status": "active",
+      "transport": "mcp",
+      "module": {
+        "meta": { "description": "list users" },
+        "args": {
+          "type": "object",
+          "properties": {}
+        },
+        "output": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "id": { "type": "string" }
+            },
+            "required": ["id"]
+          }
+        },
+        "returns": [{ "id": "u_1" }, { "id": "u_2" }]
+      },
+      "mcpArgs": {},
+      "expect": {
+        "structuredContent": {
+          "result": [{ "id": "u_1" }, { "id": "u_2" }]
+        },
+        "mcpOutputSchema": {
+          "type": "object",
+          "properties": {
+            "result": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "properties": {
+                  "id": { "type": "string" }
+                },
+                "required": ["id"]
+              }
+            }
+          },
+          "required": ["result"]
+        },
+        "manifestOutputSchema": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "id": { "type": "string" }
+            },
+            "required": ["id"]
+          }
+        }
+      }
+    },
+    {
+      "id": "object-root-passthrough",
+      "status": "active",
+      "transport": "mcp",
+      "module": {
+        "meta": { "description": "ping" },
+        "args": {
+          "type": "object",
+          "properties": {}
+        },
+        "output": {
+          "type": "object",
+          "properties": {
+            "pong": { "type": "boolean" }
+          },
+          "required": ["pong"]
+        },
+        "returns": { "pong": true }
+      },
+      "mcpArgs": {},
+      "expect": {
+        "structuredContent": { "pong": true },
+        "mcpOutputSchema": {
+          "type": "object",
+          "properties": {
+            "pong": { "type": "boolean" }
+          },
+          "required": ["pong"]
+        },
+        "manifestOutputSchema": {
+          "type": "object",
+          "properties": {
+            "pong": { "type": "boolean" }
+          },
+          "required": ["pong"]
+        }
+      }
+    },
+    {
+      "id": "object-schema-array-return-exit-70",
+      "status": "active",
+      "transport": "cli",
+      "module": {
+        "meta": { "description": "should return object" },
+        "args": {
+          "type": "object",
+          "properties": {}
+        },
+        "output": {
+          "type": "object",
+          "properties": {
+            "id": { "type": "string" }
+          },
+          "required": ["id"]
+        },
+        "returns": [{ "id": "u_1" }]
+      },
+      "argv": ["cmd", "--json"],
+      "expect": {
+        "exitCode": 70,
+        "stderrMessageIncludes": "Invalid output"
+      }
+    },
+    {
+      "id": "object-schema-array-return-mcp-no-wrap",
+      "status": "active",
+      "transport": "mcp",
+      "module": {
+        "meta": { "description": "should return object" },
+        "args": {
+          "type": "object",
+          "properties": {}
+        },
+        "output": {
+          "type": "object",
+          "properties": {
+            "id": { "type": "string" }
+          },
+          "required": ["id"]
+        },
+        "returns": [{ "id": "u_1" }]
+      },
+      "mcpArgs": {},
+      "expect": {
+        "isError": true,
+        "errorMessageIncludes": "Invalid output",
+        "structuredContentAbsent": true
+      }
+    }
+  ]
+}

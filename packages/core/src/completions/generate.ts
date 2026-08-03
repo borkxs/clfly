@@ -35,7 +35,7 @@ function renderBash(name: string, commands: CompletionCommand[]): string {
     ``,
     `  # Global flags`,
     `  if [[ "$cur" == -* ]]; then`,
-    `    COMPREPLY=( $(compgen -W "--help --version --json -h -V" -- "$cur") )`,
+    `    COMPREPLY=( $(compgen -W "--help --version --json --spool -h -V" -- "$cur") )`,
     `    return`,
     `  fi`,
     ``,
@@ -105,6 +105,7 @@ function renderZsh(name: string, commands: CompletionCommand[]): string {
   lines.push(`    '--help[Show help]'`);
   lines.push(`    '--version[Show version]'`);
   lines.push(`    '--json[Emit JSON]'`);
+  lines.push(`    '--spool[Spool result to .clfly/sessions]'`);
   lines.push(`    '-h[Show help]'`);
   lines.push(`    '-V[Show version]'`);
   lines.push(`  )`);
@@ -262,7 +263,7 @@ function uniqueFlags(commands: CompletionCommand[]): FlagInfo[] {
 }
 
 function flagWords(flags: FlagInfo[]): string {
-  const words = ["--help", "--version", "--json", "-h", "-V"];
+  const words = ["--help", "--version", "--json", "--spool", "-h", "-V"];
   for (const f of flags) {
     words.push(`--${f.name}`);
     if (f.alias) words.push(`-${f.alias}`);

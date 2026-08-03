@@ -1,5 +1,6 @@
-export { createCli, resolveCommand, wantsJson, type Cli } from "./run.js";
+export { createCli, resolveCommand, wantsJson, wantsSpool, type Cli } from "./run.js";
 export { defineCommand } from "./define-command.js";
+export { createContext } from "./context.js";
 export {
   ClflyError,
   ValidationError,
@@ -28,7 +29,12 @@ export { scanCommandsDir, loadCommandModule, listCommandFiles } from "./router/s
 export { resolveRoute, listSubcommands } from "./router/resolve.js";
 export { tokenize, mapToArgs, wantsHelp, wantsVersion } from "./parse/tokenize.js";
 export { nearestMatch, levenshtein } from "./parse/suggest.js";
-export { projectFlags, toJsonSchema, validateSchema } from "./schema/to-json-schema.js";
+export {
+  projectFlags,
+  toJsonSchema,
+  toOutputJsonSchema,
+  validateSchema,
+} from "./schema/to-json-schema.js";
 export {
   projectPositionals,
   positionalNames,
@@ -40,16 +46,47 @@ export { buildManifest, type BuildManifestOptions, type BuildManifestResult } fr
 export { treeFromManifest, completionIndexFromManifest } from "./manifest/load.js";
 export { generateCompletions } from "./completions/generate.js";
 export { writeJsonResult, writeJsonError } from "./json/output.js";
+export { resolveUnderRoot, isInsideRoot } from "./fs/resolve-under-root.js";
+export {
+  createSessionStore,
+  SessionStore,
+  mintSessionId,
+  resolveSessionId,
+  parseRef,
+  formatRef,
+  jsonByteLength,
+  buildEnvelope,
+  buildPreview,
+  DEFAULT_SPOOL_THRESHOLD,
+  DEFAULT_SESSION_TTL_MS,
+  DEFAULT_SESSION_MAX_BYTES,
+  type TruncationEnvelope,
+  type ManifestEntry,
+  type SessionSummary,
+  type SpoolResult,
+} from "./session/index.js";
+/** MCP projection helpers — SDK-free. Server APIs live at `@clfly/core/mcp`. */
 export {
   listMcpTools,
-  createMcpServer,
-  serveMcpStdio,
   invokeMcpTool,
+  mergePathParamsIntoSchema,
+  mcpOptionsFromCli,
+  validateOutput,
+  projectMcpOutputSchema,
+  shapeStructuredContent,
+  annotationsFromMeta,
+  OUTPUT_VALIDATION_EXIT,
+  MCP_RESULT_KEY,
   toolNameFromPath,
   assertUniqueToolNames,
-  mergePathParamsIntoSchema,
   isMcpServeArgv,
+  isMcpArgv,
+  parseMcpServeFlags,
   type McpToolDef,
+  type McpToolAnnotations,
   type CreateMcpOptions,
-} from "./mcp/serve.js";
+  type McpServeFlags,
+  type CallToolResult,
+  type JsonSchemaObject,
+} from "./mcp/project.js";
 export { assignRestPositionals } from "./parse/rest-positionals.js";

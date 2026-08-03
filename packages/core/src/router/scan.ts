@@ -109,6 +109,7 @@ export async function loadCommandModule(
     meta: mod.meta,
     args: mod.args,
     positionals: mod.positionals,
+    output: mod.output,
     default: mod.default,
   };
 }

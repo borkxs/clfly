@@ -15,6 +15,22 @@ export function toJsonSchema(schema: AnySchema): JsonSchema {
   );
 }
 
+/** Project a Standard Schema to JSON Schema (output shape) for `output` / MCP outputSchema. */
+export function toOutputJsonSchema(schema: AnySchema): JsonSchema {
+  const std = schema["~standard"];
+  if (std.jsonSchema?.output) {
+    return std.jsonSchema.output({ target: "draft-07" }) as JsonSchema;
+  }
+  // Fall back to input projection when the vendor only exposes one shape.
+  if (std.jsonSchema?.input) {
+    return std.jsonSchema.input({ target: "draft-07" }) as JsonSchema;
+  }
+  throw new ClflyError(
+    `Schema (vendor: ${std.vendor}) does not implement Standard JSON Schema ` +
+      `(~standard.jsonSchema). Use Zod 4, ArkType, or Valibot with JSON Schema support.`,
+  );
+}
+
 export function projectFlags(schema: AnySchema): FlagInfo[] {
   const json = toJsonSchema(schema);
   return flagsFromJsonSchema(json, schema);

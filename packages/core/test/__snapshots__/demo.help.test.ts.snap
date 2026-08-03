@@ -11,6 +11,7 @@ Options:
   -h, --help         Show help
   -V, --version      Show version
       --json         Emit JSON
+      --spool        Write result to .clfly/sessions and print path/envelope
 "
 `;
 
@@ -22,12 +23,14 @@ demo CLI
 Commands:
   deploy
   users
-  mcp     MCP transport (mcp serve)
+  mcp       MCP transport (mcp serve)
+  sessions  Session store (sessions list|clean)
 
 Options:
   -h, --help     Show help
   -V, --version  Show version
       --json     Emit JSON
+      --spool    Write result to .clfly/sessions and print path/envelope
 "
 `;
 
@@ -43,6 +46,7 @@ Options:
   -h, --help     Show help
   -V, --version  Show version
       --json     Emit JSON
+      --spool    Write result to .clfly/sessions and print path/envelope
 "
 `;
 
@@ -57,5 +61,6 @@ Options:
   -h, --help            Show help
   -V, --version         Show version
       --json            Emit JSON
+      --spool           Write result to .clfly/sessions and print path/envelope
 "
 `;

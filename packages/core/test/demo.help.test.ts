@@ -84,7 +84,7 @@ describe("demo-cli unknown option suggestions", () => {
       stderr: err.stream,
     });
     const result = await cli.run(["users", "list", "--statu", "active"]);
-    expect(result.exitCode).toBe(1);
+    expect(result.exitCode).toBe(2);
     expect(err.text()).toContain("Unknown option: --statu");
     expect(err.text()).toContain("Did you mean: --status?");
   });
