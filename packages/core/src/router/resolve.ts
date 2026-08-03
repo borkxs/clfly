@@ -90,18 +90,61 @@ function collectStaticNames(node: RouteNode, out: string[] = []): string[] {
   return out;
 }
 
-/** List top-level / nested subcommand names for help. */
+/** List child subcommand names for help (sync; manifest meta only). */
 export function listSubcommands(
   node: RouteNode,
 ): Array<{ name: string; description?: string }> {
   const out: Array<{ name: string; description?: string }> = [];
   for (const [key, child] of node.children) {
     if (key.startsWith(":")) {
-      out.push({ name: `<${key.slice(1)}>`, description: undefined });
+      out.push({
+        name: `<${key.slice(1)}>`,
+        description: child.manifestMeta?.description,
+      });
     } else {
-      out.push({ name: key, description: undefined });
+      out.push({
+        name: key,
+        description: child.manifestMeta?.description,
+      });
     }
-    void child;
   }
   return out.sort((a, b) => a.name.localeCompare(b.name));
+}
+
+/**
+ * Like {@link listSubcommands}, but loads command modules when manifest meta
+ * is missing (dev scan). Prefer this on help paths.
+ */
+export async function listSubcommandsDetailed(
+  node: RouteNode,
+): Promise<Array<{ name: string; description?: string }>> {
+  const out: Array<{ name: string; description?: string }> = [];
+  for (const [key, child] of node.children) {
+    const name = key.startsWith(":") ? `<${key.slice(1)}>` : key;
+    let description = child.manifestMeta?.description;
+    if (description === undefined) {
+      description = await loadNodeDescription(child);
+    }
+    out.push({ name, description });
+  }
+  return out.sort((a, b) => a.name.localeCompare(b.name));
+}
+
+async function loadNodeDescription(
+  node: RouteNode,
+): Promise<string | undefined> {
+  try {
+    if (node.load) {
+      const mod = await node.load();
+      return mod.meta?.description;
+    }
+    if (node.commandFile) {
+      const { loadCommandModule } = await import("./scan.js");
+      const mod = await loadCommandModule(node.commandFile);
+      return mod.meta?.description;
+    }
+  } catch {
+    return undefined;
+  }
+  return undefined;
 }

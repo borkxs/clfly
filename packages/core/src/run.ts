@@ -13,7 +13,7 @@ import {
   loadAndValidateCommand,
   scanCommandsDir,
 } from "./router/scan.js";
-import { listSubcommands, resolveRoute } from "./router/resolve.js";
+import { listSubcommandsDetailed, resolveRoute } from "./router/resolve.js";
 import {
   mapToArgs,
   tokenize,
@@ -233,7 +233,7 @@ async function runCli(ctx: {
       flags: [],
       positionals: [],
       subcommands: [
-        ...listSubcommands(ctx.tree),
+        ...(await listSubcommandsDetailed(ctx.tree)),
         {
           name: "mcp",
           description: "MCP transport (mcp serve)",
@@ -262,7 +262,7 @@ async function runCli(ctx: {
         commandPath: [],
         flags: [],
         positionals: [],
-        subcommands: listSubcommands(ctx.tree),
+        subcommands: await listSubcommandsDetailed(ctx.tree),
       });
       ctx.stdout.write(help);
       return { exitCode: 0 };
@@ -291,7 +291,7 @@ async function runCli(ctx: {
       positionals,
       subcommands:
         resolved.node.children.size > 0
-          ? listSubcommands(resolved.node)
+          ? await listSubcommandsDetailed(resolved.node)
           : undefined,
     });
     if (ctx.json) {

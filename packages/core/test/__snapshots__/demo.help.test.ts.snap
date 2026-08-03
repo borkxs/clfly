@@ -21,7 +21,7 @@ exports[`demo-cli help snapshots > root --help 1`] = `
 demo CLI
 
 Commands:
-  deploy
+  deploy    Deploy the current workspace
   users
   mcp       MCP transport (mcp serve)
   sessions  Session store (sessions list|clean)

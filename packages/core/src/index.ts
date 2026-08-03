@@ -26,7 +26,7 @@ export {
 } from "./types.js";
 export { assertManifestCompatible, coreMajorFromVersion } from "./version.js";
 export { scanCommandsDir, loadCommandModule, listCommandFiles } from "./router/scan.js";
-export { resolveRoute, listSubcommands } from "./router/resolve.js";
+export { resolveRoute, listSubcommands, listSubcommandsDetailed } from "./router/resolve.js";
 export { tokenize, mapToArgs, wantsHelp, wantsVersion } from "./parse/tokenize.js";
 export { nearestMatch, levenshtein } from "./parse/suggest.js";
 export {

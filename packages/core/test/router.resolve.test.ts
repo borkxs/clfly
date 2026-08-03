@@ -3,7 +3,11 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 import { scanCommandsDir } from "../src/router/scan.js";
-import { resolveRoute } from "../src/router/resolve.js";
+import {
+  listSubcommands,
+  listSubcommandsDetailed,
+  resolveRoute,
+} from "../src/router/resolve.js";
 import { ClflyError } from "../src/errors.js";
 
 function fixtureTree(): string {
@@ -11,10 +15,15 @@ function fixtureTree(): string {
   const commands = join(root, "commands");
   mkdirSync(join(commands, "users", "[id]"), { recursive: true });
   writeFileSync(join(commands, "index.ts"), "export default async () => {}");
-  writeFileSync(join(commands, "deploy.ts"), "export default async () => {}");
+  writeFileSync(
+    join(commands, "deploy.ts"),
+    `export const meta = { description: "Deploy stuff" };
+export default async () => {}`,
+  );
   writeFileSync(
     join(commands, "users", "list.ts"),
-    "export default async () => {}",
+    `export const meta = { description: "List users" };
+export default async () => {}`,
   );
   writeFileSync(
     join(commands, "users", "[id]", "show.ts"),
@@ -74,5 +83,29 @@ describe("router resolve", () => {
     expect(scanned.children.get("add")?.commandFile?.endsWith("add.js")).toBe(
       true,
     );
+  });
+
+  it("listSubcommandsDetailed loads meta.description in dev scan", async () => {
+    const listed = await listSubcommandsDetailed(tree);
+    expect(listed.find((c) => c.name === "deploy")?.description).toBe(
+      "Deploy stuff",
+    );
+    // Group nodes without an index have no description.
+    expect(listed.find((c) => c.name === "users")?.description).toBeUndefined();
+
+    const users = tree.children.get("users")!;
+    const nested = await listSubcommandsDetailed(users);
+    expect(nested.find((c) => c.name === "list")?.description).toBe(
+      "List users",
+    );
+  });
+
+  it("listSubcommands prefers manifestMeta without loading", () => {
+    const child = tree.children.get("deploy")!;
+    child.manifestMeta = { description: "From manifest" };
+    expect(listSubcommands(tree).find((c) => c.name === "deploy")?.description).toBe(
+      "From manifest",
+    );
+    delete child.manifestMeta;
   });
 });

@@ -26,6 +26,10 @@ Commands return values or throw; the bin wrapper owns `process.exit`. In `--json
 
 Every filesystem-touching command should resolve user-supplied paths through `ctx.resolvePath` so agent-driven CLIs inherit the jail automatically.
 
+## Throw, never `process.exit`
+
+Command bodies and shared libs must **throw** (or return) — never call `process.exit`. Under `mcp serve` an exit kills the whole server instead of failing one tool call. The bin wrapper owns process lifetime. Prefer `ClflyError` / `ValidationError` with the right exit code.
+
 ## Stdin merge / bind
 
 CLI only (MCP already receives a JSON args object):
