@@ -14,8 +14,9 @@ Dependency order for this workstream:
 | 1d | ADR stubs: elicitation-MRTR / Tasks | **Stubs only** — [elicitation-mrtr.md](./elicitation-mrtr.md), [tasks.md](./tasks.md) |
 | 2 | Implement output schemas + MCP structured results + exit codes | **Done in tree** |
 | 2b | Session store + `--spool` + `result_read` + annotations | **Done in tree** |
-| 3 | Implement stdin convention | **Done** — fixtures active; unlocks **0.2.0** |
-| 4 | Second dogfood CLI (forkspace) | Not started — different rough edges than `pm` |
+| 3 | Implement stdin convention | **Done** — fixtures active |
+| 3b | Cut **0.2.0** | **Done on branch** — `@clfly/core@0.2.0`, `@clfly/cli`/`create@0.0.6` (publish when ready) |
+| 4 | Second dogfood CLI (forkspace) | **Next** — different rough edges than `pm` |
 | 5 | Mounts dogfood: librarian / Premiumize→Plex bridge | Parked — commercial motive; see [mounts.md](./mounts.md) |
 | 6 | Launch essay (parallel, not blocked) | Not started |
 
@@ -62,9 +63,9 @@ Key code:
 - `packages/core/src/run.ts` — unknown flags exit `2`; `--json` path calls `validateOutput`
 - Conformance runner: `packages/core/test/conformance.test.ts` loads `docs/spec/fixtures/*.json`
 
-## Next: 0.2.0 + forkspace
+## Next: forkspace dogfood
 
-Interchange paper + implementation are in tree (output, stdin, session store). Cut **0.2.0** when ready; then forkspace as the second migration case study.
+Interchange is released as **0.2.0** on this branch (publish when ready). Next case study: migrate forkspace and capture rough edges `pm` did not surface.
 
 ### Stdin rules (settled — do not invent parallels)
 

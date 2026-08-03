@@ -2,7 +2,7 @@
 
 ## Active handoff
 
-**Interchange complete (paper + code)** — output, stdin merge/bind, session store. Next: cut **0.2.0**, then forkspace dogfood. Mounts remain parked ([`docs/spec/mounts.md`](./docs/spec/mounts.md)).
+**0.2.0 cut on branch** (`@clfly/core@0.2.0`, cli/create `0.0.6`). Next: publish when ready, then forkspace dogfood. Mounts remain parked ([`docs/spec/mounts.md`](./docs/spec/mounts.md)).
 
 ## Spec folded in (don't build until go)
 

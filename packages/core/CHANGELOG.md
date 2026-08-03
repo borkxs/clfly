@@ -1,5 +1,13 @@
 # @clfly/core
 
+## 0.2.0
+
+### Minor Changes
+
+- a31ddb5: Harden `mcp serve`: `--root` scoping, optional `output` → MCP `outputSchema`/structured content, `meta.interactive` exclusion, and `@clfly/core/mcp` subpath with lazy SDK load.
+- a31ddb5: Session store for large results (`.clfly/sessions/`, `--spool`, MCP auto-spool + `result_read`), plus `meta.{readOnly,destructive,idempotent}` → MCP tool annotations.
+- e9d8609: Implement stdin merge/bind: non-TTY JSON merge (lenient unknown keys), `-` bind sentinel, and conformance fixtures.
+
 ## 0.1.1
 
 ### Patch Changes

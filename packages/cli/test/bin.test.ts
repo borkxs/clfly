@@ -76,10 +76,13 @@ describe("clfly bin", () => {
   });
 
   it("--version prints bare package version", async () => {
+    const pkg = JSON.parse(
+      readFileSync(join(root, "package.json"), "utf8"),
+    ) as { version: string };
     const { stdout, stderr, code } = await run(["--version"]);
     expect(code).toBe(0);
     expect(stderr).toBe("");
-    expect(stdout).toBe("0.0.5\n");
+    expect(stdout).toBe(`${pkg.version}\n`);
   });
 
   it("--help lists real commands", async () => {
