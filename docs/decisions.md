@@ -58,7 +58,7 @@ Status: **Accepted** unless marked **Open**.
 
 ### MCP `result` wrap + exit 70 for bad output
 
-**Accepted.** Manifest `outputSchema` is the true return schema. MCP `outputSchema` / `structuredContent` wrap array (non-object) roots as `{ result: … }`; object roots pass through. Wrap is projection after successful validation — never coercion for invalid returns. Input misuse exits `2`; `output` schema violations exit `70` (`EX_SOFTWARE`). Full text: [spec/output.md](./spec/output.md).
+**Accepted.** Manifest `outputSchema` is the true return schema. MCP `outputSchema` / `structuredContent` wrap array (non-object) roots as `{ result: … }`; object roots pass through; primitive / null roots omit MCP `outputSchema` and `structuredContent` (manifest keeps the true schema). OpenAPI 200 (when shipped) uses the manifest schema, never the MCP wrap. Wrap is projection after successful validation — never coercion for invalid returns. Input misuse exits `2`; `output` schema violations exit `70` (`EX_SOFTWARE`). Full text: [spec/output.md](./spec/output.md).
 
 ---
 

@@ -1,6 +1,6 @@
 # ADR: `output` schemas → manifest / MCP structured results
 
-Status: **Draft** — shape, MCP wrap, and failure codes settled; OpenAPI prose still thin.
+Status: **Accepted** — shape, MCP wrap, failure codes, OpenAPI projection rule, and primitive omission settled.
 Conformance: [fixtures/output-exit-codes.json](./fixtures/output-exit-codes.json), [fixtures/output-mcp-result-wrap.json](./fixtures/output-mcp-result-wrap.json).
 
 Companion: [stdio.md](./stdio.md). Background acceptances: [decisions.md](../decisions.md).
@@ -14,7 +14,7 @@ Closes the projection gap when MCP tools were text-only: optional `output` → m
 - `output` is opt-in; absent ⇒ untyped JSON, no warning.
 - When present: always validate on machine-facing transports (`--json`, MCP; HTTP later). No dev/prod divergence.
 - Manifest `outputSchema` is the **true** return schema (additive in formatVersion 1) — what the command actually returns on `--json` / HTTP.
-- MCP `structuredContent` is spec'd as a JSON **object**. Non-null plain objects pass through. **Arrays (and other non-object roots) are wrapped** before structured content and before the MCP-facing `outputSchema` (see below). Primitives and `null` stay text-only — no `structuredContent`, and MCP `outputSchema` is omitted for those roots (manifest still carries the true schema).
+- MCP `structuredContent` is spec'd as a JSON **object**. Non-null plain objects pass through. **Arrays (and other non-object roots we choose to structure) are wrapped** before structured content and before the MCP-facing `outputSchema` (see below). **Primitives and `null` stay text-only** — no `structuredContent`, and MCP `outputSchema` is **omitted** for those roots (prefer omit over a never-satisfied schema). Manifest still carries the true schema.
 
 ### MCP wrap contract (`result`)
 
@@ -26,10 +26,11 @@ When the validated return value is not a non-null object (today: arrays; later a
 
 | Artifact | Schema / payload |
 |---|---|
-| Manifest `outputSchema` | True schema (e.g. `{ "type": "array", "items": … }`) |
-| MCP `outputSchema` | `{ "type": "object", "properties": { "result": <true schema> }, "required": ["result"] }` |
-| MCP `structuredContent` | `{ "result": <value> }` |
+| Manifest `outputSchema` | True schema (e.g. `{ "type": "array", "items": … }` or `{ "type": "string" }`) |
+| MCP `outputSchema` | Array roots: `{ "type": "object", "properties": { "result": <true schema> }, "required": ["result"] }`. Object roots: true schema. **Primitive / null roots: omitted.** |
+| MCP `structuredContent` | `{ "result": <value> }` for arrays; object passthrough; **absent** for primitives / null |
 | `--json` stdout | Unwrapped `<value>` (manifest truth) |
+| OpenAPI 200 (M4a) | **Manifest** (true) schema — never the MCP-wrapped form |
 
 Wrapper key is **`result`** — public contract, chosen to rhyme with jc's `--meta-out` envelope. Do not invent a parallel key per transport. Object-rooted returns are **not** wrapped (no `{ "result": { … } }` indirection).
 
@@ -44,10 +45,3 @@ Wrapper key is **`result`** — public contract, chosen to rhyme with jc's `--me
 Exit 2 is "I called it wrong." Exit 70 is "it's broken." Agents must be able to tell those apart; collapsing output failures into 2 (or into generic 1 without a distinct code) loses that. See [conventions.md](../conventions.md).
 
 Absent `output`, return values are not validated — no 70 path.
-
----
-
-## Still thin
-
-- OpenAPI 200 response schema uses the **manifest** (true) schema, not the MCP-wrapped form.
-- Exact MCP omission rules when `output` root is a primitive (no `outputSchema` on the tool vs a never-satisfied schema — prefer omit).

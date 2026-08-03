@@ -81,7 +81,6 @@ Interchange is released as **0.2.0** on this branch (publish when ready). Next c
 - **Step 4:** forkspace as second clfly migration — surface rough edges `pm` did not.
 - **Step 5:** librarian / bridge extraction as mounts dogfood — `@you/premiumize` + `@you/plex` adapters, publishable bridge CLI, private `pm` mounts those plus search. Motive and hard problems: [mounts.md](./mounts.md). Cheap prep inside `pm`: keep `premiumize.ts` / `plex.ts` / `tmdb.ts` data-in/data-out (no `process.exit`, no `@clack`, no `console.log` below `src/commands/`).
 - **Step 6:** Launch essay — "what Unix got right, what PowerShell got right, why agents need both" (weekend writing; sharpens spec defenses).
-- Thin leftover in [output.md](./output.md): OpenAPI 200 uses **manifest** schema (not MCP-wrapped); primitive `output` roots omit MCP `outputSchema`.
 
 ## Explicitly out of scope
 

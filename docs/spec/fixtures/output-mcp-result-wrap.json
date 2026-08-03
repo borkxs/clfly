@@ -145,6 +145,26 @@
         "errorMessageIncludes": "Invalid output",
         "structuredContentAbsent": true
       }
+    },
+    {
+      "id": "primitive-root-omits-mcp-output-schema",
+      "status": "active",
+      "transport": "mcp",
+      "module": {
+        "meta": { "description": "echo" },
+        "args": {
+          "type": "object",
+          "properties": {}
+        },
+        "output": { "type": "string" },
+        "returns": "hello"
+      },
+      "mcpArgs": {},
+      "expect": {
+        "structuredContentAbsent": true,
+        "mcpOutputSchemaAbsent": true,
+        "manifestOutputSchema": { "type": "string" }
+      }
     }
   ]
 }

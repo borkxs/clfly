@@ -46,6 +46,7 @@ interface FixtureExpect {
   structuredContent?: Record<string, unknown>;
   structuredContentAbsent?: boolean;
   mcpOutputSchema?: JsonSchema;
+  mcpOutputSchemaAbsent?: boolean;
   manifestOutputSchema?: JsonSchema;
   isError?: boolean;
   errorMessageIncludes?: string;
@@ -293,6 +294,13 @@ describe("spec conformance fixtures", () => {
             if (c.expect.structuredContent !== undefined) {
               expect(result!.structuredContent).toEqual(c.expect.structuredContent);
             }
+            if (c.expect.structuredContentAbsent) {
+              expect(result!.structuredContent).toBeUndefined();
+            }
+          }
+
+          if (c.expect.mcpOutputSchemaAbsent) {
+            expect(tool.outputSchema).toBeUndefined();
           }
 
           if (c.expect.mcpOutputSchema !== undefined) {

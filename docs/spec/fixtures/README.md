@@ -36,6 +36,7 @@ Each file is one rule; `cases[]` covers the edges. `@clfly/core` runs them via
     "assembledArgs": { … },
     "structuredContent": { … },
     "mcpOutputSchema": { … },
+    "mcpOutputSchemaAbsent": true,
     "manifestOutputSchema": { … }
   }
 }
