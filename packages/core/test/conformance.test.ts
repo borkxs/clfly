@@ -1,6 +1,5 @@
 /**
  * Runs docs/spec/fixtures against @clfly/core.
- * Pending cases (stdin merge/bind) are skipped until that feature lands.
  */
 import {
   existsSync,
@@ -220,6 +219,8 @@ async function runCliCase(c: FixtureCase) {
     commandsDir: dir,
     stdout: stdout.stream,
     stderr: stderr.stream,
+    ...(c.stdin !== undefined ? { stdinText: c.stdin } : {}),
+    ...(c.stdinIsTTY !== undefined ? { stdinIsTTY: c.stdinIsTTY } : {}),
   });
   // Materialize writes cmd.ts → command path token "cmd".
   const result = await cli.run(c.argv ?? ["cmd"]);
@@ -270,6 +271,9 @@ describe("spec conformance fixtures", () => {
             }
             if (c.expect.stdoutJson !== undefined) {
               expect(JSON.parse(stdout)).toEqual(c.expect.stdoutJson);
+            }
+            if (c.expect.assembledArgs !== undefined) {
+              expect(result.args).toEqual(c.expect.assembledArgs);
             }
             return;
           }

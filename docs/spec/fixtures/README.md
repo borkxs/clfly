@@ -9,7 +9,7 @@ Each file is one rule; `cases[]` covers the edges. `@clfly/core` runs them via
 | Value | Meaning |
 |---|---|
 | `active` | Must pass against the current implementation |
-| `pending` | Spec-settled; skipped until the feature lands (stdin merge/bind) |
+| `pending` | Spec-settled; skipped until the feature lands |
 
 ## Case shape
 

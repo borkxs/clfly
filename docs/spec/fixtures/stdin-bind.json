@@ -4,7 +4,7 @@
   "cases": [
     {
       "id": "bind-array-to-items",
-      "status": "pending",
+      "status": "active",
       "transport": "cli",
       "module": {
         "meta": { "description": "filter" },
@@ -40,7 +40,7 @@
     },
     {
       "id": "bind-disables-merge",
-      "status": "pending",
+      "status": "active",
       "transport": "cli",
       "module": {
         "meta": { "description": "filter" },
@@ -67,7 +67,7 @@
     },
     {
       "id": "two-sentinels-exit-2",
-      "status": "pending",
+      "status": "active",
       "transport": "cli",
       "module": {
         "meta": { "description": "filter" },
@@ -83,6 +83,28 @@
       },
       "argv": ["cmd", "--items", "-", "--extra", "-", "--json"],
       "stdin": "[]",
+      "stdinIsTTY": false,
+      "expect": {
+        "exitCode": 2
+      }
+    },
+    {
+      "id": "bind-non-json-exit-2",
+      "status": "active",
+      "transport": "cli",
+      "module": {
+        "meta": { "description": "filter" },
+        "args": {
+          "type": "object",
+          "properties": {
+            "items": { "type": "array" }
+          },
+          "required": ["items"]
+        },
+        "returns": { "ok": true }
+      },
+      "argv": ["cmd", "--items", "-", "--json"],
+      "stdin": "not-json",
       "stdinIsTTY": false,
       "expect": {
         "exitCode": 2

@@ -1,7 +1,7 @@
 # ADR: stdio interchange (stdin merge + list-shaped JSON)
 
-Status: **Draft** — hinge + unknown-keys + merge/bind settled; list-output default noted.
-Conformance: [fixtures/stdin-*.json](./fixtures/) (`pending` until stdin lands).
+Status: **Accepted** — hinge + unknown-keys + merge/bind implemented.
+Conformance: [fixtures/stdin-*.json](./fixtures/) (`active`).
 
 Companion (write first): [output.md](./output.md) — `output` schemas → manifest / MCP structured results.
 Prior art consulted: [jc](https://github.com/kellyjonbrazil/jc) (stdin → one JSON document by default; streaming parsers emit NDJSON; `--slurp` aggregates multi-item input into one array), [jq](https://jqlang.org/manual/) (stream of JSON values; `--slurp` → one array; right-hand object wins on `+` merge).

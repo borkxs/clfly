@@ -2,7 +2,7 @@
 
 ## Active handoff
 
-**Interchange / stdin** — next agent: read [`docs/spec/HANDOFF.md`](./docs/spec/HANDOFF.md). Output + session store done; implement stdin merge/bind → **0.2.0**. Mounts are parked ([`docs/spec/mounts.md`](./docs/spec/mounts.md)) — commercial bridge extraction later, not pack hygiene now.
+**Interchange complete (paper + code)** — output, stdin merge/bind, session store. Next: cut **0.2.0**, then forkspace dogfood. Mounts remain parked ([`docs/spec/mounts.md`](./docs/spec/mounts.md)).
 
 ## Spec folded in (don't build until go)
 

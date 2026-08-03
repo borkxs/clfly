@@ -155,12 +155,24 @@ export interface CreateCliOptions {
   stdout?: NodeJS.WritableStream;
   stderr?: NodeJS.WritableStream;
   env?: NodeJS.ProcessEnv;
+  /**
+   * Injectable stdin text for tests / embedding. When set (including `""`),
+   * process.stdin is not read.
+   */
+  stdinText?: string;
+  /**
+   * Injectable TTY flag for tests. Defaults to `process.stdin.isTTY` when
+   * `stdinText` is not provided; when `stdinText` is provided, defaults to false.
+   */
+  stdinIsTTY?: boolean;
 }
 
 export interface RunResult {
   exitCode: number;
   /** Present when a command handler returned a value. */
   value?: unknown;
+  /** Validated args object passed to the command (CLI path). */
+  args?: unknown;
 }
 
 export interface FlagInfo {

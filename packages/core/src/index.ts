@@ -65,6 +65,15 @@ export {
   type SessionSummary,
   type SpoolResult,
 } from "./session/index.js";
+export {
+  assembleInput,
+  decodeSingleJson,
+  rewriteBindSentinels,
+  resolveBindField,
+  BIND_SENTINEL,
+  type AssembleInputOptions,
+  type AssembleResult,
+} from "./stdin/index.js";
 /** MCP projection helpers — SDK-free. Server APIs live at `@clfly/core/mcp`. */
 export {
   listMcpTools,

@@ -26,6 +26,17 @@ Commands return values or throw; the bin wrapper owns `process.exit`. In `--json
 
 Every filesystem-touching command should resolve user-supplied paths through `ctx.resolvePath` so agent-driven CLIs inherit the jail automatically.
 
+## Stdin merge / bind
+
+CLI only (MCP already receives a JSON args object):
+
+- Consult stdin when it is **not a TTY** and non-empty after trim (pipes and `cmd < file.json`).
+- **Merge (default):** stdin must be one JSON object; undeclared keys dropped; argv wins on conflict; then schema validate (defaults apply).
+- **Bind:** exactly one argv value `-` assigns the entire decoded JSON value to that field and disables merge. A second `-` is exit 2.
+- NDJSON / multi-value / invalid JSON / merge-mode arrays → exit 2.
+
+See [spec/stdio.md](./spec/stdio.md). Spool files from the session store are valid bind documents.
+
 ## Interactivity vs purity
 
 Interactivity belongs to the resolver; purity belongs to the function. Command bodies are `args → result`. Arg-gathering UX (TTY prompting, future `@clfly/prompts`) lives in the resolver layer. Mark bodies that still do their own TTY work with `meta.interactive: true` so they are excluded from MCP / OpenAPI.

@@ -4,7 +4,7 @@
   "cases": [
     {
       "id": "stdin-extra-keys-dropped",
-      "status": "pending",
+      "status": "active",
       "transport": "cli",
       "module": {
         "meta": { "description": "add" },

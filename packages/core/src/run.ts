@@ -21,7 +21,7 @@ import {
   wantsVersion,
 } from "./parse/tokenize.js";
 import { nearestMatch } from "./parse/suggest.js";
-import { projectFlags, validateSchema } from "./schema/to-json-schema.js";
+import { projectFlags, toJsonSchema, validateSchema } from "./schema/to-json-schema.js";
 import {
   parseFlagAllowlist,
   positionalNames,
@@ -50,6 +50,11 @@ import {
   resolveSessionId,
   resolveThreshold,
 } from "./session/index.js";
+import {
+  assembleInput,
+  rewriteBindSentinels,
+  resolveBindField,
+} from "./stdin/assemble.js";
 import { readFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -297,8 +302,9 @@ async function runCli(ctx: {
     return { exitCode: 0 };
   }
 
+  const rewritten = rewriteBindSentinels(resolved.rest);
   const { flags: parsedFlags, positionals: restTokens } = tokenize(
-    resolved.rest,
+    rewritten.argv,
     tokenizeFlags,
   );
 
@@ -322,9 +328,34 @@ async function runCli(ctx: {
     mod.args,
   );
 
-  let opts: unknown = forArgs;
+  const bindResolved = resolveBindField(
+    forArgs,
+    rewritten.flagBindFields,
+    rewritten.positionalBindCount,
+  );
+  if (!bindResolved.ok) {
+    throw new ClflyError(bindResolved.message, 2);
+  }
+
+  const { text: stdinText, isTTY: stdinIsTTY } = await resolveStdin(
+    ctx.cliOptions,
+  );
+
+  const declaredKeys = declaredArgKeys(mod, pathParamNames, positionals);
+  const assembled = assembleInput({
+    argvArgs: forArgs,
+    stdinText,
+    stdinIsTTY,
+    declaredKeys,
+    bindField: bindResolved.bindField,
+  });
+  if (!assembled.ok) {
+    throw new ClflyError(assembled.message, 2);
+  }
+
+  let opts: unknown = assembled.args;
   if (mod.args) {
-    const validated = await validateSchema(mod.args, forArgs);
+    const validated = await validateSchema(mod.args, assembled.args);
     if ("issues" in validated) {
       const excerpt = renderHelpExcerpt({
         name: ctx.name,
@@ -396,14 +427,14 @@ async function runCli(ctx: {
       // Opt-in spool without --json: print absolute path for redirect/bind.
       ctx.stdout.write(`${spooled.path}\n`);
     }
-    return { exitCode: 0, value };
+    return { exitCode: 0, value, args: opts };
   }
 
   if (ctx.json && value !== undefined) {
     writeJsonResult(ctx.stdout, value);
   }
 
-  return { exitCode: 0, value };
+  return { exitCode: 0, value, args: opts };
 }
 
 function projectCommandSurface(
@@ -507,6 +538,61 @@ function stripReserved(argv: string[]): string[] {
       t !== "--json" &&
       t !== "--spool",
   );
+}
+
+function declaredArgKeys(
+  mod: CommandModule,
+  pathParamNames: string[],
+  positionals: PositionalInfo[],
+): Set<string> {
+  const keys = new Set<string>();
+  for (const name of pathParamNames) keys.add(name);
+  for (const p of positionals) keys.add(p.name);
+  if (mod.args) {
+    try {
+      const json = toJsonSchema(mod.args);
+      const props = (json.properties ?? {}) as Record<string, unknown>;
+      for (const name of Object.keys(props)) keys.add(name);
+    } catch {
+      // Schema without JSON Schema projection — fall back to projected flags.
+      for (const f of projectFlags(mod.args)) keys.add(f.name);
+    }
+  }
+  return keys;
+}
+
+async function resolveStdin(
+  options: CreateCliOptions,
+): Promise<{ text: string; isTTY: boolean }> {
+  if (options.stdinText !== undefined) {
+    return {
+      text: options.stdinText,
+      isTTY: options.stdinIsTTY ?? false,
+    };
+  }
+  if (options.stdinIsTTY !== undefined) {
+    if (options.stdinIsTTY) return { text: "", isTTY: true };
+    return { text: await readAllStdin(), isTTY: false };
+  }
+  // Interactive terminal — ignore stdin.
+  if (process.stdin.isTTY === true) {
+    return { text: "", isTTY: true };
+  }
+  // Vitest / node:test leave fd 0 open without EOF; don't hang unit tests.
+  // Real pipes/redirects are not run under these runners. Conformance injects.
+  if (process.env.VITEST != null || process.env.NODE_TEST_CONTEXT != null) {
+    return { text: "", isTTY: true };
+  }
+  // Pipe or file redirect (`isTTY` falsy) — read to EOF.
+  return { text: await readAllStdin(), isTTY: false };
+}
+
+async function readAllStdin(): Promise<string> {
+  const chunks: Buffer[] = [];
+  for await (const chunk of process.stdin) {
+    chunks.push(Buffer.isBuffer(chunk) ? chunk : Buffer.from(String(chunk)));
+  }
+  return Buffer.concat(chunks).toString("utf8");
 }
 
 export function wantsJson(argv: string[]): boolean {

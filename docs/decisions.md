@@ -106,6 +106,10 @@ Status: **Accepted** unless marked **Open**.
 
 **Accepted.** Large validated results spool under a shared repo-local `.clfly/sessions/` tree. Session identity is an explicit filesystem-safe handle (minted by `mcp serve` or `CLFLY_SESSION`), not an MCP transport session (2026-07-28 / SEP-2567). Threshold unit is UTF-8 JSON bytes (default 64 KiB). Refs are `<sessionId>/<seq>` resolved only via the manifest. CLI `--spool` and MCP auto-spool share one ledger. Full text: [spec/session-store.md](./spec/session-store.md).
 
+### Stdin merge / bind
+
+**Accepted.** Non-TTY non-empty stdin supplies args: merge mode (default) filters to declared keys then loses to argv; bind mode (`-` sentinel) assigns the entire decoded JSON value to one field and disables merge. NDJSON / multi-value / merge-mode non-objects → exit 2. Full text: [spec/stdio.md](./spec/stdio.md).
+
 ### `meta.{readOnly,destructive,idempotent}` → MCP tool annotations
 
 **Accepted.** Optional meta booleans project to MCP `annotations.readOnlyHint` / `destructiveHint` / `idempotentHint`. Absent means omit (clients keep spec defaults). Hints are advisory.

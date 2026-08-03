@@ -4,7 +4,7 @@
   "cases": [
     {
       "id": "tty-ignores-stdin",
-      "status": "pending",
+      "status": "active",
       "transport": "cli",
       "module": {
         "meta": { "description": "show" },
@@ -27,7 +27,7 @@
     },
     {
       "id": "redirect-merges-stdin",
-      "status": "pending",
+      "status": "active",
       "transport": "cli",
       "module": {
         "meta": { "description": "show" },
@@ -51,7 +51,7 @@
     },
     {
       "id": "empty-non-tty-ignored",
-      "status": "pending",
+      "status": "active",
       "transport": "cli",
       "module": {
         "meta": { "description": "show" },
@@ -74,7 +74,7 @@
     },
     {
       "id": "argv-wins-over-stdin",
-      "status": "pending",
+      "status": "active",
       "transport": "cli",
       "module": {
         "meta": { "description": "show" },
@@ -98,7 +98,7 @@
     },
     {
       "id": "ndjson-exit-2",
-      "status": "pending",
+      "status": "active",
       "transport": "cli",
       "module": {
         "meta": { "description": "show" },
@@ -116,6 +116,52 @@
       "stdinIsTTY": false,
       "expect": {
         "exitCode": 2
+      }
+    },
+    {
+      "id": "merge-array-exit-2",
+      "status": "active",
+      "transport": "cli",
+      "module": {
+        "meta": { "description": "show" },
+        "args": {
+          "type": "object",
+          "properties": {
+            "id": { "type": "string" }
+          },
+          "required": ["id"]
+        },
+        "returns": { "ok": true }
+      },
+      "argv": ["cmd", "--json"],
+      "stdin": "[{\"id\":\"a\"}]",
+      "stdinIsTTY": false,
+      "expect": {
+        "exitCode": 2
+      }
+    },
+    {
+      "id": "defaults-after-merge",
+      "status": "active",
+      "transport": "cli",
+      "module": {
+        "meta": { "description": "show" },
+        "args": {
+          "type": "object",
+          "properties": {
+            "id": { "type": "string" },
+            "limit": { "type": "number", "default": 50 }
+          },
+          "required": ["id"]
+        },
+        "returns": { "ok": true }
+      },
+      "argv": ["cmd", "--json"],
+      "stdin": "{\"id\":\"from-stdin\"}",
+      "stdinIsTTY": false,
+      "expect": {
+        "exitCode": 0,
+        "assembledArgs": { "id": "from-stdin", "limit": 50 }
       }
     }
   ]
