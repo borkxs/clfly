@@ -8,6 +8,10 @@
 - a31ddb5: Session store for large results (`.clfly/sessions/`, `--spool`, MCP auto-spool + `result_read`), plus `meta.{readOnly,destructive,idempotent}` → MCP tool annotations.
 - e9d8609: Implement stdin merge/bind: non-TTY JSON merge (lenient unknown keys), `-` bind sentinel, and conformance fixtures.
 
+### Patch Changes
+
+- Show subcommand `meta.description` in help (load in dev scan; use manifest meta in prod).
+
 ## 0.1.1
 
 ### Patch Changes
