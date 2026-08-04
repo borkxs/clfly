@@ -1,0 +1,81 @@
+{
+  "rule": "output.md#validation-failure-codes",
+  "summary": "Exit 2 = caller misuse (input); exit 70 = producer bug (output schema).",
+  "cases": [
+    {
+      "id": "invalid-args-exit-2",
+      "status": "active",
+      "transport": "cli",
+      "module": {
+        "meta": { "description": "echo status" },
+        "args": {
+          "type": "object",
+          "properties": {
+            "status": {
+              "type": "string",
+              "enum": ["active", "churned"]
+            }
+          },
+          "required": ["status"]
+        },
+        "returns": { "ok": true }
+      },
+      "argv": ["cmd", "--status", "nope", "--json"],
+      "expect": {
+        "exitCode": 2,
+        "stderrMessageIncludes": "Invalid arguments"
+      }
+    },
+    {
+      "id": "invalid-output-exit-70",
+      "status": "active",
+      "transport": "cli",
+      "module": {
+        "meta": { "description": "ping" },
+        "args": {
+          "type": "object",
+          "properties": {}
+        },
+        "output": {
+          "type": "object",
+          "properties": {
+            "pong": { "type": "boolean" }
+          },
+          "required": ["pong"]
+        },
+        "returns": { "pong": "yes" }
+      },
+      "argv": ["cmd", "--json"],
+      "expect": {
+        "exitCode": 70,
+        "stderrMessageIncludes": "Invalid output"
+      }
+    },
+    {
+      "id": "undefined-output-exit-70",
+      "status": "active",
+      "transport": "cli",
+      "module": {
+        "meta": { "description": "empty" },
+        "args": {
+          "type": "object",
+          "properties": {}
+        },
+        "output": {
+          "type": "object",
+          "properties": {
+            "pong": { "type": "boolean" }
+          },
+          "required": ["pong"]
+        },
+        "returns": null,
+        "returnsUndefined": true
+      },
+      "argv": ["cmd", "--json"],
+      "expect": {
+        "exitCode": 70,
+        "stderrMessageIncludes": "Invalid output"
+      }
+    }
+  ]
+}

@@ -1,0 +1,114 @@
+{
+  "rule": "stdio.md#merge-vs-bind-one-mode-switch",
+  "summary": "Exactly one `-` binds entire decoded JSON to that field and disables merge; two `-` hard-fail.",
+  "cases": [
+    {
+      "id": "bind-array-to-items",
+      "status": "active",
+      "transport": "cli",
+      "module": {
+        "meta": { "description": "filter" },
+        "args": {
+          "type": "object",
+          "properties": {
+            "items": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "properties": {
+                  "id": { "type": "string" }
+                },
+                "required": ["id"]
+              }
+            },
+            "status": { "type": "string" }
+          },
+          "required": ["items"]
+        },
+        "returns": { "ok": true }
+      },
+      "argv": ["cmd", "--items", "-", "--status", "active", "--json"],
+      "stdin": "[{\"id\":\"u_1\"},{\"id\":\"u_2\"}]",
+      "stdinIsTTY": false,
+      "expect": {
+        "exitCode": 0,
+        "assembledArgs": {
+          "items": [{ "id": "u_1" }, { "id": "u_2" }],
+          "status": "active"
+        }
+      }
+    },
+    {
+      "id": "bind-disables-merge",
+      "status": "active",
+      "transport": "cli",
+      "module": {
+        "meta": { "description": "filter" },
+        "args": {
+          "type": "object",
+          "properties": {
+            "items": {
+              "type": "array",
+              "items": { "type": "object" }
+            },
+            "status": { "type": "string" }
+          },
+          "required": ["items"]
+        },
+        "returns": { "ok": true }
+      },
+      "argv": ["cmd", "--items", "-", "--json"],
+      "stdin": "{\"items\":[{\"id\":\"x\"}],\"status\":\"from-stdin-must-not-merge\"}",
+      "stdinIsTTY": false,
+      "expect": {
+        "exitCode": 2,
+        "stderrMessageIncludes": "Invalid arguments"
+      }
+    },
+    {
+      "id": "two-sentinels-exit-2",
+      "status": "active",
+      "transport": "cli",
+      "module": {
+        "meta": { "description": "filter" },
+        "args": {
+          "type": "object",
+          "properties": {
+            "items": { "type": "array" },
+            "extra": { "type": "array" }
+          },
+          "required": ["items"]
+        },
+        "returns": { "ok": true }
+      },
+      "argv": ["cmd", "--items", "-", "--extra", "-", "--json"],
+      "stdin": "[]",
+      "stdinIsTTY": false,
+      "expect": {
+        "exitCode": 2
+      }
+    },
+    {
+      "id": "bind-non-json-exit-2",
+      "status": "active",
+      "transport": "cli",
+      "module": {
+        "meta": { "description": "filter" },
+        "args": {
+          "type": "object",
+          "properties": {
+            "items": { "type": "array" }
+          },
+          "required": ["items"]
+        },
+        "returns": { "ok": true }
+      },
+      "argv": ["cmd", "--items", "-", "--json"],
+      "stdin": "not-json",
+      "stdinIsTTY": false,
+      "expect": {
+        "exitCode": 2
+      }
+    }
+  ]
+}

@@ -1,11 +1,14 @@
 # TODO
 
+## Active handoff
+
+**0.2.0 on branch** (`@clfly/core@0.2.0`). Interchange ADRs closed (incl. output primitive/OpenAPI rules). Next: publish when ready; forkspace dogfood when that repo has a real CLI (currently a stub). Mounts parked ([`docs/spec/mounts.md`](./docs/spec/mounts.md)).
+
 ## Spec folded in (don't build until go)
 
-See `docs/decisions.md`, `docs/manifest.md`, `docs/ecosystem.md`, `docs/conventions.md`, `docs/scaffolder.md`.
+See `docs/decisions.md`, `docs/manifest.md`, `docs/ecosystem.md`, `docs/conventions.md`, `docs/scaffolder.md`, `docs/spec/`.
 
-- **v0.0.6** — root scoping, agent conventions, MCP harden (outputSchema, collision ADR docs, SDK lazy-import / `@clfly/core/mcp`), real MCP E2E against init/add. See conversation lock-ins.
-- **Optional `output` export** — types + projection (validation: always when exported). Part of v0.0.6 / M3 generalized.
+- **Optional polish** — `listChanged` posture for long-lived MCP servers; shared CLI/MCP error-formatting helper if messages drift.
 - **HTTP mapping** — RPC `POST /…` only; document now, implement at M4a/M4b.
 - **Manifest gaps for palette/docs** — additive fields as needed; never couple ecosystem to core.
 - **`clfly dev mcp [dir]`** — backlog.

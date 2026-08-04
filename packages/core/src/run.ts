@@ -13,7 +13,7 @@ import {
   loadAndValidateCommand,
   scanCommandsDir,
 } from "./router/scan.js";
-import { listSubcommands, resolveRoute } from "./router/resolve.js";
+import { listSubcommandsDetailed, resolveRoute } from "./router/resolve.js";
 import {
   mapToArgs,
   tokenize,
@@ -21,7 +21,7 @@ import {
   wantsVersion,
 } from "./parse/tokenize.js";
 import { nearestMatch } from "./parse/suggest.js";
-import { projectFlags, validateSchema } from "./schema/to-json-schema.js";
+import { projectFlags, toJsonSchema, validateSchema } from "./schema/to-json-schema.js";
 import {
   parseFlagAllowlist,
   positionalNames,
@@ -38,10 +38,23 @@ import {
   isMcpArgv,
   isMcpServeArgv,
   mcpOptionsFromCli,
-  serveMcpStdio,
-} from "./mcp/serve.js";
+  parseMcpServeFlags,
+  validateOutput,
+} from "./mcp/project.js";
 import { assertUniqueToolNames } from "./mcp/tool-names.js";
 import { assignRestPositionals } from "./parse/rest-positionals.js";
+import { createContext } from "./context.js";
+import {
+  createSessionStore,
+  DEFAULT_SPOOL_THRESHOLD,
+  resolveSessionId,
+  resolveThreshold,
+} from "./session/index.js";
+import {
+  assembleInput,
+  rewriteBindSentinels,
+  resolveBindField,
+} from "./stdin/assemble.js";
 import { readFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -76,6 +89,11 @@ export function createCli(options: CreateCliOptions): Cli {
       'Command "mcp" is reserved for the MCP transport (`mcp serve`). Rename your commands/mcp path.',
     );
   }
+  if (tree.children.has("sessions")) {
+    throw new ClflyError(
+      'Command "sessions" is reserved for the session store (`sessions list|clean`). Rename your commands/sessions path.',
+    );
+  }
 
   assertUniqueToolNames(
     listCommandFiles(tree).map((e) => ({
@@ -100,6 +118,7 @@ export function createCli(options: CreateCliOptions): Cli {
     tree,
     async run(argv = process.argv.slice(2)): Promise<RunResult> {
       const json = wantsJson(argv);
+      const spool = wantsSpool(argv);
       try {
         return await runCli({
           name: options.name,
@@ -112,6 +131,7 @@ export function createCli(options: CreateCliOptions): Cli {
           env,
           version,
           json,
+          spool,
           cliOptions: options,
         });
       } catch (err) {
@@ -148,6 +168,7 @@ async function runCli(ctx: {
   env: NodeJS.ProcessEnv;
   version: string;
   json: boolean;
+  spool: boolean;
   cliOptions: CreateCliOptions;
 }): Promise<RunResult> {
   if (wantsVersion(ctx.argv)) {
@@ -161,28 +182,40 @@ async function runCli(ctx: {
 
   // Framework-owned MCP transport — before FS routing.
   if (isMcpServeArgv(ctx.argv)) {
-    if (wantsHelp(ctx.argv)) {
+    const flags = parseMcpServeFlags(ctx.argv);
+    if (flags.help || wantsHelp(ctx.argv)) {
       ctx.stdout.write(
-        `Usage: ${ctx.name} mcp serve\n\n` +
+        `Usage: ${ctx.name} mcp serve [--root <dir>]\n\n` +
           `Expose every command as an MCP tool over stdio.\n` +
-          `Tool names come from the command path; inputSchema from the args JSON Schema.\n`,
+          `Tool names come from the command path; inputSchema from the args JSON Schema.\n` +
+          `Large results spool under .clfly/sessions/ (see docs/spec/session-store.md).\n` +
+          `\nOptions:\n` +
+          `  --root <dir>  Filesystem root for tool invocations (default: cwd)\n`,
       );
       return { exitCode: 0 };
     }
     // stderr only — stdout is the MCP JSON-RPC channel.
+    const root = flags.root ?? ctx.cwd;
     ctx.stderr.write(
-      `${ctx.name} mcp serve listening on stdio (${ctx.version})\n`,
+      `${ctx.name} mcp serve listening on stdio (${ctx.version}) root=${root}\n`,
     );
-    await serveMcpStdio(mcpOptionsFromCli(ctx.cliOptions));
+    // Lazy-load SDK only when serving — keeps createCli import graph free of it.
+    const { serveMcpStdio } = await import("./mcp/server.js");
+    await serveMcpStdio(mcpOptionsFromCli(ctx.cliOptions, { root }));
     return { exitCode: 0 };
   }
 
   if (isMcpArgv(ctx.argv)) {
     ctx.stdout.write(
-      `Usage: ${ctx.name} mcp serve\n\n` +
+      `Usage: ${ctx.name} mcp serve [--root <dir>]\n\n` +
         `Start an MCP server (stdio) projecting this CLI's command tree as tools.\n`,
     );
     return { exitCode: 0 };
+  }
+
+  // Framework-owned session store builtins.
+  if (isSessionsArgv(ctx.argv)) {
+    return runSessionsBuiltin(ctx);
   }
 
   const pathTokens = stripReserved(ctx.argv);
@@ -200,10 +233,14 @@ async function runCli(ctx: {
       flags: [],
       positionals: [],
       subcommands: [
-        ...listSubcommands(ctx.tree),
+        ...(await listSubcommandsDetailed(ctx.tree)),
         {
           name: "mcp",
           description: "MCP transport (mcp serve)",
+        },
+        {
+          name: "sessions",
+          description: "Session store (sessions list|clean)",
         },
       ],
     });
@@ -225,7 +262,7 @@ async function runCli(ctx: {
         commandPath: [],
         flags: [],
         positionals: [],
-        subcommands: listSubcommands(ctx.tree),
+        subcommands: await listSubcommandsDetailed(ctx.tree),
       });
       ctx.stdout.write(help);
       return { exitCode: 0 };
@@ -254,7 +291,7 @@ async function runCli(ctx: {
       positionals,
       subcommands:
         resolved.node.children.size > 0
-          ? listSubcommands(resolved.node)
+          ? await listSubcommandsDetailed(resolved.node)
           : undefined,
     });
     if (ctx.json) {
@@ -265,8 +302,9 @@ async function runCli(ctx: {
     return { exitCode: 0 };
   }
 
+  const rewritten = rewriteBindSentinels(resolved.rest);
   const { flags: parsedFlags, positionals: restTokens } = tokenize(
-    resolved.rest,
+    rewritten.argv,
     tokenizeFlags,
   );
 
@@ -290,9 +328,34 @@ async function runCli(ctx: {
     mod.args,
   );
 
-  let opts: unknown = forArgs;
+  const bindResolved = resolveBindField(
+    forArgs,
+    rewritten.flagBindFields,
+    rewritten.positionalBindCount,
+  );
+  if (!bindResolved.ok) {
+    throw new ClflyError(bindResolved.message, 2);
+  }
+
+  const { text: stdinText, isTTY: stdinIsTTY } = await resolveStdin(
+    ctx.cliOptions,
+  );
+
+  const declaredKeys = declaredArgKeys(mod, pathParamNames, positionals);
+  const assembled = assembleInput({
+    argvArgs: forArgs,
+    stdinText,
+    stdinIsTTY,
+    declaredKeys,
+    bindField: bindResolved.bindField,
+  });
+  if (!assembled.ok) {
+    throw new ClflyError(assembled.message, 2);
+  }
+
+  let opts: unknown = assembled.args;
   if (mod.args) {
-    const validated = await validateSchema(mod.args, forArgs);
+    const validated = await validateSchema(mod.args, assembled.args);
     if ("issues" in validated) {
       const excerpt = renderHelpExcerpt({
         name: ctx.name,
@@ -314,22 +377,64 @@ async function runCli(ctx: {
     opts = { ...resolved.pathParams, ...opts };
   }
 
-  const result = await mod.default(opts, {
-    argv: ctx.argv,
-    cwd: ctx.cwd,
-    env: ctx.env,
-    commandPath: resolved.commandPath,
-    meta: mod.meta ?? {},
-    json: ctx.json,
-    stdout: ctx.stdout,
-    stderr: ctx.stderr,
-  });
+  const result = await mod.default(
+    opts,
+    createContext({
+      argv: ctx.argv,
+      cwd: ctx.cwd,
+      env: ctx.env,
+      commandPath: resolved.commandPath,
+      meta: mod.meta ?? {},
+      json: ctx.json,
+      stdout: ctx.stdout,
+      stderr: ctx.stderr,
+      scoped: false,
+    }),
+  );
 
-  if (ctx.json && result !== undefined) {
-    writeJsonResult(ctx.stdout, result);
+  // Validate return values when `output` is exported and the consumer is
+  // machine-facing (`--json`; MCP validates in invokeMcpTool).
+  const value =
+    (ctx.json || ctx.spool) && mod.output
+      ? await validateOutput(mod, result)
+      : result;
+
+  if (ctx.spool && value !== undefined) {
+    const threshold = resolveThreshold(
+      ctx.env,
+      undefined,
+      DEFAULT_SPOOL_THRESHOLD,
+    );
+    const store = createSessionStore({ root: ctx.cwd, threshold });
+    const sessionId = resolveSessionId(ctx.env);
+    const spooled = store.spool({
+      sessionId,
+      command: resolved.commandPath
+        .map((p) => (p.startsWith("<") ? p.slice(1, -1) : p))
+        .join("_") || "root",
+      argv: ctx.argv,
+      value,
+      schemaRef: mod.output ? "output" : undefined,
+    });
+
+    if (ctx.json) {
+      if (store.exceedsThreshold(value)) {
+        writeJsonResult(ctx.stdout, spooled.envelope);
+      } else {
+        writeJsonResult(ctx.stdout, value);
+      }
+    } else {
+      // Opt-in spool without --json: print absolute path for redirect/bind.
+      ctx.stdout.write(`${spooled.path}\n`);
+    }
+    return { exitCode: 0, value, args: opts };
   }
 
-  return { exitCode: 0, value: result };
+  if (ctx.json && value !== undefined) {
+    writeJsonResult(ctx.stdout, value);
+  }
+
+  return { exitCode: 0, value, args: opts };
 }
 
 function projectCommandSurface(
@@ -399,6 +504,7 @@ function assertKnownFlags(
       `Unknown option: ${display}` +
         (suggestion ? `\nDid you mean: --${suggestion}?` : "") +
         `\nRun with --help to see available options.`,
+      2,
     );
   }
 }
@@ -429,12 +535,141 @@ function stripReserved(argv: string[]): string[] {
       t !== "-h" &&
       t !== "--version" &&
       t !== "-V" &&
-      t !== "--json",
+      t !== "--json" &&
+      t !== "--spool",
   );
+}
+
+function declaredArgKeys(
+  mod: CommandModule,
+  pathParamNames: string[],
+  positionals: PositionalInfo[],
+): Set<string> {
+  const keys = new Set<string>();
+  for (const name of pathParamNames) keys.add(name);
+  for (const p of positionals) keys.add(p.name);
+  if (mod.args) {
+    try {
+      const json = toJsonSchema(mod.args);
+      const props = (json.properties ?? {}) as Record<string, unknown>;
+      for (const name of Object.keys(props)) keys.add(name);
+    } catch {
+      // Schema without JSON Schema projection — fall back to projected flags.
+      for (const f of projectFlags(mod.args)) keys.add(f.name);
+    }
+  }
+  return keys;
+}
+
+async function resolveStdin(
+  options: CreateCliOptions,
+): Promise<{ text: string; isTTY: boolean }> {
+  if (options.stdinText !== undefined) {
+    return {
+      text: options.stdinText,
+      isTTY: options.stdinIsTTY ?? false,
+    };
+  }
+  if (options.stdinIsTTY !== undefined) {
+    if (options.stdinIsTTY) return { text: "", isTTY: true };
+    return { text: await readAllStdin(), isTTY: false };
+  }
+  // Interactive terminal — ignore stdin.
+  if (process.stdin.isTTY === true) {
+    return { text: "", isTTY: true };
+  }
+  // Vitest / node:test leave fd 0 open without EOF; don't hang unit tests.
+  // Real pipes/redirects are not run under these runners. Conformance injects.
+  if (process.env.VITEST != null || process.env.NODE_TEST_CONTEXT != null) {
+    return { text: "", isTTY: true };
+  }
+  // Pipe or file redirect (`isTTY` falsy) — read to EOF.
+  return { text: await readAllStdin(), isTTY: false };
+}
+
+async function readAllStdin(): Promise<string> {
+  const chunks: Buffer[] = [];
+  for await (const chunk of process.stdin) {
+    chunks.push(Buffer.isBuffer(chunk) ? chunk : Buffer.from(String(chunk)));
+  }
+  return Buffer.concat(chunks).toString("utf8");
 }
 
 export function wantsJson(argv: string[]): boolean {
   return argv.includes("--json");
+}
+
+export function wantsSpool(argv: string[]): boolean {
+  return argv.includes("--spool");
+}
+
+function isSessionsArgv(argv: string[]): boolean {
+  const tokens = argv.filter((t) => !t.startsWith("-") && t !== "--");
+  return tokens[0] === "sessions";
+}
+
+async function runSessionsBuiltin(ctx: {
+  name: string;
+  argv: string[];
+  cwd: string;
+  stdout: NodeJS.WritableStream;
+  stderr: NodeJS.WritableStream;
+  env: NodeJS.ProcessEnv;
+  json: boolean;
+}): Promise<RunResult> {
+  const tokens = ctx.argv.filter((t) => !t.startsWith("-") && t !== "--");
+  const sub = tokens[1] ?? "list";
+
+  if (wantsHelp(ctx.argv) || sub === "help") {
+    ctx.stdout.write(
+      `Usage: ${ctx.name} sessions [list|clean]\n\n` +
+        `Inspect or evict the shared .clfly/sessions/ store.\n` +
+        `  list   List sessions (default)\n` +
+        `  clean  Run TTL + max-bytes eviction now\n`,
+    );
+    return { exitCode: 0 };
+  }
+
+  if (sub !== "list" && sub !== "clean") {
+    throw new ClflyError(
+      `Unknown sessions subcommand: ${sub}\n` +
+        `Usage: ${ctx.name} sessions [list|clean]`,
+      2,
+    );
+  }
+
+  const threshold = resolveThreshold(
+    ctx.env,
+    undefined,
+    DEFAULT_SPOOL_THRESHOLD,
+  );
+  const store = createSessionStore({ root: ctx.cwd, threshold });
+
+  if (sub === "clean") {
+    const removed = store.evict();
+    if (ctx.json) {
+      writeJsonResult(ctx.stdout, { removed });
+    } else if (removed.length === 0) {
+      ctx.stdout.write("No sessions evicted.\n");
+    } else {
+      for (const id of removed) ctx.stdout.write(`${id}\n`);
+    }
+    return { exitCode: 0, value: { removed } };
+  }
+
+  const sessions = store.listSessions();
+  if (ctx.json) {
+    writeJsonResult(ctx.stdout, sessions);
+  } else if (sessions.length === 0) {
+    ctx.stdout.write("No sessions.\n");
+  } else {
+    for (const s of sessions) {
+      ctx.stdout.write(
+        `${s.sessionId}  entries=${s.entries}  bytes=${s.bytes}  mtime=${new Date(s.mtimeMs).toISOString()}\n`,
+      );
+    }
+  }
+  return { exitCode: 0, value: sessions };
 }
 
 function expectedFromFlags(

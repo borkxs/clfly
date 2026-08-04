@@ -59,9 +59,12 @@ bin/<name>.ts  # createCli wiring
 package.json
 tsconfig.json
 README.md
+.gitignore     # includes `.clfly/` (idempotent append if file already exists)
 ```
 
 Dynamic segments are taught by `clfly add`, not the starter. `examples/demo-cli` remains the full showcase.
+
+`init` and `add` both ensure `.clfly/` is listed in `.gitignore` (session store + build artifacts live there).
 
 ### Return
 
@@ -131,6 +134,6 @@ Leftover argv tokens after the command path fill args as follows (implemented in
 1. If the args JSON Schema has **exactly one** `type: "array"` property, assign the rest array to it (e.g. `paths`).
 2. Else, assign rest tokens in order to unset `type: "string"` properties (e.g. optional `name` on `init`).
 
-## Out of scope here (v0.0.6+)
+## MCP / agent notes
 
-Root scoping (`--root`), MCP E2E against init/add, `meta.interactive`, SDK lazy-import / `@clfly/core/mcp` subpath, generalized MCP harden. Naming hard-fail + root-index exclusion are specified with the scaffolder because `add` must validate tool names; full MCP projection posture lands in v0.0.6.
+`init` and `add` resolve filesystem paths via `ctx.resolvePath`, so `clfly mcp serve --root <dir>` jails scaffolding under that root. Tool-name hard-fail and root-index exclusion are enforced here because `add` validates names before writing files.

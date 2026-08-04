@@ -4,6 +4,8 @@
 
 clfly is a TypeScript CLI framework where a `commands/` directory is the single source of truth. Each file exports a schema (Zod 4, Valibot, ArkType — anything [Standard Schema](https://standardschema.dev)) and a default function. Everything else is derived: argument parsing, validation, help text, completions, and an MCP server that exposes every command as a tool AI agents can call.
 
+`mcp serve` is to agents what `--help` is to humans — every tool answers for itself, in a uniform grammar, because both are projections of the same tree.
+
 If you know Next.js routing or PostgREST, it's that idea pointed at argv: the tree *is* the interface. If you don't — you never write a parser, a help screen, or a tool manifest again.
 
 ```ts
@@ -39,7 +41,11 @@ mycli users u_1 show
 mycli deploy --env staging --dryRun
 mycli users list --json
 mycli mcp serve          # same tree, now it's an MCP server over stdio
+mycli sessions list      # inspect .clfly/sessions (large-result spool store)
+mycli users list --json --spool   # opt-in: write full JSON under .clfly/ + print path/envelope
 ```
+
+Large MCP/`--json` results auto-spool (or `--spool` on the CLI) under a shared `.clfly/sessions/` ledger — see [docs/spec/session-store.md](./docs/spec/session-store.md).
 
 ## Why
 
@@ -54,6 +60,11 @@ npm create clfly mycli
 # or: clfly init mycli   (from @clfly/cli)
 cd mycli && pnpm install
 pnpm exec tsx bin/mycli.ts --help
+
+# Point an agent at the same tree:
+claude mcp add mycli -- npx -y mycli mcp serve
+# Scaffold via clfly itself (jailed to the project root):
+claude mcp add clfly -- npx -y @clfly/cli mcp serve --root .
 ```
 
 Or wire core yourself:
@@ -115,7 +126,7 @@ The gap all of them leave: no package treats a directory of `(schema, function)`
 
 - ✅ **M1** — router, parsing, validation, `--help`/`--version`, reserved-flag errors
 - ✅ **M2** — `clfly build` manifest, bash/zsh/fish completions, global `--json`
-- 🔄 **M3** — `mycli mcp serve`: every command as an MCP tool — *in progress* (minimal: stdio projection of the tree; generalized later: harden, `outputSchema`/structured content, `listChanged` posture)
+- ✅ **M3** — `mycli mcp serve`: every command as an MCP tool (stdio, `--root` scoping, optional `output` → `outputSchema` / structured content, session store for large results, tool annotations; `listChanged` later)
 - ⬜ **M4a** — `clfly export openapi`: OpenAPI 3.1 from the tree (RPC-over-POST paths; no server)
 - ⬜ **M4b** — `clfly http serve`: the same mapping as a live JSON API (auth on by default)
 - ⬜ **M5** — ecosystem packages: `@clfly/docs`, `clfly palette` (TUI), `@clfly/palette` (web ⌘K)
@@ -130,7 +141,7 @@ Plugins, i18n, config-file merging, telemetry. The framework does not ship inter
 
 | Package | Role |
 |---|---|
-| [`@clfly/core`](./packages/core) | Router, parser, help, build, completions, `mcp serve` |
+| [`@clfly/core`](./packages/core) | Router, parser, help, build, completions; MCP projection (server APIs at `@clfly/core/mcp`) |
 | [`@clfly/cli`](./packages/cli) | Product binary `clfly` (`init`, `add`, `build`, `completions`) |
 | [`@clfly/create`](./packages/create) | Thin `npm create clfly` alias for `init` |
 | [`examples/demo-cli`](./examples/demo-cli) | Reference CLI + MCP server |

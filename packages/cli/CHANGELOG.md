@@ -1,5 +1,16 @@
 # @clfly/cli
 
+## 0.0.6
+
+### Patch Changes
+
+- a31ddb5: Harden `mcp serve`: `--root` scoping, optional `output` → MCP `outputSchema`/structured content, `meta.interactive` exclusion, and `@clfly/core/mcp` subpath with lazy SDK load.
+- a31ddb5: Session store for large results (`.clfly/sessions/`, `--spool`, MCP auto-spool + `result_read`), plus `meta.{readOnly,destructive,idempotent}` → MCP tool annotations.
+- Updated dependencies [a31ddb5]
+- Updated dependencies [a31ddb5]
+- Updated dependencies [e9d8609]
+  - @clfly/core@0.2.0
+
 ## 0.0.5
 
 ### Patch Changes

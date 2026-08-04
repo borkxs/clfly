@@ -2,6 +2,7 @@
  * Thin alias for `clfly init` — enables `npm create clfly`.
  * Shares @clfly/cli's init implementation (no second template).
  */
+import { resolve } from "node:path";
 import { runInit } from "@clfly/cli/scaffold";
 
 function parseArgv(argv: string[]): {
@@ -55,11 +56,13 @@ function parseArgv(argv: string[]): {
 const opts = parseArgv(process.argv.slice(2));
 
 try {
+  const cwd = process.cwd();
   await runInit(opts, {
-    cwd: process.cwd(),
+    cwd,
     json: false,
     stdout: process.stdout,
     stderr: process.stderr,
+    resolvePath: (userPath) => resolve(cwd, userPath),
   });
   process.exitCode = 0;
 } catch (err) {

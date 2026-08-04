@@ -1,0 +1,66 @@
+[
+  {
+    "name": "deploy",
+    "description": "Deploy the current workspace",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "env": {
+          "default": "staging",
+          "description": "Target environment",
+          "type": "string",
+          "enum": [
+            "staging",
+            "production"
+          ]
+        },
+        "dryRun": {
+          "default": false,
+          "description": "Print actions without applying",
+          "type": "boolean"
+        }
+      }
+    },
+    "outputSchema": null
+  },
+  {
+    "name": "users_list",
+    "description": "List users in the workspace",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "status": {
+          "description": "Filter by status",
+          "type": "string",
+          "enum": [
+            "active",
+            "churned"
+          ]
+        },
+        "limit": {
+          "default": 50,
+          "description": "Max rows",
+          "type": "number"
+        }
+      }
+    },
+    "outputSchema": null
+  },
+  {
+    "name": "users_show",
+    "description": "Show a single user",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "User id"
+        }
+      },
+      "required": [
+        "id"
+      ]
+    },
+    "outputSchema": null
+  }
+]

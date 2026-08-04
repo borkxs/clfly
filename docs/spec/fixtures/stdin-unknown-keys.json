@@ -1,0 +1,51 @@
+{
+  "rule": "stdio.md#unknown-keys-lenient-stdin-strict-argv",
+  "summary": "Filter stdin keys to declared properties; argv unknown flags stay strict.",
+  "cases": [
+    {
+      "id": "stdin-extra-keys-dropped",
+      "status": "active",
+      "transport": "cli",
+      "module": {
+        "meta": { "description": "add" },
+        "args": {
+          "type": "object",
+          "properties": {
+            "magnet": { "type": "string" }
+          },
+          "required": ["magnet"]
+        },
+        "returns": { "ok": true }
+      },
+      "argv": ["cmd", "--json"],
+      "stdin": "{\"magnet\":\"abc\",\"title\":\"Over-supplied\",\"seeders\":12}",
+      "stdinIsTTY": false,
+      "expect": {
+        "exitCode": 0,
+        "assembledArgs": { "magnet": "abc" },
+        "stdoutJson": { "ok": true }
+      }
+    },
+    {
+      "id": "argv-unknown-flag-exit-2",
+      "status": "active",
+      "transport": "cli",
+      "module": {
+        "meta": { "description": "add" },
+        "args": {
+          "type": "object",
+          "properties": {
+            "magnet": { "type": "string" }
+          },
+          "required": ["magnet"]
+        },
+        "returns": { "ok": true }
+      },
+      "argv": ["cmd", "--magnet", "abc", "--title", "typo", "--json"],
+      "stdinIsTTY": true,
+      "expect": {
+        "exitCode": 2
+      }
+    }
+  ]
+}

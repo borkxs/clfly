@@ -155,7 +155,7 @@ describe("--json convention", () => {
       "--status",
       "nope",
     ]);
-    expect(result.exitCode).toBe(1);
+    expect(result.exitCode).toBe(2);
     const body = JSON.parse(err.text()) as {
       error: { message: string; issues: unknown[] };
     };

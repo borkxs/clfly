@@ -1,5 +1,5 @@
 import { mkdirSync, writeFileSync, existsSync, readdirSync } from "node:fs";
-import { dirname, join, relative, resolve } from "node:path";
+import { dirname, join, relative } from "node:path";
 import type { Context } from "@clfly/core";
 import { ClflyError } from "@clfly/core";
 import {
@@ -9,6 +9,7 @@ import {
 } from "./detect.js";
 import { mergePackageJson, type PackageJsonMergeResult } from "./package-json.js";
 import { renderBin, renderHello, renderIndex, renderReadme, renderTsconfig } from "./template.js";
+import { ensureClflyGitignore } from "./gitignore.js";
 
 export interface InitOptions {
   name?: string;
@@ -26,14 +27,16 @@ export interface InitResult {
 
 export async function runInit(
   opts: InitOptions,
-  ctx: Pick<Context, "cwd" | "stdout" | "stderr" | "json">,
+  ctx: Pick<Context, "cwd" | "stdout" | "stderr" | "json" | "resolvePath">,
 ): Promise<InitResult> {
   const validator: ValidatorKind = opts.validator ?? "zod";
   const pm: PackageManager =
     opts.pm ?? detectPackageManager(ctx.cwd, { env: process.env });
   const force = opts.force ?? false;
   const cliName = opts.name ?? inferCliName(ctx.cwd);
-  const targetDir = opts.name ? resolve(ctx.cwd, opts.name) : resolve(ctx.cwd);
+  const targetDir = opts.name
+    ? ctx.resolvePath(opts.name)
+    : ctx.resolvePath(".");
 
   if (!force && isNonEmptyDir(targetDir)) {
     throw new ClflyError(
@@ -98,6 +101,10 @@ export async function runInit(
     mkdirSync(dirname(abs), { recursive: true });
     writeFileSync(abs, file.contents, "utf8");
     created.push(toRepoRel(ctx.cwd, abs));
+  }
+
+  if (ensureClflyGitignore(targetDir)) {
+    created.push(toRepoRel(ctx.cwd, join(targetDir, ".gitignore")));
   }
 
   if (!ctx.json) {
