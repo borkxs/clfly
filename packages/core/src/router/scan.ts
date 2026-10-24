@@ -67,7 +67,8 @@ function walk(commandsDir: string, dir: string, parent: RouteNode): void {
       continue;
     }
 
-    const seg: RouteSegment = { type: "static", name };
+    // `down/[env].ts` is the param-child of `down/index.ts`, same as `down/[env]/`.
+    const seg = parseSegment(name);
     const key = segmentKey(seg);
     let child = parent.children.get(key);
     if (!child) {

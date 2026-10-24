@@ -24,7 +24,7 @@ export function mergePackageJson(opts: {
 }): PackageJsonMergeResult {
   const pkgPath = join(opts.targetDir, "package.json");
   const suggested = [
-    `"start": "tsx bin/${opts.cliName}.ts"`,
+    `"start": "node bin/${opts.cliName}.mjs"`,
     `"typecheck": "tsc -p tsconfig.json --noEmit"`,
   ];
 
@@ -34,18 +34,18 @@ export function mergePackageJson(opts: {
       version: "0.0.0",
       private: true,
       type: "module",
-      bin: { [opts.cliName]: `./bin/${opts.cliName}.ts` },
+      bin: { [opts.cliName]: `./bin/${opts.cliName}.mjs` },
       scripts: {
-        start: `tsx bin/${opts.cliName}.ts`,
+        start: `node bin/${opts.cliName}.mjs`,
         typecheck: "tsc -p tsconfig.json --noEmit",
       },
       dependencies: {
-        "@clfly/core": "^0.1.0",
+        "@clfly/core": "^0.3.0",
+        tsx: "^4",
         [VALIDATOR_DEP[opts.validator].name]: VALIDATOR_DEP[opts.validator].range,
       },
       devDependencies: {
         "@types/node": "^22",
-        tsx: "^4",
         typescript: "^5",
       },
       clfly: { validator: opts.validator },
@@ -80,7 +80,7 @@ export function mergePackageJson(opts: {
       : {};
   const binKey = opts.cliName;
   if (bin[binKey] === undefined) {
-    bin[binKey] = `./bin/${opts.cliName}.ts`;
+    bin[binKey] = `./bin/${opts.cliName}.mjs`;
     pkg.bin = bin;
     added.push(`bin.${binKey}`);
   } else {
@@ -92,7 +92,7 @@ export function mergePackageJson(opts: {
       ? { ...(pkg.dependencies as Record<string, string>) }
       : {};
   if (deps["@clfly/core"] === undefined) {
-    deps["@clfly/core"] = "^0.1.0";
+    deps["@clfly/core"] = "^0.3.0";
     added.push("dependencies.@clfly/core");
   } else {
     skipped.push("dependencies.@clfly/core");
@@ -103,6 +103,10 @@ export function mergePackageJson(opts: {
     added.push(`dependencies.${vDep.name}`);
   } else {
     skipped.push(`dependencies.${vDep.name}`);
+  }
+  if (bin[binKey]?.endsWith(".mjs") && deps.tsx === undefined) {
+    deps.tsx = "^4";
+    added.push("dependencies.tsx");
   }
   pkg.dependencies = deps;
 
@@ -123,7 +127,7 @@ export function mergePackageJson(opts: {
       ? (pkg.scripts as Record<string, string>)
       : {};
   for (const [k, v] of Object.entries({
-    start: `tsx bin/${opts.cliName}.ts`,
+    start: `node bin/${opts.cliName}.mjs`,
     typecheck: "tsc -p tsconfig.json --noEmit",
   })) {
     if (scripts[k] === undefined) {

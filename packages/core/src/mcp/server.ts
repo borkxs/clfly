@@ -4,6 +4,7 @@ import {
   CallToolRequestSchema,
   ListToolsRequestSchema,
 } from "@modelcontextprotocol/sdk/types.js";
+import { fileUrlToPath } from "../version.js";
 import { ClflyError, ValidationError } from "../errors.js";
 import {
   createSessionStore,
@@ -14,6 +15,7 @@ import {
 } from "../session/index.js";
 import {
   type CreateMcpOptions,
+  type McpToolDef,
   invokeMcpTool,
   listMcpTools,
   resolveMcpRoot,
@@ -28,13 +30,14 @@ import {
   resultQueryInputSchema,
   resultReadInputSchema,
 } from "./session-tools.js";
+import { watchCommandTree } from "./watch.js";
 
 /** Build an MCP Server with tools projected from the command tree. */
 export async function createMcpServer(
   options: CreateMcpOptions,
 ): Promise<Server> {
-  const tools = await listMcpTools(options);
-  const byName = new Map(tools.map((t) => [t.name, t]));
+  const state: { tools: McpToolDef[] } = { tools: await listMcpTools(options) };
+  const byName = new Map(state.tools.map((t) => [t.name, t]));
   const version = resolveMcpVersion(options);
   const root = resolveMcpRoot(options);
   const env = options.env ?? process.env;
@@ -49,12 +52,37 @@ export async function createMcpServer(
 
   const server = new Server(
     { name: options.name, version },
-    { capabilities: { tools: {} } },
+    { capabilities: { tools: { listChanged: true } } },
   );
+
+  const replaceTools = (next: McpToolDef[]) => {
+    state.tools = next;
+    byName.clear();
+    for (const tool of next) byName.set(tool.name, tool);
+  };
+
+  // Dev mode is a live scan. A baked manifest does not change under us.
+  if (options.commandsDir && !options.manifest) {
+    const commandsDir = fileUrlToPath(options.commandsDir);
+    const stop = watchCommandTree(commandsDir, async () => {
+      try {
+        replaceTools(await listMcpTools(options));
+        await server.sendToolListChanged();
+      } catch (err) {
+        const message = err instanceof Error ? err.message : String(err);
+        process.stderr.write(`clfly: tool list refresh failed: ${message}\n`);
+      }
+    });
+    const close = server.close.bind(server);
+    server.close = () => {
+      stop();
+      return close();
+    };
+  }
 
   server.setRequestHandler(ListToolsRequestSchema, async () => ({
     tools: [
-      ...tools.map((t) => ({
+      ...state.tools.map((t) => ({
         name: t.name,
         description: t.description,
         inputSchema: t.inputSchema,

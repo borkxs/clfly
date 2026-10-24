@@ -1,6 +1,6 @@
 # clfly
 
-> The real CLI — `init`, `add`, `build`, `completions`, and inherited `mcp serve`.
+> The real CLI — `init`, `add`, `build`, `completions`, `skill export`, and inherited `mcp serve`.
 
 ```bash
 npm i -g @clfly/cli

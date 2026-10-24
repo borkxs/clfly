@@ -1,5 +1,11 @@
 # @clfly/core
 
+## 0.3.0
+
+### Minor Changes
+
+- bf8a6be: Refresh the MCP tool list when a dev-mode command tree changes, and treat a trailing `[param].ts` file as its own command.
+
 ## 0.2.0
 
 ### Minor Changes
