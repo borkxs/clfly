@@ -1,5 +1,13 @@
 # @clfly/cli
 
+## 0.0.7
+
+### Patch Changes
+
+- bf8a6be: Add `clfly skill export`. Scaffolded CLIs get a `bin/<name>.mjs` launcher that registers tsx, so `npm link` runs on Node 20.
+- Updated dependencies [bf8a6be]
+  - @clfly/core@0.3.0
+
 ## 0.0.6
 
 ### Patch Changes

@@ -2,7 +2,7 @@
 
 ## Active handoff
 
-**Demo loop on `feat/publish-demo-loop`.** `@clfly/core` minor: dev-mode `tools/list_changed`, trailing `[param].ts` stays a child tool. `@clfly/cli` patch: `skill export`, and `init` writes `bin/<name>.mjs` so `npm link` runs on Node 20. Next: merge and publish so the recording uses the registry, not a `file:` link. Mounts parked ([`docs/spec/mounts.md`](./docs/spec/mounts.md)).
+**0.3.0 / 0.0.7 on `feat/publish-demo-loop`.** `@clfly/core@0.3.0`: dev-mode `tools/list_changed`, trailing `[param].ts` stays a child tool. `@clfly/cli@0.0.7`: `skill export`, and `init` writes `bin/<name>.mjs` so `npm link` runs on Node 20. Next: merge and `changeset publish` so the recording uses the registry, not a `file:` link. Mounts parked ([`docs/spec/mounts.md`](./docs/spec/mounts.md)).
 
 ## Spec folded in (don't build until go)
 

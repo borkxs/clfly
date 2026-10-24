@@ -1,6 +1,6 @@
 {
   "name": "@clfly/create",
-  "version": "0.0.6",
+  "version": "0.0.7",
   "description": "Scaffold a clfly CLI (npm create clfly)",
   "type": "module",
   "license": "MIT",
