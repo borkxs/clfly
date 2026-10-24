@@ -26,6 +26,18 @@ describe("assertUniqueToolNames", () => {
     ).not.toThrow();
   });
 
+  it("keeps a trailing param child distinct from the bare command", () => {
+    expect(toolNameFromPath(["down"])).toBe("down");
+    expect(toolNameFromPath(["down", ":env"])).toBe("down_env");
+    expect(toolNameFromPath(["users", ":id", "show"])).toBe("users_show");
+    expect(() =>
+      assertUniqueToolNames([
+        { path: ["down"], file: "commands/down/index.ts" },
+        { path: ["down", ":env"], file: "commands/down/[env].ts" },
+      ]),
+    ).not.toThrow();
+  });
+
   it("createCli hard-fails on colliding command files", () => {
     const dir = mkdtempSync(join(tmpdir(), "clfly-name-"));
     try {

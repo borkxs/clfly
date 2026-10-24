@@ -8,7 +8,14 @@ import {
   type ValidatorKind,
 } from "./detect.js";
 import { mergePackageJson, type PackageJsonMergeResult } from "./package-json.js";
-import { renderBin, renderHello, renderIndex, renderReadme, renderTsconfig } from "./template.js";
+import {
+  renderBin,
+  renderBinLauncher,
+  renderHello,
+  renderIndex,
+  renderReadme,
+  renderTsconfig,
+} from "./template.js";
 import { ensureClflyGitignore } from "./gitignore.js";
 
 export interface InitOptions {
@@ -60,6 +67,10 @@ export async function runInit(
     {
       rel: "README.md",
       contents: renderReadme(cliName),
+    },
+    {
+      rel: join("bin", `${cliName}.mjs`),
+      contents: renderBinLauncher(cliName),
     },
     {
       rel: join("bin", `${cliName}.ts`),

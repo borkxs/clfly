@@ -92,6 +92,7 @@ describe("clfly bin", () => {
     expect(stdout).toContain("add");
     expect(stdout).toContain("build");
     expect(stdout).toContain("completions");
+    expect(stdout).toContain("skill");
     expect(stdout).toContain("mcp");
     expect(stdout).not.toMatch(/\badd\.d\b/);
     expect(stdout).not.toMatch(/\bbuild\.d\b/);
@@ -120,11 +121,21 @@ describe("clfly bin", () => {
       );
       expect(existsSync(join(dir, "demo", "commands", "hello.ts"))).toBe(true);
       expect(existsSync(join(dir, "demo", "bin", "demo.ts"))).toBe(true);
+      expect(existsSync(join(dir, "demo", "bin", "demo.mjs"))).toBe(true);
+      expect(readFileSync(join(dir, "demo", "bin", "demo.mjs"), "utf8")).toContain(
+        "tsx/esm/api",
+      );
       const pkg = JSON.parse(
         readFileSync(join(dir, "demo", "package.json"), "utf8"),
-      ) as { clfly: { validator: string }; bin: Record<string, string> };
+      ) as {
+        clfly: { validator: string };
+        bin: Record<string, string>;
+        dependencies: Record<string, string>;
+      };
       expect(pkg.clfly.validator).toBe("zod");
-      expect(pkg.bin.demo).toBe("./bin/demo.ts");
+      expect(pkg.bin.demo).toBe("./bin/demo.mjs");
+      expect(pkg.dependencies["@clfly/core"]).toBe("^0.3.0");
+      expect(pkg.dependencies.tsx).toBe("^4");
     } finally {
       rmSync(dir, { recursive: true, force: true });
     }

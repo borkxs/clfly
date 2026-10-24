@@ -4,7 +4,9 @@ import { ClflyError } from "../errors.js";
  * Map a command path to an MCP tool name.
  *
  * Rules:
- * - Dynamic segments (`:id` / `[id]`) are dropped.
+ * - A dynamic segment in the middle (`users/:id/show`) is an argument and is dropped.
+ * - A trailing dynamic segment (`down/:env`, from `down/[env].ts`) is the child
+ *   command, so its name stays (`down_env`) and does not collide with bare `down`.
  * - Remaining segments are sanitized (`[^a-zA-Z0-9_-]` → `_`) and joined with `_`.
  * - Root index (`[]`) is **not** a tool → returns `null`.
  * - Nested index is already represented as the parent path (`users/index` → `["users"]` → `users`).
@@ -13,11 +15,22 @@ import { ClflyError } from "../errors.js";
  */
 export function toolNameFromPath(path: string[]): string | null {
   if (path.length === 0) return null;
-  const parts = path
-    .filter((p) => !p.startsWith(":") && !/^\[.+\]$/.test(p))
-    .map((p) => p.replace(/[^a-zA-Z0-9_-]/g, "_"));
+  const parts: string[] = [];
+  for (let i = 0; i < path.length; i++) {
+    const segment = path[i]!;
+    const dynamic = segment.startsWith(":") || /^\[.+\]$/.test(segment);
+    if (dynamic && i !== path.length - 1) continue;
+    const label = dynamic ? dynamicLabel(segment) : segment;
+    parts.push(label.replace(/[^a-zA-Z0-9_-]/g, "_"));
+  }
   if (parts.length === 0) return null;
   return parts.join("_");
+}
+
+function dynamicLabel(segment: string): string {
+  if (segment.startsWith(":")) return segment.slice(1);
+  const match = /^\[(.+)\]$/.exec(segment);
+  return match?.[1] ?? segment;
 }
 
 export interface ToolNameSource {

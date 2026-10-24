@@ -2,13 +2,13 @@
 
 ## Active handoff
 
-**0.2.0 on branch** (`@clfly/core@0.2.0`). Interchange ADRs closed (incl. output primitive/OpenAPI rules). Next: publish when ready; forkspace dogfood when that repo has a real CLI (currently a stub). Mounts parked ([`docs/spec/mounts.md`](./docs/spec/mounts.md)).
+**Demo loop on `feat/publish-demo-loop`.** `@clfly/core` minor: dev-mode `tools/list_changed`, trailing `[param].ts` stays a child tool. `@clfly/cli` patch: `skill export`, and `init` writes `bin/<name>.mjs` so `npm link` runs on Node 20. Next: merge and publish so the recording uses the registry, not a `file:` link. Mounts parked ([`docs/spec/mounts.md`](./docs/spec/mounts.md)).
 
 ## Spec folded in (don't build until go)
 
 See `docs/decisions.md`, `docs/manifest.md`, `docs/ecosystem.md`, `docs/conventions.md`, `docs/scaffolder.md`, `docs/spec/`.
 
-- **Optional polish** — `listChanged` posture for long-lived MCP servers; shared CLI/MCP error-formatting helper if messages drift.
+- **Optional polish** — shared CLI/MCP error-formatting helper if messages drift. Dev-mode `listChanged` ships with the demo release.
 - **HTTP mapping** — RPC `POST /…` only; document now, implement at M4a/M4b.
 - **Manifest gaps for palette/docs** — additive fields as needed; never couple ecosystem to core.
 - **`clfly dev mcp [dir]`** — backlog.

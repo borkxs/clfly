@@ -2,6 +2,7 @@ import { mkdirSync, mkdtempSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
+import { createCli } from "../src/run.js";
 import { scanCommandsDir } from "../src/router/scan.js";
 import {
   listSubcommands,
@@ -83,6 +84,23 @@ describe("router resolve", () => {
     expect(scanned.children.get("add")?.commandFile?.endsWith("add.js")).toBe(
       true,
     );
+  });
+
+  it("treats [env].ts as the param child of index.ts", () => {
+    const root = mkdtempSync(join(tmpdir(), "clfly-param-file-"));
+    const commands = join(root, "commands", "down");
+    mkdirSync(commands, { recursive: true });
+    writeFileSync(join(commands, "index.ts"), "export default async () => {}");
+    writeFileSync(join(commands, "[env].ts"), "export default async () => {}");
+    const scanned = scanCommandsDir(join(root, "commands"));
+    const bare = resolveRoute(scanned, ["down"]);
+    expect(bare.commandPath).toEqual(["down"]);
+    expect(bare.node.commandFile?.endsWith("down/index.ts")).toBe(true);
+    const child = resolveRoute(scanned, ["down", "dev"]);
+    expect(child.commandPath).toEqual(["down", "<env>"]);
+    expect(child.pathParams).toEqual({ env: "dev" });
+    expect(child.node.commandFile?.endsWith("down/[env].ts")).toBe(true);
+    expect(() => createCli({ name: "forkspace", commandsDir: join(root, "commands") })).not.toThrow();
   });
 
   it("listSubcommandsDetailed loads meta.description in dev scan", async () => {

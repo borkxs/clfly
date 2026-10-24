@@ -24,6 +24,7 @@ export default defineConfig([
       "commands/add": "src/commands/add.ts",
       "commands/build": "src/commands/build.ts",
       "commands/completions": "src/commands/completions.ts",
+      "commands/skill/export": "src/commands/skill/export.ts",
     },
     clean: false,
     dts: false,

@@ -25,18 +25,27 @@ export function renderReadme(cliName: string): string {
 Scaffolded with [clfly](https://github.com/borkxs/clfly).
 
 \`\`\`bash
-npx tsx bin/${cliName}.ts --help
-npx tsx bin/${cliName}.ts hello --name world
-npx tsx bin/${cliName}.ts mcp serve
+node bin/${cliName}.mjs --help
+node bin/${cliName}.mjs hello --name world
+node bin/${cliName}.mjs mcp serve
 \`\`\`
 
 Add commands with \`clfly add user/:id/report\`.
 `;
 }
 
-export function renderBin(cliName: string): string {
+/** npm bin. Registers tsx, then loads the TypeScript entry. Node 20 can run this file. */
+export function renderBinLauncher(cliName: string): string {
   return `#!/usr/bin/env node
-import { fileURLToPath } from "node:url";
+import { register } from "tsx/esm/api";
+
+register();
+await import(new URL("./${cliName}.ts", import.meta.url).href);
+`;
+}
+
+export function renderBin(cliName: string): string {
+  return `import { fileURLToPath } from "node:url";
 import { createCli } from "@clfly/core";
 
 const cli = createCli({
