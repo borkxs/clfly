@@ -93,6 +93,8 @@ describe("clfly bin", () => {
     expect(stdout).toContain("build");
     expect(stdout).toContain("completions");
     expect(stdout).toContain("skill");
+    expect(stdout).toContain("link");
+    expect(stdout).toContain("register");
     expect(stdout).toContain("mcp");
     expect(stdout).not.toMatch(/\badd\.d\b/);
     expect(stdout).not.toMatch(/\bbuild\.d\b/);

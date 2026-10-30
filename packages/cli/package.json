@@ -54,6 +54,7 @@
   },
   "dependencies": {
     "@clfly/core": "workspace:^",
+    "smol-toml": "^1.9.1",
     "zod": "^4.0.5"
   },
   "devDependencies": {

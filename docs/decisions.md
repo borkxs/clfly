@@ -121,3 +121,11 @@ Status: **Accepted** unless marked **Open**.
 ### Mounts / pack composition
 
 **Open (stub).** Mounts are a product scalpel (publishable bridge vs private `pm`), not an extract-everything backlog. Hard problems for core: config namespacing per mount, MCP tool naming across mounts. Sequencing: stdin → 0.2.0, then forkspace dogfood, then librarian extraction as mounts dogfood. Full text: [spec/mounts.md](./spec/mounts.md).
+
+### Local registry, explicit link
+
+**Accepted.** Trees live in `$CLFLY_HOME/registry.json` (`formatVersion: 1`). `clfly init` prints `clfly link` and does not link. Full text: [spec/registry.md](./spec/registry.md).
+
+### Harness registration is one named entry
+
+**Accepted.** `clfly register` merges a single server into the harness file (or the harness CLI when it is on PATH). Codex uses `smol-toml` so a re-run can parse. `--self` omits `--root`; linked trees pass it. Full text: [spec/register.md](./spec/register.md).

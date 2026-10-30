@@ -135,6 +135,7 @@ export async function runInit(
     ctx.stderr.write(
       `Next: cd ${relative(ctx.cwd, targetDir) || "."} && ${pm} install\n`,
     );
+    ctx.stderr.write(`Then: clfly link\n`);
   }
 
   return { created, skipped, targetDir, packageJson };

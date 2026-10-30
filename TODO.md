@@ -2,7 +2,7 @@
 
 ## Active handoff
 
-**0.3.0 / 0.0.7 on `feat/publish-demo-loop`.** `@clfly/core@0.3.0`: dev-mode `tools/list_changed`, trailing `[param].ts` stays a child tool. `@clfly/cli@0.0.7`: `skill export`, and `init` writes `bin/<name>.mjs` so `npm link` runs on Node 20. Next: merge and `changeset publish` so the recording uses the registry, not a `file:` link. Mounts parked ([`docs/spec/mounts.md`](./docs/spec/mounts.md)).
+**Loop phases 1–2 landed.** `clfly link` / `unlink` / `ls` and `clfly register` (six harnesses, `--self`, `--tree`, `--dry-run`, `--remove`) are in `@clfly/cli` with golden tests per harness×scope; two changesets wait for `changeset version`. Published baseline remains `@clfly/core@0.3.0` / `@clfly/cli@0.0.7`. Next: phase 3, rewrite `BOOTSTRAP.md` as the two-session runbook and run it once on `examples/demo-cli` — its bin is `./bin/demo.ts`, so registered entries run `node ./bin/demo.ts`, which Node 20 cannot load; give it a `bin/demo.mjs` tsx shim like `init` writes before recording. Groom, export, and the hub ADR are not started. Mounts parked ([`docs/spec/mounts.md`](./docs/spec/mounts.md)).
 
 ## Spec folded in (don't build until go)
 

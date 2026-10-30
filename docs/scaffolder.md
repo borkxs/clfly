@@ -66,6 +66,8 @@ Dynamic segments are taught by `clfly add`, not the starter. `examples/demo-cli`
 
 `init` and `add` both ensure `.clfly/` is listed in `.gitignore` (session store + build artifacts live there).
 
+`init` does not put the new bin on PATH. After the install hint it prints `Then: clfly link`.
+
 ### Return
 
 `{ created: string[]; skipped?: string[]; packageJson?: { added: string[]; skipped: string[]; suggested: string[] } }`
