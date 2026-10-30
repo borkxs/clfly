@@ -3,7 +3,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { HARNESSES, harnessFile, type Harness, type Scope } from "../src/registry/harness.js";
-import { runLink, runLs, runUnlink, type ExecFn } from "../src/registry/link.js";
+import { linkPackageManager, runLink, runLs, runUnlink, type ExecFn } from "../src/registry/link.js";
 import { registryPath } from "../src/registry/paths.js";
 import { runRegister, selfDir } from "../src/registry/register.js";
 import { readRegistry } from "../src/registry/store.js";
@@ -66,6 +66,14 @@ describe("link / unlink / ls", () => {
     await register({ harness: "cursor" });
     const again = await runLink({ dir: tree, env, now, exec });
     expect(Object.keys(again.registered)).toEqual(["cursor:project"]);
+  });
+
+  it("uses pnpm for a package inside a pnpm workspace, even with a stray lockfile", () => {
+    writeFileSync(join(project, "pnpm-workspace.yaml"), "packages:\n  - packages/*\n");
+    writeFileSync(join(tree, "package-lock.json"), "{}");
+    expect(linkPackageManager(tree, {})).toBe("pnpm");
+    rmSync(join(project, "pnpm-workspace.yaml"));
+    expect(linkPackageManager(tree, {})).toBe("npm");
   });
 
   it("refuses a second tree with the same name", async () => {
