@@ -108,7 +108,7 @@ Status: **Accepted** unless marked **Open**.
 
 ### Stdin merge / bind
 
-**Accepted.** Non-TTY non-empty stdin supplies args: merge mode (default) filters to declared keys then loses to argv; bind mode (`-` sentinel) assigns the entire decoded JSON value to one field and disables merge. NDJSON / multi-value / merge-mode non-objects → exit 2. Full text: [spec/stdio.md](./spec/stdio.md).
+**Accepted; amended 2026-10-30.** Stdin is read only on an explicit `-` sentinel. Without one it is never read, so an agent shell's never-closed pipe can't hang a command. Merge mode (`--args -`, a reserved flag) filters one JSON object to declared keys, then argv wins. Bind mode (`--field -` or positional `-`) assigns the entire decoded JSON value to one field and disables merge. One sentinel per invocation. NDJSON / multi-value / merge-mode non-objects → exit 2. The amendment removed implicit merge of piped stdin (`producer | cmd` → `producer | cmd --args -`). Full text: [spec/stdio.md](./spec/stdio.md).
 
 ### `meta.{readOnly,destructive,idempotent}` → MCP tool annotations
 

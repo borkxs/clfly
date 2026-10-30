@@ -1,6 +1,6 @@
 {
   "rule": "stdio.md#merge-precedence-hinge",
-  "summary": "Stdin consulted when not a TTY and non-empty (pipes and file redirects); ignored on TTY and empty.",
+  "summary": "Stdin merged only on an explicit `--args -` (pipes and file redirects alike); a pipe without a `-` sentinel is never read.",
   "cases": [
     {
       "id": "tty-ignores-stdin",
@@ -40,7 +40,7 @@
         },
         "returns": { "ok": true }
       },
-      "argv": ["cmd", "--json"],
+      "argv": ["cmd", "--args", "-", "--json"],
       "stdin": "{\"id\":\"from-file\"}",
       "stdinIsTTY": false,
       "expect": {
@@ -88,7 +88,7 @@
         },
         "returns": { "ok": true }
       },
-      "argv": ["cmd", "--id", "from-argv", "--json"],
+      "argv": ["cmd", "--id", "from-argv", "--args", "-", "--json"],
       "stdin": "{\"id\":\"from-stdin\",\"limit\":10}",
       "stdinIsTTY": false,
       "expect": {
@@ -111,7 +111,7 @@
         },
         "returns": { "ok": true }
       },
-      "argv": ["cmd", "--json"],
+      "argv": ["cmd", "--args", "-", "--json"],
       "stdin": "{\"id\":\"a\"}\n{\"id\":\"b\"}\n",
       "stdinIsTTY": false,
       "expect": {
@@ -133,7 +133,7 @@
         },
         "returns": { "ok": true }
       },
-      "argv": ["cmd", "--json"],
+      "argv": ["cmd", "--args", "-", "--json"],
       "stdin": "[{\"id\":\"a\"}]",
       "stdinIsTTY": false,
       "expect": {
@@ -156,12 +156,57 @@
         },
         "returns": { "ok": true }
       },
-      "argv": ["cmd", "--json"],
+      "argv": ["cmd", "--args", "-", "--json"],
       "stdin": "{\"id\":\"from-stdin\"}",
       "stdinIsTTY": false,
       "expect": {
         "exitCode": 0,
         "assembledArgs": { "id": "from-stdin", "limit": 50 }
+      }
+    },
+    {
+      "id": "pipe-without-sentinel-ignored",
+      "status": "active",
+      "transport": "cli",
+      "module": {
+        "meta": { "description": "show" },
+        "args": {
+          "type": "object",
+          "properties": {
+            "id": { "type": "string" }
+          },
+          "required": ["id"]
+        },
+        "returns": { "ok": true }
+      },
+      "argv": ["cmd", "--json"],
+      "stdin": "{\"id\":\"from-stdin\"}",
+      "stdinIsTTY": false,
+      "expect": {
+        "exitCode": 2,
+        "stderrMessageIncludes": "Invalid arguments"
+      }
+    },
+    {
+      "id": "args-merge-empty-exit-2",
+      "status": "active",
+      "transport": "cli",
+      "module": {
+        "meta": { "description": "show" },
+        "args": {
+          "type": "object",
+          "properties": {
+            "id": { "type": "string" }
+          },
+          "required": ["id"]
+        },
+        "returns": { "ok": true }
+      },
+      "argv": ["cmd", "--args", "-", "--json"],
+      "stdin": "",
+      "stdinIsTTY": false,
+      "expect": {
+        "exitCode": 2
       }
     }
   ]

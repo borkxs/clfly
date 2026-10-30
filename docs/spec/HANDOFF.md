@@ -69,10 +69,10 @@ Interchange is released as **0.2.0** on this branch (publish when ready). Next c
 
 ### Stdin rules (settled — do not invent parallels)
 
-1. **When to read stdin** — not a TTY and non-empty after trim. TTY / empty → ignore.
+1. **When to read stdin** — only on a `-` sentinel (`--args -`, `--field -`, positional `-`). No sentinel → never read (2026-10-30 amendment).
 2. **Merge precedence** — schema defaults < stdin object (filtered) < argv. Shallow. Then one `validateSchema`.
 3. **Unknown keys** — drop undeclared stdin keys (lenient). Argv stays strict.
-4. **Merge XOR bind** — default merge; exactly one `-` binds entire JSON to that field. Second `-` → exit 2.
+4. **Merge XOR bind** — `--args -` merges; `--field -` binds entire JSON to that field. Second `-` → exit 2.
 5. **NDJSON / multi-value** → exit 2. `--slurp` name reserved.
 6. **List output** — `--json` stays one document; consumers use bind (`--items -`).
 

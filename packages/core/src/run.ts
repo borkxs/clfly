@@ -332,21 +332,19 @@ async function runCli(ctx: {
     forArgs,
     rewritten.flagBindFields,
     rewritten.positionalBindCount,
+    rewritten.mergeCount,
   );
   if (!bindResolved.ok) {
     throw new ClflyError(bindResolved.message, 2);
   }
 
   const declaredKeys = declaredArgKeys(mod, pathParamNames, positionals);
-  // Only touch stdin when it can contribute: a `-` bind, or a declared field
-  // argv left unset (argv wins on conflict). An agent shell's never-closed
-  // pipe would otherwise hang every command before it runs.
-  const stdinUsable =
-    bindResolved.bindField !== undefined ||
-    [...declaredKeys].some((k) => !(k in forArgs));
-  const { text: stdinText, isTTY: stdinIsTTY } = stdinUsable
-    ? await resolveStdin(ctx.cliOptions)
-    : { text: "", isTTY: true };
+  // Read stdin only on an explicit `-`. An agent shell's never-closed pipe
+  // would otherwise hang every command before it runs.
+  const { text: stdinText, isTTY: stdinIsTTY } =
+    bindResolved.bindField !== undefined || bindResolved.merge
+      ? await resolveStdin(ctx.cliOptions)
+      : { text: "", isTTY: true };
 
   const assembled = assembleInput({
     argvArgs: forArgs,
@@ -354,6 +352,7 @@ async function runCli(ctx: {
     stdinIsTTY,
     declaredKeys,
     bindField: bindResolved.bindField,
+    merge: bindResolved.merge,
   });
   if (!assembled.ok) {
     throw new ClflyError(assembled.message, 2);

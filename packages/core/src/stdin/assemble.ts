@@ -3,6 +3,9 @@ import { ClflyError } from "../errors.js";
 /** Internal placeholder so yargs-parser does not treat `-` as a bare positional. */
 export const BIND_SENTINEL = "\0clfly-bind\0";
 
+/** Reserved flag: `--args -` merges one stdin JSON object into the args. */
+export const MERGE_FLAG = "args";
+
 export type AssembleOk = { ok: true; args: Record<string, unknown> };
 export type AssembleErr = { ok: false; message: string };
 export type AssembleResult = AssembleOk | AssembleErr;
@@ -10,7 +13,7 @@ export type AssembleResult = AssembleOk | AssembleErr;
 export interface AssembleInputOptions {
   /** Argv-derived candidate (flags, path params, positionals) before stdin overlay. */
   argvArgs: Record<string, unknown>;
-  /** Raw stdin text (may be empty). Ignored when `stdinIsTTY` or trim-empty. */
+  /** Raw stdin text. Ignored unless `bindField` or `merge` is set. */
   stdinText: string | undefined;
   /** True when stdin is a TTY — stdin is ignored. */
   stdinIsTTY: boolean;
@@ -21,10 +24,13 @@ export interface AssembleInputOptions {
    * When set, merge is disabled and the entire decoded JSON is assigned here.
    */
   bindField?: string;
+  /** `--args -` was present: merge one stdin JSON object into the args. */
+  merge?: boolean;
 }
 
 /**
- * Decode / merge / bind stdin into the argv candidate object.
+ * Decode / merge / bind stdin into the argv candidate object. Stdin is used
+ * only on an explicit `-` (`--field -`, positional `-`, or `--args -`).
  * Pure and fixture-testable — does not apply schema defaults (validator does).
  */
 export function assembleInput(opts: AssembleInputOptions): AssembleResult {
@@ -50,8 +56,14 @@ export function assembleInput(opts: AssembleInputOptions): AssembleResult {
     return { ok: true, args };
   }
 
-  if (!shouldRead) {
+  if (!opts.merge) {
     return { ok: true, args: { ...opts.argvArgs } };
+  }
+  if (!shouldRead) {
+    return {
+      ok: false,
+      message: "`--args -` requires non-empty non-TTY stdin JSON",
+    };
   }
 
   const decoded = decodeSingleJson(opts.stdinText!);
@@ -200,10 +212,13 @@ export function rewriteBindSentinels(argv: string[]): {
   flagBindFields: string[];
   /** Count of bare positional `-` tokens rewritten. */
   positionalBindCount: number;
+  /** Count of `--args -` merge sentinels (removed from argv). */
+  mergeCount: number;
 } {
   const out: string[] = [];
   const flagBindFields: string[] = [];
   let positionalBindCount = 0;
+  let mergeCount = 0;
 
   for (let i = 0; i < argv.length; i++) {
     const t = argv[i]!;
@@ -212,7 +227,9 @@ export function rewriteBindSentinels(argv: string[]): {
       const eq = t.indexOf("=");
       const name = t.slice(2, eq);
       const value = t.slice(eq + 1);
-      if (value === "-") {
+      if (value === "-" && name === MERGE_FLAG) {
+        mergeCount++;
+      } else if (value === "-") {
         flagBindFields.push(name);
         out.push(`--${name}=${BIND_SENTINEL}`);
       } else {
@@ -232,6 +249,11 @@ export function rewriteBindSentinels(argv: string[]): {
       ) {
         // `--flag -` or `-a -` (short alias as previous token alone is rare).
         const name = prev.startsWith("--") ? prev.slice(2) : prev.slice(1);
+        if (name === MERGE_FLAG) {
+          out.pop();
+          mergeCount++;
+          continue;
+        }
         flagBindFields.push(name);
         out.push(BIND_SENTINEL);
       } else {
@@ -244,16 +266,20 @@ export function rewriteBindSentinels(argv: string[]): {
     out.push(t);
   }
 
-  return { argv: out, flagBindFields, positionalBindCount };
+  return { argv: out, flagBindFields, positionalBindCount, mergeCount };
 }
 
-/** Count bind sentinels and resolve the single bind field name from argvArgs. */
+/**
+ * Count `-` sentinels (at most one) and resolve the single bind field name
+ * from argvArgs, or report an `--args -` merge.
+ */
 export function resolveBindField(
   argvArgs: Record<string, unknown>,
   flagBindFields: string[],
   positionalBindCount: number,
-): { ok: true; bindField?: string } | AssembleErr {
-  const total = flagBindFields.length + positionalBindCount;
+  mergeCount = 0,
+): { ok: true; bindField?: string; merge?: boolean } | AssembleErr {
+  const total = flagBindFields.length + positionalBindCount + mergeCount;
   if (total > 1) {
     return {
       ok: false,
@@ -261,6 +287,7 @@ export function resolveBindField(
     };
   }
   if (total === 0) return { ok: true };
+  if (mergeCount === 1) return { ok: true, merge: true };
 
   if (flagBindFields.length === 1) {
     return { ok: true, bindField: flagBindFields[0] };

@@ -211,10 +211,29 @@ describe("e2e spawn demo-cli with an open stdin pipe", () => {
     expect(stdout).toBe("u_9\tactive\n");
   }, 15_000);
 
-  it("still merges piped stdin when a field is unset", async () => {
+  it("exits when optional fields are left unset", async () => {
+    const { stdout, code } = await spawnTsx(demoBin, ["users", "list", "--json"], {
+      env: realEnv,
+      holdStdin: true,
+    });
+    expect(code).toBe(0);
+    expect(JSON.parse(stdout)).toHaveLength(2);
+  }, 15_000);
+
+  it("ignores a piped object without a `-` sentinel", async () => {
     const { stdout, code } = await spawnTsx(
       demoBin,
       ["users", "list", "--json"],
+      { env: realEnv, stdin: '{"limit":1}' },
+    );
+    expect(code).toBe(0);
+    expect(JSON.parse(stdout)).toHaveLength(2);
+  }, 15_000);
+
+  it("merges a piped object with `--args -`", async () => {
+    const { stdout, code } = await spawnTsx(
+      demoBin,
+      ["users", "list", "--args", "-", "--json"],
       { env: realEnv, stdin: '{"limit":1}' },
     );
     expect(code).toBe(0);
