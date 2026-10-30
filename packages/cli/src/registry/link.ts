@@ -1,6 +1,6 @@
 import { spawn, spawnSync } from "node:child_process";
 import { accessSync, constants, existsSync, readFileSync, realpathSync } from "node:fs";
-import { join, resolve } from "node:path";
+import { dirname, join, resolve } from "node:path";
 import { ClflyError } from "@clfly/core";
 import { detectPackageManager, type PackageManager } from "../scaffold/detect.js";
 import { serveInvocation } from "../skill/export.js";
@@ -124,6 +124,21 @@ function samePath(file: string): string {
   }
 }
 
+/**
+ * A package inside a pnpm workspace has no lockfile of its own (or a stray
+ * one), so look for the workspace first and fall back to the package dir.
+ */
+export function linkPackageManager(dir: string, env: NodeJS.ProcessEnv): PackageManager {
+  let cur = dir;
+  while (true) {
+    if (existsSync(join(cur, "pnpm-workspace.yaml"))) return "pnpm";
+    const parent = dirname(cur);
+    if (parent === cur) break;
+    cur = parent;
+  }
+  return detectPackageManager(dir, { env });
+}
+
 export function linkArgv(pm: PackageManager): { command: string; args: string[] } {
   if (pm === "pnpm") return { command: "pnpm", args: ["link", "--global"] };
   return { command: "npm", args: ["link"] };
@@ -152,7 +167,7 @@ export async function runLink(input: {
   const dir = samePath(input.dir);
   const derived = deriveTree(dir);
   const exec = input.exec ?? spawnExec;
-  const pm = detectPackageManager(dir, { env: input.env });
+  const pm = linkPackageManager(dir, input.env);
   const argv = linkArgv(pm);
   await exec(argv.command, argv.args, dir, input.env);
 
@@ -186,7 +201,7 @@ export async function runUnlink(input: {
   if (!prev) throw new ClflyError(`"${input.name}" is not in the clfly registry`, 2);
   const exec = input.exec ?? spawnExec;
   const pm = existsSync(prev.path)
-    ? detectPackageManager(prev.path, { env: input.env })
+    ? linkPackageManager(prev.path, input.env)
     : "npm";
   const argv = unlinkArgv(pm, input.name);
   const cwd = existsSync(prev.path) ? prev.path : process.cwd();
