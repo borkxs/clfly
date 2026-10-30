@@ -337,11 +337,17 @@ async function runCli(ctx: {
     throw new ClflyError(bindResolved.message, 2);
   }
 
-  const { text: stdinText, isTTY: stdinIsTTY } = await resolveStdin(
-    ctx.cliOptions,
-  );
-
   const declaredKeys = declaredArgKeys(mod, pathParamNames, positionals);
+  // Only touch stdin when it can contribute: a `-` bind, or a declared field
+  // argv left unset (argv wins on conflict). An agent shell's never-closed
+  // pipe would otherwise hang every command before it runs.
+  const stdinUsable =
+    bindResolved.bindField !== undefined ||
+    [...declaredKeys].some((k) => !(k in forArgs));
+  const { text: stdinText, isTTY: stdinIsTTY } = stdinUsable
+    ? await resolveStdin(ctx.cliOptions)
+    : { text: "", isTTY: true };
+
   const assembled = assembleInput({
     argvArgs: forArgs,
     stdinText,

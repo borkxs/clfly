@@ -35,6 +35,7 @@ Command bodies and shared libs must **throw** (or return) — never call `proces
 CLI only (MCP already receives a JSON args object):
 
 - Consult stdin when it is **not a TTY** and non-empty after trim (pipes and `cmd < file.json`).
+- Skip the read entirely unless a `-` bind is present or some declared field is unset on argv, so an agent shell's never-closed pipe can't hang the command.
 - **Merge (default):** stdin must be one JSON object; undeclared keys dropped; argv wins on conflict; then schema validate (defaults apply).
 - **Bind:** exactly one argv value `-` assigns the entire decoded JSON value to that field and disables merge. A second `-` is exit 2.
 - NDJSON / multi-value / invalid JSON / merge-mode arrays → exit 2.
