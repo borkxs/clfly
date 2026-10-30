@@ -29,8 +29,9 @@ exports[`register > claude-code user: adds one entry and keeps the others 1`] = 
       "command": "other"
     },
     "demo": {
-      "command": "<tmp>/project/packages/demo/bin/demo.mjs",
+      "command": "<node>",
       "args": [
+        "<tmp>/project/packages/demo/bin/demo.mjs",
         "mcp",
         "serve",
         "--root",
@@ -50,8 +51,9 @@ exports[`register > claude-desktop user: adds one entry and keeps the others 1`]
       "command": "other"
     },
     "demo": {
-      "command": "<tmp>/project/packages/demo/bin/demo.mjs",
+      "command": "<node>",
       "args": [
+        "<tmp>/project/packages/demo/bin/demo.mjs",
         "mcp",
         "serve",
         "--root",
@@ -84,8 +86,8 @@ command = "other"
 args = []
 
 [mcp_servers.demo]
-command = "<tmp>/project/packages/demo/bin/demo.mjs"
-args = [ "mcp", "serve", "--root", "<tmp>/project/packages/demo" ]
+command = "<node>"
+args = [ "<tmp>/project/packages/demo/bin/demo.mjs", "mcp", "serve", "--root", "<tmp>/project/packages/demo" ]
 "
 `;
 
@@ -118,8 +120,9 @@ exports[`register > cursor user: adds one entry and keeps the others 1`] = `
       "command": "other"
     },
     "demo": {
-      "command": "<tmp>/project/packages/demo/bin/demo.mjs",
+      "command": "<node>",
       "args": [
+        "<tmp>/project/packages/demo/bin/demo.mjs",
         "mcp",
         "serve",
         "--root",
@@ -160,8 +163,9 @@ exports[`register > gemini user: adds one entry and keeps the others 1`] = `
       "command": "other"
     },
     "demo": {
-      "command": "<tmp>/project/packages/demo/bin/demo.mjs",
+      "command": "<node>",
       "args": [
+        "<tmp>/project/packages/demo/bin/demo.mjs",
         "mcp",
         "serve",
         "--root",
@@ -204,8 +208,9 @@ exports[`register > vscode user: adds one entry and keeps the others 1`] = `
     },
     "demo": {
       "type": "stdio",
-      "command": "<tmp>/project/packages/demo/bin/demo.mjs",
+      "command": "<node>",
       "args": [
+        "<tmp>/project/packages/demo/bin/demo.mjs",
         "mcp",
         "serve",
         "--root",
