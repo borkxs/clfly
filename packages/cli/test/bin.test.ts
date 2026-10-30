@@ -109,6 +109,24 @@ describe("clfly bin", () => {
     expect(stdout).not.toMatch(/Unknown command/);
   });
 
+  it("add --dir writes into that tree, not cwd", async () => {
+    const dir = mkdtempSync(join(tmpdir(), "clfly-add-dir-"));
+    const elsewhere = mkdtempSync(join(tmpdir(), "clfly-add-cwd-"));
+    try {
+      writeFileSync(join(dir, "package.json"), JSON.stringify({ name: "t", bin: { t: "./bin/t.mjs" } }));
+      const { code, stderr } = await run(["add", "scan", "--dir", dir], elsewhere);
+      expect(stderr).toBe("");
+      expect(code).toBe(0);
+      expect(existsSync(join(dir, "commands", "scan.ts"))).toBe(true);
+      expect(existsSync(join(elsewhere, "commands"))).toBe(false);
+      const bad = await run(["add", "scan", "--dir", elsewhere], dir);
+      expect(bad.code).toBe(2);
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+      rmSync(elsewhere, { recursive: true, force: true });
+    }
+  });
+
   it("init scaffolds a runnable project", async () => {
     const dir = mkdtempSync(join(tmpdir(), "clfly-init-"));
     try {
