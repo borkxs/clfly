@@ -332,22 +332,27 @@ async function runCli(ctx: {
     forArgs,
     rewritten.flagBindFields,
     rewritten.positionalBindCount,
+    rewritten.mergeCount,
   );
   if (!bindResolved.ok) {
     throw new ClflyError(bindResolved.message, 2);
   }
 
-  const { text: stdinText, isTTY: stdinIsTTY } = await resolveStdin(
-    ctx.cliOptions,
-  );
-
   const declaredKeys = declaredArgKeys(mod, pathParamNames, positionals);
+  // Read stdin only on an explicit `-`. An agent shell's never-closed pipe
+  // would otherwise hang every command before it runs.
+  const { text: stdinText, isTTY: stdinIsTTY } =
+    bindResolved.bindField !== undefined || bindResolved.merge
+      ? await resolveStdin(ctx.cliOptions)
+      : { text: "", isTTY: true };
+
   const assembled = assembleInput({
     argvArgs: forArgs,
     stdinText,
     stdinIsTTY,
     declaredKeys,
     bindField: bindResolved.bindField,
+    merge: bindResolved.merge,
   });
   if (!assembled.ok) {
     throw new ClflyError(assembled.message, 2);

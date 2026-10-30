@@ -94,6 +94,12 @@ export function renderHelp(opts: HelpOptions): string {
       description: "Write result to .clfly/sessions and print path/envelope",
       optional: true,
     },
+    {
+      name: "args",
+      type: "string",
+      description: "Pass `-` to merge one JSON object from stdin into the args",
+      optional: true,
+    },
   ];
 
   const flagWidth = Math.max(

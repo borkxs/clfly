@@ -9,10 +9,11 @@ Arguments:
   <id>  User id (also --id)
 
 Options:
-  -h, --help     Show help
-  -V, --version  Show version
-      --json     Emit JSON
-      --spool    Write result to .clfly/sessions and print path/envelope
+  -h, --help          Show help
+  -V, --version       Show version
+      --json          Emit JSON
+      --spool         Write result to .clfly/sessions and print path/envelope
+      --args <value>  Pass \`-\` to merge one JSON object from stdin into the args
 "
 `;
 
@@ -30,6 +31,7 @@ Options:
   -V, --version         Show version
       --json            Emit JSON
       --spool           Write result to .clfly/sessions and print path/envelope
+      --args <value>    Pass \`-\` to merge one JSON object from stdin into the args
 "
 `;
 
@@ -43,9 +45,10 @@ Arguments:
   [paths...]  File paths
 
 Options:
-  -h, --help     Show help
-  -V, --version  Show version
-      --json     Emit JSON
-      --spool    Write result to .clfly/sessions and print path/envelope
+  -h, --help          Show help
+  -V, --version       Show version
+      --json          Emit JSON
+      --spool         Write result to .clfly/sessions and print path/envelope
+      --args <value>  Pass \`-\` to merge one JSON object from stdin into the args
 "
 `;

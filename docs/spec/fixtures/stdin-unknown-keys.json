@@ -17,7 +17,7 @@
         },
         "returns": { "ok": true }
       },
-      "argv": ["cmd", "--json"],
+      "argv": ["cmd", "--args", "-", "--json"],
       "stdin": "{\"magnet\":\"abc\",\"title\":\"Over-supplied\",\"seeders\":12}",
       "stdinIsTTY": false,
       "expect": {

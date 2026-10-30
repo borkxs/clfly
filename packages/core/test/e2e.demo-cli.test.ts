@@ -188,9 +188,69 @@ describe("e2e spawn demo-cli", () => {
   });
 });
 
+// Agent shells hand commands a stdin pipe that never closes. Spawn without the
+// test-runner env so the real non-TTY stdin path runs.
+describe("e2e spawn demo-cli with an open stdin pipe", () => {
+  const { VITEST: _v, NODE_TEST_CONTEXT: _n, ...realEnv } = process.env;
+
+  it("exits when the command declares no args", async () => {
+    const { stdout, code } = await spawnTsx(demoBin, [], {
+      env: realEnv,
+      holdStdin: true,
+    });
+    expect(code).toBe(0);
+    expect(stdout).toContain("demo");
+  }, 15_000);
+
+  it("exits when argv supplies every declared field", async () => {
+    const { stdout, code } = await spawnTsx(demoBin, ["users", "u_9", "show"], {
+      env: realEnv,
+      holdStdin: true,
+    });
+    expect(code).toBe(0);
+    expect(stdout).toBe("u_9\tactive\n");
+  }, 15_000);
+
+  it("exits when optional fields are left unset", async () => {
+    const { stdout, code } = await spawnTsx(demoBin, ["users", "list", "--json"], {
+      env: realEnv,
+      holdStdin: true,
+    });
+    expect(code).toBe(0);
+    expect(JSON.parse(stdout)).toHaveLength(2);
+  }, 15_000);
+
+  it("ignores a piped object without a `-` sentinel", async () => {
+    const { stdout, code } = await spawnTsx(
+      demoBin,
+      ["users", "list", "--json"],
+      { env: realEnv, stdin: '{"limit":1}' },
+    );
+    expect(code).toBe(0);
+    expect(JSON.parse(stdout)).toHaveLength(2);
+  }, 15_000);
+
+  it("merges a piped object with `--args -`", async () => {
+    const { stdout, code } = await spawnTsx(
+      demoBin,
+      ["users", "list", "--args", "-", "--json"],
+      { env: realEnv, stdin: '{"limit":1}' },
+    );
+    expect(code).toBe(0);
+    expect(JSON.parse(stdout)).toHaveLength(1);
+  }, 15_000);
+});
+
 function spawnTsx(
   script: string,
   args: string[],
+  opts: {
+    env?: NodeJS.ProcessEnv;
+    /** Write this to stdin, then close it. */
+    stdin?: string;
+    /** Keep stdin open and never write; killed if still running at the deadline. */
+    holdStdin?: boolean;
+  } = {},
 ): Promise<{ stdout: string; stderr: string; code: number | null }> {
   return new Promise((resolve, reject) => {
     const child = spawn(
@@ -204,10 +264,16 @@ function spawnTsx(
         ...args,
       ],
       {
-        env: process.env,
+        env: opts.env ?? process.env,
         cwd: dirname(dirname(script)),
       },
     );
+    if (opts.stdin !== undefined) {
+      child.stdin.end(opts.stdin);
+    } else if (opts.holdStdin) {
+      const deadline = setTimeout(() => child.kill("SIGKILL"), 10_000);
+      child.on("close", () => clearTimeout(deadline));
+    }
     let stdout = "";
     let stderr = "";
     child.stdout.on("data", (c) => {

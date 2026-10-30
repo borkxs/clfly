@@ -4,6 +4,8 @@
 
 **Loop phases 1–2 landed.** `clfly link` / `unlink` / `ls` and `clfly register` (six harnesses, `--self`, `--tree`, `--dry-run`, `--remove`) are in `@clfly/cli` with golden tests per harness×scope; two changesets wait for `changeset version`. Published baseline remains `@clfly/core@0.3.0` / `@clfly/cli@0.0.7`. Next: phase 3, rewrite `BOOTSTRAP.md` as the two-session runbook and run it once on `examples/demo-cli` — its bin is `./bin/demo.ts`, so registered entries run `node ./bin/demo.ts`, which Node 20 cannot load; give it a `bin/demo.mjs` tsx shim like `init` writes before recording. Groom, export, and the hub ADR are not started. Mounts parked ([`docs/spec/mounts.md`](./docs/spec/mounts.md)).
 
+**Stdin only on explicit `-` (decided 2026-10-30).** Core never reads stdin without a `-` sentinel, so agent shells' never-closed pipes no longer hang commands (`clfly register` included). Implicit merge became `--args -`, which is now reserved. This is a breaking minor for `@clfly/core` and the changeset is waiting. No borkxs-mono tree relied on implicit merge. Related: borkxs-mono CAPTURES "pm mcp serve EOF" (a separate server-lifetime issue).
+
 ## Spec folded in (don't build until go)
 
 See `docs/decisions.md`, `docs/manifest.md`, `docs/ecosystem.md`, `docs/conventions.md`, `docs/scaffolder.md`, `docs/spec/`.

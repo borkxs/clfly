@@ -109,6 +109,28 @@
       "expect": {
         "exitCode": 2
       }
+    },
+    {
+      "id": "args-merge-plus-bind-exit-2",
+      "status": "active",
+      "transport": "cli",
+      "module": {
+        "meta": { "description": "filter" },
+        "args": {
+          "type": "object",
+          "properties": {
+            "items": { "type": "array" },
+            "status": { "type": "string" }
+          }
+        },
+        "returns": { "ok": true }
+      },
+      "argv": ["cmd", "--args", "-", "--items", "-", "--json"],
+      "stdin": "{}",
+      "stdinIsTTY": false,
+      "expect": {
+        "exitCode": 2
+      }
     }
   ]
 }
