@@ -116,7 +116,7 @@ describe("register", () => {
 
     const result = await register({ harness, scope });
     expect(result).toMatchObject({ changed: true, via: "file", name: "demo" });
-    const after = readFileSync(file, "utf8").split(tmp).join("<tmp>");
+    const after = readFileSync(file, "utf8").split(tmp).join("<tmp>").split(process.execPath).join("<node>");
     expect(after).toMatchSnapshot();
 
     const second = await register({ harness, scope });
@@ -154,6 +154,17 @@ describe("register", () => {
     const user = await register({ harness: "cursor", scope: "user" });
     expect(user.record.command).toBe(process.execPath);
     expect(user.record.args[0]).toBe(join(tree, "bin", "demo.mjs"));
+  });
+
+  it("user scope runs an executable JS bin through this node", async () => {
+    const user = await register({ harness: "claude-desktop", scope: "user" });
+    expect(user.record).toEqual({
+      name: "demo",
+      command: process.execPath,
+      args: [join(tree, "bin", "demo.mjs"), "mcp", "serve", "--root", tree],
+    });
+    const project_ = await register({ harness: "cursor" });
+    expect(project_.record.command).toBe("./packages/demo/bin/demo.mjs");
   });
 
   it("--self registers @clfly/cli without --root", async () => {

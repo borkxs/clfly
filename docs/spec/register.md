@@ -40,7 +40,7 @@ One record: `{ name, command, args, env?, cwd? }`.
 
 - Linked tree: `args` are `["mcp", "serve", "--root", root]`. `--root` is the package directory so the jail and `.clfly/sessions/` follow the tree, not whatever cwd the client happens to use.
 - `--self`: `args` are `["mcp", "serve"]` with no `--root`. `clfly add` and `clfly init` write the caller's project; a jail at the clfly package would reject those paths.
-- Executable bin: `command` is the absolute bin. Otherwise the bin is `args[0]` and `command` is `process.execPath` at user scope (GUI harnesses do not inherit a shell PATH) or `node` at project scope (a checked-in file should not pin one machine's node).
+- `command` is the absolute bin when it is executable, except a `.js`/`.mjs`/`.cjs` bin at user scope. Otherwise the bin is `args[0]` and `command` is `process.execPath` at user scope or `node` at project scope. GUI harnesses (Claude Desktop, editors launched from the dock) do not inherit a shell PATH, so a `#!/usr/bin/env node` bin cannot find an nvm or Homebrew node there; a checked-in project file should not pin one machine's node.
 - Project scope: the bin and `--root` are written `./`-relative when they are inside the project. The client is assumed to launch project servers with cwd at the project. User scope stays absolute.
 - `--name` changes only the harness entry name.
 

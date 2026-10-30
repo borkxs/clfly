@@ -108,8 +108,10 @@ export function projectRecord(input: {
     : ["mcp", "serve", "--root", scoped(tree.root, project, scope)];
   const bin = scoped(tree.bin, project, scope);
   const name = input.name ?? tree.name;
-  if (input.executable) return { name, command: bin, args: serve };
-  // GUI harnesses do not inherit a shell PATH, so user scope pins this node.
+  // GUI harnesses do not inherit a shell PATH, so a `#!/usr/bin/env node` bin
+  // cannot find node there. User scope runs JS bins through this node instead.
+  const pinNode = scope === "user" && /\.(m|c)?js$/.test(tree.bin);
+  if (input.executable && !pinNode) return { name, command: bin, args: serve };
   const node = scope === "user" ? process.execPath : "node";
   return { name, command: node, args: [bin, ...serve] };
 }
