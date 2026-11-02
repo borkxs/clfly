@@ -28,6 +28,7 @@ export default defineConfig([
       "commands/link": "src/commands/link.ts",
       "commands/unlink": "src/commands/unlink.ts",
       "commands/ls": "src/commands/ls.ts",
+      "commands/memory": "src/commands/memory.ts",
       "commands/register": "src/commands/register.ts",
     },
     clean: false,
