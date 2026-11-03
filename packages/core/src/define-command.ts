@@ -12,6 +12,7 @@ export function defineCommand<TSchema extends AnySchema>(
     args: input.args,
     positionals: input.positionals,
     output: input.output,
+    complete: input.complete,
     default: input.run,
   };
 }

@@ -1,5 +1,6 @@
 import type { AnySchema, PositionalInfo } from "../types.js";
 import { toJsonSchema, type JsonSchema } from "./to-json-schema.js";
+import { readCompleteFrom } from "../complete/index.js";
 
 export interface ProjectPositionalsInput {
   /** Ordered names from `[segment]` directory params (manifest `":name"`). */
@@ -33,6 +34,7 @@ export function projectPositionals(
       description:
         typeof prop?.description === "string" ? prop.description : undefined,
       alsoFlag: prop !== undefined,
+      ...completeFromOf(name, prop),
     });
   }
 
@@ -94,6 +96,7 @@ function projectExportPositionals(
         description:
           typeof item.description === "string" ? item.description : undefined,
         alsoFlag: argsProps[name] !== undefined,
+        ...completeFromOf(name, item, argsProps[name]),
       });
     }
     // Rest items after a fixed tuple (draft-07 `items` as a single schema).
@@ -114,6 +117,7 @@ function projectExportPositionals(
         description:
           typeof rest.description === "string" ? rest.description : undefined,
         alsoFlag: argsProps[name] !== undefined,
+        ...completeFromOf(name, rest, argsProps[name]),
       });
     }
     return out;
@@ -141,6 +145,7 @@ function projectExportPositionals(
             ? items.description
             : undefined,
       alsoFlag: argsProps[name] !== undefined,
+      ...completeFromOf(name, items, json, argsProps[name]),
     });
     return out;
   }
@@ -164,11 +169,24 @@ function projectExportPositionals(
         description:
           typeof prop.description === "string" ? prop.description : undefined,
         alsoFlag: argsProps[name] !== undefined,
+        ...completeFromOf(name, prop, argsProps[name]),
       });
     }
   }
 
   return out;
+}
+
+/** First `completeFrom` keyword among candidate schemas (positional schema, then its `args` twin). */
+function completeFromOf(
+  name: string,
+  ...schemas: Array<JsonSchema | undefined>
+): { completeFrom?: PositionalInfo["completeFrom"] } {
+  for (const schema of schemas) {
+    const cf = readCompleteFrom(schema?.completeFrom, `positional <${name}>`);
+    if (cf) return { completeFrom: cf };
+  }
+  return {};
 }
 
 function tupleElementName(item: JsonSchema, index: number): string {

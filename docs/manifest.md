@@ -61,6 +61,7 @@ Derived convenience view of `args` properties that are **not** positionals (not 
 | `enum` | `unknown[]` | no | Allowed values when enumerable. |
 | `alias` | `string` | no | Short alias if any. |
 | `deprecated` | `boolean` | no | Flag-level deprecation. |
+| `completeFrom` | `CompleteFrom` | no | **Additive in formatVersion 1.** Where the flag's choices come from. See below. |
 
 ### `PositionalInfo`
 
@@ -74,6 +75,39 @@ Derived convenience view of `args` properties that are **not** positionals (not 
 | `variadic` | `boolean` | no | When true, synopsis uses `name...`. |
 | `description` | `string` | no | From args / positionals schema descriptions when available. |
 | `alsoFlag` | `boolean` | no | When true, `--name` is still accepted at parse time (same key on `args`). Help shows `(also --name)`. |
+| `completeFrom` | `CompleteFrom` | no | **Additive in formatVersion 1.** Where the positional's choices come from. See below. |
+
+### `CompleteFrom`
+
+**Additive in formatVersion 1.** Declares that an arg's choices are the output of another command in the same tree. A consumer (a launcher, a phone UI, shell completions) runs `cmd` with `--json` and picks values out of the result. Shell completions ignore it for now.
+
+| Field | Type | Required | Description |
+|---|---|---|---|
+| `cmd` | `string` | yes | Command path in the same tree, space-separated. A leading tree name is optional: `"pm search"` and `"search"` mean the same thing in the `pm` tree. |
+| `args` | `Record<string, string \| number \| boolean>` | no | Flags passed to `cmd` (`{ limit: 20 }` → `--limit 20`; `true` → bare `--flag`; `false` omits it). A string `"$name"` stands for the current value of arg `name` on the command being completed; when that value is empty, the flag is dropped. |
+| `field` | `string` | yes | Path to each choice's value in the JSON output. Dot-separated keys; `[]` maps over an array: `"hits[].infoHash"`, `"rows[].name"`, `"[]"` for a bare array of scalars. Non-scalar values are skipped and duplicates dropped. |
+| `label` | `string` | no | Path to a display label, relative to the innermost element `field` mapped over (the output root when `field` has no `[]`). |
+| `sub` | `string` | no | Path to a secondary line, relative to the same element as `label`. |
+
+Declare it in either of two ways. The module export wins when both name the same arg, and a key that names no flag or positional fails the build.
+
+```ts
+// 1. Schema metadata (Zod 4 copies .meta() into the JSON Schema; other
+//    libraries work if their JSON Schema output carries a `completeFrom` keyword).
+export const positionals = z.object({
+  magnet: z.string().meta({
+    completeFrom: { cmd: "pm search", args: { query: "$query" }, field: "hits[].infoHash", label: "title", sub: "indexer" },
+  }),
+});
+
+// 2. Module export keyed by arg name. Use this for `[segment]` path params,
+//    which have no schema of their own.
+export const complete = {
+  job: { cmd: "run ls", field: "jobs[].name", sub: "description" },
+};
+```
+
+`@clfly/core/complete` exports the dependency-free helpers consumers use: `completeFromArgv(cf, treeName, values)` builds the argv to run, and `selectCompletions(output, cf)` returns `{ value, label?, sub? }[]`.
 
 ## Naming projections (derived, not stored)
 
@@ -100,7 +134,8 @@ Audit against the ecosystem UI checklist (command paths, names, descriptions, de
 | Args JSON Schema | ✅ `inputSchema` |
 | Output JSON Schema | ✅ Optional `output` → `outputSchema` (absent when untyped) |
 | Positional / path-param info | ✅ `positionals: PositionalInfo[]` (additive; older files may omit → treat as `[]`). Dynamics also remain as `":name"` in `path`. |
-| CLI binary name | ❌ Not on the manifest (comes from `createCli({ name })` / package bin) |
+| CLI binary name | ❌ Not on the manifest (comes from `createCli({ name })` / package bin). `clfly manifest <tree> --json` adds it from the registry. |
+| Choice sources for args | ✅ `completeFrom` on `FlagInfo` / `PositionalInfo` (additive) |
 
 Gaps above are candidates for additive fields before palette/docs ship — never for coupling to core.
 

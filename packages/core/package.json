@@ -15,6 +15,10 @@
     "./mcp": {
       "types": "./dist/mcp/index.d.ts",
       "import": "./dist/mcp/index.js"
+    },
+    "./complete": {
+      "types": "./dist/complete/index.d.ts",
+      "import": "./dist/complete/index.js"
     }
   },
   "files": [

@@ -20,6 +20,7 @@ export {
   type FlagInfo,
   type PositionalInfo,
   type PositionalSource,
+  type CompleteFrom,
   type RouteNode,
   type ResolvedRoute,
   type CompletionShell,
@@ -43,6 +44,12 @@ export {
 export { assertNoReservedFlags, RESERVED_FLAGS, RESERVED_ALIASES } from "./schema/reserved.js";
 export { renderHelp, renderHelpExcerpt, formatPositionalToken } from "./help/render.js";
 export { buildManifest, type BuildManifestOptions, type BuildManifestResult } from "./build/manifest.js";
+export {
+  readCompleteFrom,
+  completeFromArgv,
+  selectCompletions,
+  type CompletionChoice,
+} from "./complete/index.js";
 export { treeFromManifest, completionIndexFromManifest } from "./manifest/load.js";
 export { generateCompletions } from "./completions/generate.js";
 export { writeJsonResult, writeJsonError } from "./json/output.js";
