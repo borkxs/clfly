@@ -17,7 +17,7 @@ export function ParamPicker(props: {
 }) {
   const { tree, template, params, name, next } = props;
   const cf = paramCompleteFrom(tree, template, name);
-  const { data: choices = [], isLoading, error, revalidate } = useChoices(tree, cf, params);
+  const { data: choices = [], isLoading, error, revalidate, runnable } = useChoices(tree, cf, params);
   const [search, setSearch] = useState("");
   const typed = search.trim();
   const title = [tree.name, displayPath(template, params)].join(" ");
@@ -28,7 +28,7 @@ export function ParamPicker(props: {
       isLoading={isLoading}
       filtering
       onSearchTextChange={setSearch}
-      searchBarPlaceholder={cf ? `${name} (from ${cf.cmd})` : `Type ${name}`}
+      searchBarPlaceholder={cf && runnable ? `${name} (from ${cf.cmd})` : `Type ${name}`}
     >
       {typed && !choices.some((c) => c.value === typed) && (
         <List.Item
@@ -59,7 +59,7 @@ export function ParamPicker(props: {
           }
         />
       ))}
-      {!cf && !typed && <List.EmptyView icon={Icon.Pencil} title={`Type a value for ‹${name}›`} />}
+      {!(cf && runnable) && !typed && <List.EmptyView icon={Icon.Pencil} title={`Type a value for ‹${name}›`} />}
     </List>
   );
 }

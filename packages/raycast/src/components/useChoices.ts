@@ -2,7 +2,7 @@ import { completeFromArgv, selectCompletions, type CompletionChoice } from "@clf
 import type { CompleteFrom } from "@clfly/core";
 import { useCachedPromise } from "@raycast/utils";
 import { execArgv } from "../lib/exec";
-import type { Tree } from "../lib/model";
+import { sourceRunnable, type Tree } from "../lib/model";
 
 async function loadChoices(bin: string, argvKey: string, cfKey: string): Promise<CompletionChoice[]> {
   const res = await execArgv(bin, JSON.parse(argvKey) as string[], { timeoutMs: 60_000 });
@@ -10,11 +10,16 @@ async function loadChoices(bin: string, argvKey: string, cfKey: string): Promise
   return selectCompletions(res.json, JSON.parse(cfKey) as CompleteFrom);
 }
 
-/** Run a `completeFrom` source with `--json` and pick its choices. Cached per argv. */
+/**
+ * Run a `completeFrom` source with `--json` and pick its choices. Cached per
+ * argv. `runnable` is false for chain-only sources, which are never run here.
+ */
 export function useChoices(tree: Tree, cf: CompleteFrom | undefined, values: Record<string, unknown> = {}) {
+  const runnable = cf !== undefined && sourceRunnable(tree, cf);
   const argv = cf ? completeFromArgv(cf, tree.name, values) : [];
-  return useCachedPromise(loadChoices, [tree.bin, JSON.stringify(argv), JSON.stringify(cf ?? {})], {
-    execute: cf !== undefined,
+  const result = useCachedPromise(loadChoices, [tree.bin, JSON.stringify(argv), JSON.stringify(cf ?? {})], {
+    execute: runnable,
     keepPreviousData: true,
   });
+  return { ...result, runnable };
 }

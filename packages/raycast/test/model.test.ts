@@ -12,6 +12,7 @@ import {
   rowAccessories,
   rowTitle,
   shapeOutput,
+  sourceRunnable,
   type Route,
   type Tree,
 } from "../src/lib/model";
@@ -112,6 +113,13 @@ describe("output shaping and chains", () => {
     const runChains = chainsFor(run, run.routes[0]!, shapeOutput({ jobs: [{ name: "shots" }] }));
     expect(runChains.map((c) => [c.route.path.join(" "), c.source, c.valueOf({ name: "shots" })])).toEqual([["job :job rm", "path", "shots"]]);
     expect(chainsFor(pm, add, shapeOutput(out))).toEqual([]);
+  });
+
+  it("treats a source needing an unsupplied positional as chain-only", () => {
+    expect(sourceRunnable(pm, { cmd: "pm search", field: "hits[].magnet" })).toBe(false);
+    expect(sourceRunnable(pm, { cmd: "pm search", args: { query: "$query" }, field: "hits[].magnet" })).toBe(true);
+    expect(sourceRunnable(run, { cmd: "run ls", field: "jobs[].name" })).toBe(true);
+    expect(sourceRunnable(run, { cmd: "run nope", field: "x" })).toBe(false);
   });
 });
 
