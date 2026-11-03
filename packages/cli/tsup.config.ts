@@ -5,7 +5,7 @@ const shared = {
   sourcemap: true,
   target: "node20" as const,
   splitting: false,
-  external: ["@clfly/core", "zod", "smol-toml"],
+  external: ["@clfly/core", "zod", "smol-toml", "tsx"],
 };
 
 export default defineConfig([
@@ -28,6 +28,7 @@ export default defineConfig([
       "commands/link": "src/commands/link.ts",
       "commands/unlink": "src/commands/unlink.ts",
       "commands/ls": "src/commands/ls.ts",
+      "commands/manifest": "src/commands/manifest.ts",
       "commands/register": "src/commands/register.ts",
     },
     clean: false,

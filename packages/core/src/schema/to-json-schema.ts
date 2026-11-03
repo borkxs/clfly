@@ -1,5 +1,6 @@
 import type { AnySchema, FlagInfo } from "../types.js";
 import { ClflyError } from "../errors.js";
+import { readCompleteFrom } from "../complete/index.js";
 
 export type JsonSchema = Record<string, unknown>;
 
@@ -55,6 +56,7 @@ export function flagsFromJsonSchema(
           ? (prop["x-alias"] as string)
           : aliasMap.get(name);
 
+    const completeFrom = readCompleteFrom(prop.completeFrom, `flag --${name}`);
     flags.push({
       name,
       type: inferFlagType(prop),
@@ -64,6 +66,7 @@ export function flagsFromJsonSchema(
       enum: Array.isArray(prop.enum) ? prop.enum : undefined,
       alias: aliasFromMeta,
       deprecated: prop.deprecated === true,
+      ...(completeFrom ? { completeFrom } : {}),
     });
   }
   return flags;

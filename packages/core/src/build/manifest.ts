@@ -26,12 +26,16 @@ import {
 import { coreMajorFromVersion, fileUrlToPath } from "../version.js";
 import { assertUniqueToolNames } from "../mcp/tool-names.js";
 import { ClflyError } from "../errors.js";
+import { applyCompleteExport } from "../complete/index.js";
 
 export interface BuildManifestOptions {
   /** Commands directory (path or file URL). */
   commandsDir: string | URL;
-  /** Output path for the generated manifest module (`.js` or `.ts`). */
-  outFile: string | URL;
+  /**
+   * Output path for the generated manifest module (`.js` or `.ts`).
+   * Omit to build in memory only (launchers and UIs that read routes, never `load`).
+   */
+  outFile?: string | URL;
   /**
    * Version of @clfly/core writing the manifest. Defaults to this package's version.
    * Used for `coreMajor` and mismatch error text.
@@ -42,7 +46,8 @@ export interface BuildManifestOptions {
 }
 
 export interface BuildManifestResult {
-  outFile: string;
+  /** Absent when `outFile` was omitted. */
+  outFile?: string;
   manifest: Manifest;
   routeCount: number;
 }
@@ -52,7 +57,8 @@ export async function buildManifest(
   options: BuildManifestOptions,
 ): Promise<BuildManifestResult> {
   const commandsDir = fileUrlToPath(options.commandsDir);
-  const outFile = fileUrlToPath(options.outFile);
+  const outFile =
+    options.outFile === undefined ? undefined : fileUrlToPath(options.outFile);
   const coreVersion = options.coreVersion ?? readCorePackageVersion();
   const tree = scanCommandsDir(commandsDir);
   const files = listCommandFiles(tree);
@@ -86,29 +92,37 @@ export async function buildManifest(
     const flags = (mod.args ? projectFlags(mod.args) : []).filter(
       (f) => !excluded.has(f.name),
     );
+    applyCompleteExport(
+      mod.complete,
+      flags,
+      positionals,
+      `command "${labelPath.join(" ") || "(root)"}"`,
+    );
     const inputSchema = mod.args
       ? (toJsonSchema(mod.args) as Record<string, unknown>)
       : { type: "object", properties: {} };
     const outputSchema = mod.output
       ? (toOutputJsonSchema(mod.output) as Record<string, unknown>)
       : undefined;
-    const importPath = (
-      options.toImportPath ?? defaultImportPath
-    )(entry.file, outFile);
+    const importPath = outFile
+      ? (options.toImportPath ?? defaultImportPath)(entry.file, outFile)
+      : undefined;
 
-    records.push({
-      path: manifestPath,
-      importPath,
-      meta: mod.meta,
-      flags,
-      positionals,
-      inputSchema,
-      ...(outputSchema ? { outputSchema } : {}),
-    });
+    if (importPath) {
+      records.push({
+        path: manifestPath,
+        importPath,
+        meta: mod.meta,
+        flags,
+        positionals,
+        inputSchema,
+        ...(outputSchema ? { outputSchema } : {}),
+      });
+    }
 
     routes.push({
       path: manifestPath,
-      importPath,
+      ...(importPath ? { importPath } : {}),
       meta: mod.meta,
       flags,
       positionals,
@@ -140,6 +154,8 @@ export async function buildManifest(
     coreMajor: coreMajorFromVersion(coreVersion),
     routes,
   };
+
+  if (!outFile) return { manifest, routeCount: routes.length };
 
   const source = renderManifestModule(records, {
     formatVersion: MANIFEST_FORMAT_VERSION,

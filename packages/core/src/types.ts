@@ -121,6 +121,12 @@ export interface CommandModule<TArgs = unknown, TOutput = unknown> {
    * manifest `outputSchema` and MCP `outputSchema` / structured content.
    */
   output?: AnySchema;
+  /**
+   * Per-arg choice sources keyed by arg name. Covers path params and schema
+   * libraries that cannot carry `completeFrom` in JSON Schema metadata.
+   * Wins over a `completeFrom` keyword on the same property.
+   */
+  complete?: Record<string, CompleteFrom>;
   default: (opts: TArgs, ctx: Context) => TOutput | Promise<TOutput>;
 }
 
@@ -132,6 +138,7 @@ export interface DefineCommandInput<
   args: TSchema;
   positionals?: AnySchema;
   output?: TOutputSchema;
+  complete?: Record<string, CompleteFrom>;
   run: (
     opts: import("@standard-schema/spec").StandardSchemaV1.InferOutput<TSchema>,
     ctx: Context,
@@ -184,6 +191,31 @@ export interface FlagInfo {
   enum?: unknown[];
   alias?: string;
   deprecated?: boolean;
+  /** Where this flag's choices come from. Additive in formatVersion 1. */
+  completeFrom?: CompleteFrom;
+}
+
+/**
+ * Declares that an arg's choices are the output of another command in the
+ * same tree. Consumers (launchers, phone UIs, shell completions) run
+ * `cmd` with `--json` and pick `field` out of the result.
+ * Additive in formatVersion 1 — see docs/manifest.md.
+ */
+export interface CompleteFrom {
+  /** Command path in the same tree, space-separated (`"pm search"` or `"search"`; a leading tree name is optional). */
+  cmd: string;
+  /**
+   * Args passed to `cmd`, as flags (`{ limit: 20 }` → `--limit 20`).
+   * A string `"$name"` stands for the current value of arg `name` on the
+   * command being completed.
+   */
+  args?: Record<string, string | number | boolean>;
+  /** Path to the choice value: dot segments, `[]` maps over an array (`"hits[].infoHash"`, `"rows[].name"`, `"[]"`). */
+  field: string;
+  /** Path to a display label, relative to the innermost array element `field` mapped over (the output root when `field` has no `[]`). */
+  label?: string;
+  /** Path to a secondary line, relative to the same element as `label`. */
+  sub?: string;
 }
 
 /** Where a positional comes from in the command module / route tree. */
@@ -207,6 +239,8 @@ export interface PositionalInfo {
    * Help renders `(also --name)`.
    */
   alsoFlag?: boolean;
+  /** Where this positional's choices come from. Additive in formatVersion 1. */
+  completeFrom?: CompleteFrom;
 }
 
 export interface RouteSegment {
