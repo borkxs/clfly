@@ -13,6 +13,10 @@ export const positionals = z.object({
   name: z.string().optional().describe("Tree name as `clfly ls` shows it (default: every linked tree)"),
 });
 
+export const complete = {
+  name: { cmd: "clfly ls", field: "rows[].name", sub: "path" },
+};
+
 export const args = z.object({
   name: z.string().optional().describe("Tree name as `clfly ls` shows it (default: every linked tree)"),
   commands: z
