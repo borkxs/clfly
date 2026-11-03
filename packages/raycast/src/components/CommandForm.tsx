@@ -176,7 +176,7 @@ function CompleteDropdown(props: {
       .map((a) => [a.slice(1), values[a.slice(1)]]),
   );
   const debounced = useDebounced(refs, 500);
-  const { data: choices = [], isLoading } = useChoices(tree, completeFrom, debounced);
+  const { data: choices = [], isLoading, runnable } = useChoices(tree, completeFrom, debounced);
   const [typed, setTyped] = useState("");
   const value = String(values[f.name] ?? "");
   const extra = [typed.trim(), value].filter((v, i, a) => v && a.indexOf(v) === i && !choices.some((c) => c.value === v));
@@ -193,7 +193,10 @@ function CompleteDropdown(props: {
       filtering
       onSearchTextChange={setTyped}
     >
-      <Form.Dropdown.Item value="" title={f.optional ? "(none)" : `(pick from ${completeFrom.cmd})`} />
+      <Form.Dropdown.Item
+        value=""
+        title={runnable ? (f.optional ? "(none)" : `(pick from ${completeFrom.cmd})`) : `(type a value, or chain from ${completeFrom.cmd} results)`}
+      />
       {extra.map((v) => (
         <Form.Dropdown.Item key={`typed-${v}`} value={v} title={v} icon={Icon.Pencil} />
       ))}

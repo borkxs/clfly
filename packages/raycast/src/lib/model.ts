@@ -276,6 +276,18 @@ export function chainsFor(tree: Tree, from: Route, shaped: Shaped): Chain[] {
   return out;
 }
 
+/**
+ * Whether a `completeFrom` source can run on its own: its route exists and
+ * `args` supplies every required positional. `pm add`'s magnet comes from
+ * `pm search`, which needs a query, so that one is chain-only (filled from
+ * search results, not fetched into the form).
+ */
+export function sourceRunnable(tree: Tree, cf: CompleteFrom): boolean {
+  const source = tree.routes.find((r) => samePath(r.path, cmdPath(cf.cmd, tree.name)));
+  if (!source) return false;
+  return formPositionals(source).every((p) => p.optional || cf.args?.[p.name] !== undefined);
+}
+
 /** `"pm search"` in tree `pm` → `["search"]`. */
 export function cmdPath(cmd: string, treeName: string): string[] {
   const path = cmd.split(/\s+/).filter(Boolean);

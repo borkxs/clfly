@@ -6,6 +6,10 @@ export const meta = {
   description: "Remove a tree's bin from PATH and delete its registry entry",
 };
 
+export const complete = {
+  name: { cmd: "clfly ls", field: "rows[].name", sub: "path" },
+};
+
 export const args = z.object({
   name: z.string().describe("Tree name as `clfly ls` shows it"),
 });
