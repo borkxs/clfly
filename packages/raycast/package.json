@@ -1,0 +1,78 @@
+{
+  "$schema": "https://www.raycast.com/schemas/extension.json",
+  "name": "clfly",
+  "title": "clfly",
+  "description": "Every linked clfly tree as an arrow-key command builder: drill into routes, fill a form, run without a shell, chain results into the next command.",
+  "icon": "icon.png",
+  "author": "borkxs",
+  "private": true,
+  "categories": ["Developer Tools"],
+  "license": "MIT",
+  "commands": [
+    {
+      "name": "trees",
+      "title": "clfly Trees",
+      "subtitle": "clfly",
+      "description": "Browse linked trees and their commands",
+      "mode": "view"
+    },
+    {
+      "name": "favorites",
+      "title": "clfly Favorites",
+      "subtitle": "clfly",
+      "description": "Pinned commands",
+      "mode": "view"
+    },
+    {
+      "name": "run",
+      "title": "Run clfly Command",
+      "subtitle": "clfly",
+      "description": "Target of pinned-command quicklinks; opens the command passed in the deeplink context",
+      "mode": "view"
+    }
+  ],
+  "preferences": [
+    {
+      "name": "extraPath",
+      "title": "Extra PATH",
+      "description": "Colon-separated directories searched for node and clfly before the defaults (Raycast does not load your shell profile)",
+      "type": "textfield",
+      "required": false,
+      "default": ""
+    },
+    {
+      "name": "clflyBin",
+      "title": "clfly executable",
+      "description": "Path to the clfly bin (default: clfly on PATH)",
+      "type": "textfield",
+      "required": false,
+      "default": ""
+    },
+    {
+      "name": "searchLimit",
+      "title": "Live search result limit",
+      "description": "--limit passed to search-as-you-type (pm search)",
+      "type": "textfield",
+      "required": false,
+      "default": "25"
+    }
+  ],
+  "scripts": {
+    "build": "ray build",
+    "dev": "ray develop",
+    "lint": "ray lint",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "@clfly/core": "file:../core",
+    "@raycast/api": "^2.10.1",
+    "@raycast/utils": "^2.3.3"
+  },
+  "devDependencies": {
+    "@types/node": "^22.15.3",
+    "@types/react": "^19.0.0",
+    "typescript": "^5.8.3",
+    "vitest": "^3.1.3"
+  }
+}

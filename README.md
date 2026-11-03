@@ -144,4 +144,5 @@ Plugins, i18n, config-file merging, telemetry. The framework does not ship inter
 | [`@clfly/core`](./packages/core) | Router, parser, help, build, completions; MCP projection (server APIs at `@clfly/core/mcp`) |
 | [`@clfly/cli`](./packages/cli) | Product binary `clfly` (`init`, `add`, `build`, `completions`) |
 | [`@clfly/create`](./packages/create) | Thin `npm create clfly` alias for `init` |
+| [`packages/raycast`](./packages/raycast) | Local Raycast extension: every linked tree as an arrow-key command builder (not published) |
 | [`examples/demo-cli`](./examples/demo-cli) | Reference CLI + MCP server |

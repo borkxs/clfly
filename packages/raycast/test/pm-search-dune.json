@@ -1,0 +1,307 @@
+{
+ "query": "dune part two",
+ "normalized": "dune part two",
+ "warnings": [],
+ "hits": [
+  {
+   "kind": "indexer",
+   "title": "Dune.Part.Two.2024.2160p.WEB-DL.DDP5.1.Atmos.DV.HDR.H.265-FLUX[T",
+   "sizeBytes": 31418996499,
+   "resolution": "2160p",
+   "audio": "surround",
+   "seeders": 498,
+   "indexer": "TPB",
+   "infoHash": "4950a74e1461e71a356c1919026e8c0bbdc4d2ed"
+  },
+  {
+   "kind": "indexer",
+   "title": "Dune.Part.Two.2024.UHD.BluRay.2160p.TrueHD.Atmos.7.1.DV.HEVC.REMUX-FraMeSToR",
+   "sizeBytes": 69026891608,
+   "resolution": "2160p",
+   "audio": "surround",
+   "seeders": 265,
+   "indexer": "TPB",
+   "infoHash": "eee7f700c17bb89a63d0991ebb5f0b20de1b1d69"
+  },
+  {
+   "kind": "indexer",
+   "title": "Dune.Part.Two.2024.REPACK.2160p.AMZN.WEB-DL.DDP5.1.Atmos.H.265-F",
+   "sizeBytes": 19572667134,
+   "resolution": "2160p",
+   "audio": "surround",
+   "seeders": 68,
+   "indexer": "TPB",
+   "infoHash": "1b7b7075624a96f75744f06af17019aa24d079e3"
+  },
+  {
+   "kind": "indexer",
+   "title": "Dune.Part.Two.2024.2160p.UHD.BRRip.x265.HDR.DV.DD+5.1.Dual.YG\u2b50",
+   "sizeBytes": 12425624399,
+   "resolution": "2160p",
+   "audio": "surround",
+   "seeders": 41,
+   "indexer": "TPB",
+   "infoHash": "da04ded9922d3304005334649ca809ab85d36b83"
+  },
+  {
+   "kind": "indexer",
+   "title": "Dune.Part.Two.2024.2160p.AMZN.WEB-DL.DDP5.1.Atmos.H.265-FLUX[TGx",
+   "sizeBytes": 19572643945,
+   "resolution": "2160p",
+   "audio": "surround",
+   "seeders": 21,
+   "indexer": "TPB",
+   "infoHash": "2ebe842cc087eb7c131429b594ac3588a8e502b4"
+  },
+  {
+   "kind": "indexer",
+   "title": "Dune.Part.Two.2024.2160p.HDR10Plus.DV.WEBRip.6CH.x265.HEVC-PSA",
+   "sizeBytes": 3114959162,
+   "resolution": "2160p",
+   "audio": "surround",
+   "seeders": 13,
+   "indexer": "TPB",
+   "infoHash": "29c707dc7cdca1f35ebf85ece80d4eaa99ad317e"
+  },
+  {
+   "kind": "indexer",
+   "title": "Dune.Part.Two.2024.2160p.BluRay.REMUX.DV.HDR.ENG.LATINO.DDP5.1.H265.MP4-BTM",
+   "sizeBytes": 65772353916,
+   "resolution": "2160p",
+   "audio": "surround",
+   "seeders": 10,
+   "indexer": "TPB",
+   "infoHash": "dd088a2c10a90e11630c2550e0def047c3a1bee3"
+  },
+  {
+   "kind": "indexer",
+   "title": "Dune.Part.Two.2024.2160p.BDRip.AAC5.1.10bits.x265-Rapta",
+   "sizeBytes": 2639461546,
+   "resolution": "2160p",
+   "audio": "surround",
+   "seeders": 10,
+   "indexer": "TPB",
+   "infoHash": "f6d578fd79374103ae2552d354018e936315eb58"
+  },
+  {
+   "kind": "indexer",
+   "title": "Dune Part Two 2024 2160p WEB-DL DDP5 1 Atmos DV H 265-FLUX",
+   "sizeBytes": 31418992412,
+   "resolution": "2160p",
+   "audio": "surround",
+   "seeders": 3,
+   "indexer": "TPB",
+   "infoHash": "80e680896f57f8c617b0fa1c1ab71b3c9a5b1f69"
+  },
+  {
+   "kind": "indexer",
+   "title": "Dune.Part.Two.2024.2160p.WEB-DL.DV.P5.ENG.LATINO.Atmos.H265.MKV-BEN.THE.MEN",
+   "sizeBytes": 31771779142,
+   "resolution": "2160p",
+   "audio": "surround",
+   "seeders": 2,
+   "indexer": "TPB",
+   "infoHash": "44fbe087e0c8467c676c1aac4002410b4af74322"
+  },
+  {
+   "kind": "indexer",
+   "title": "Dune Part Two (2024) [2160p] HDR10+ DV WEB [x265-10bit Atmos_5.1]",
+   "sizeBytes": 4054086968,
+   "resolution": "2160p",
+   "audio": "surround",
+   "seeders": 2,
+   "indexer": "TPB",
+   "infoHash": "a328331ad8f33fc0e2892469ee3f03e9a7247372"
+  },
+  {
+   "kind": "indexer",
+   "title": "Dune.Part.Two.2024.2160p.WEB-DL.DV.P5.DDP5.1.Atmos.H265.MP4-BEN.THE.MEN",
+   "sizeBytes": 31379128231,
+   "resolution": "2160p",
+   "audio": "surround",
+   "seeders": 1,
+   "indexer": "TPB",
+   "infoHash": "cf937f30c627ff5a867a406db86cff474a5ff3ee"
+  },
+  {
+   "kind": "indexer",
+   "title": "Dune.Part.Two.2024.2160p.WEB-DL.DV.HDR10.PLUS.ENG.LATINO.H265.MKV-BEN.THE.MEN",
+   "sizeBytes": 31817802399,
+   "resolution": "2160p",
+   "audio": "unknown",
+   "seeders": 19,
+   "indexer": "TPB",
+   "infoHash": "62c6429f039d61f4a9b1663305d86d0fa649cbb1"
+  },
+  {
+   "kind": "indexer",
+   "title": "Dune.Part.Two.2024.MULTi.FRENCH.HDR.DV.2160p.WEB-DL.H265-Slay3R.mkv",
+   "sizeBytes": 32375123696,
+   "resolution": "2160p",
+   "audio": "unknown",
+   "seeders": 13,
+   "indexer": "TPB",
+   "infoHash": "3d33f9e73ab69402e4d803c9006b323674414c36"
+  },
+  {
+   "kind": "indexer",
+   "title": "Dune.Part.Two.2024.2160p.AI.Enhanced.WEBRip.60FPS.H265.10BIT.Hybrid_Marjenbo",
+   "sizeBytes": 61820790488,
+   "resolution": "2160p",
+   "audio": "unknown",
+   "seeders": 11,
+   "indexer": "TPB",
+   "infoHash": "5e28b6504beb319aba494a3ab540ab434b697b65"
+  },
+  {
+   "kind": "indexer",
+   "title": "Dune.Part.Two.2024.MULTI.2160p.WEB-DL.DV.HDR.H265-AOC",
+   "sizeBytes": 20776677274,
+   "resolution": "2160p",
+   "audio": "unknown",
+   "seeders": 11,
+   "indexer": "TPB",
+   "infoHash": "10751fde6e8c2ed6ff8530e04f77bc7698bcb232"
+  },
+  {
+   "kind": "indexer",
+   "title": "Dune Part Two 2024 HDR 2160p WEB h265-ETHEL",
+   "sizeBytes": 31365579596,
+   "resolution": "2160p",
+   "audio": "unknown",
+   "seeders": 5,
+   "indexer": "TPB",
+   "infoHash": "bd218986d62798c85b62f07122c57208cf7c3725"
+  },
+  {
+   "kind": "indexer",
+   "title": "Dune.Part.Two.2024.2160p.WEB-DL.DV.HDR10.PLUS.ENG.LATINO.HINDI.H265.MP4-BTM",
+   "sizeBytes": 32708547086,
+   "resolution": "2160p",
+   "audio": "unknown",
+   "seeders": 2,
+   "indexer": "TPB",
+   "infoHash": "1aacf439e609ee4cbdf3274317f5fdb733c5633e"
+  },
+  {
+   "kind": "indexer",
+   "title": "Dune Part Two 2024 REPACK 2160p UPSCALE WEB HEVC 10Bit AAC 2 0-R&amp;H",
+   "sizeBytes": 23266094982,
+   "resolution": "2160p",
+   "audio": "stereo",
+   "seeders": 70,
+   "indexer": "TPB",
+   "infoHash": "66248ae427e73a48871572cc527541f5958d85c2"
+  },
+  {
+   "kind": "indexer",
+   "title": "Dune Part Two 2024 NORDiC 1080p REMUX BluRay AVC DTS-HD MA TrueHD 7 1 Atmos",
+   "sizeBytes": 36784696185,
+   "resolution": "1080p",
+   "audio": "surround",
+   "seeders": 168,
+   "indexer": "TPB",
+   "infoHash": "468b01356a39b6e5226e1c7ff6edffc55eaa9da4"
+  },
+  {
+   "kind": "indexer",
+   "title": "Dune Part Two (2024) [REPACK] [1080p] [WEBRip] [5.1] ",
+   "sizeBytes": 3301156568,
+   "resolution": "1080p",
+   "audio": "surround",
+   "seeders": 98,
+   "indexer": "TPB",
+   "infoHash": "7d1b443c3197be3d714d8d2ed58c03ad60fb8f85"
+  },
+  {
+   "kind": "indexer",
+   "title": "Dune Part Two 2024 REPACK 1080p AMZN WEB-DL DDP5 1 Atmos H 264-FLUX",
+   "sizeBytes": 8558490729,
+   "resolution": "1080p",
+   "audio": "surround",
+   "seeders": 88,
+   "indexer": "TPB",
+   "infoHash": "b33f4594185ceb5d72794d3bb925d25f8eb64968"
+  },
+  {
+   "kind": "indexer",
+   "title": "Dune Part Two 2024 Bluray 1080p AV1 EN/FR/ES OPUS 7.1-UH",
+   "sizeBytes": 6001345868,
+   "resolution": "1080p",
+   "audio": "surround",
+   "seeders": 69,
+   "indexer": "TPB",
+   "infoHash": "1f8581f9e81a422287459ac6489323dc305590f5"
+  },
+  {
+   "kind": "indexer",
+   "title": "Dune Part Two 2024 1080p BluRay x265 DD 7 1-Pahe in",
+   "sizeBytes": 2452164020,
+   "resolution": "1080p",
+   "audio": "surround",
+   "seeders": 67,
+   "indexer": "TPB",
+   "infoHash": "98eab2b19aca09c10507a7caa9bc4d51f81ebe73"
+  },
+  {
+   "kind": "indexer",
+   "title": "Dune - Part Two 2024 1080p BluRay DoVi HDR10 TrueHD Atmos 7 1 x265-GeneMige",
+   "sizeBytes": 6368343459,
+   "resolution": "1080p",
+   "audio": "surround",
+   "seeders": 50,
+   "indexer": "TPB",
+   "infoHash": "d3549698151a641ffa23117baee0be1b7358358b"
+  },
+  {
+   "kind": "indexer",
+   "title": "Dune.Part.Two.2024.1080p.AMZN.WEB-DL.DDP5.1.Atmos.H.264-FLUX[TGx",
+   "sizeBytes": 8558381150,
+   "resolution": "1080p",
+   "audio": "surround",
+   "seeders": 44,
+   "indexer": "TPB",
+   "infoHash": "e649bf9be7060ba251fd362793e8f84d6d887347"
+  },
+  {
+   "kind": "indexer",
+   "title": "Dune Part Two 2024 BluRay 1080p DD 5 1 x264-BHDStudio",
+   "sizeBytes": 10692844318,
+   "resolution": "1080p",
+   "audio": "surround",
+   "seeders": 30,
+   "indexer": "TPB",
+   "infoHash": "6d4dc4322ceff41523a75c7b0ee3faf878cc6a03"
+  },
+  {
+   "kind": "indexer",
+   "title": "Dune Part Two 2024 V2 1080p X264 HDTS English + Hindi AAC 2.5GB ",
+   "sizeBytes": 2703759800,
+   "resolution": "1080p",
+   "audio": "surround",
+   "seeders": 30,
+   "indexer": "TPB",
+   "infoHash": "793c7c4adac06b15c39513f5b32a5ce06634b347"
+  },
+  {
+   "kind": "indexer",
+   "title": "Dune.Part.Two.2024.REPACK.1080p.10bit.WEBRip.6CH.x265.HEVC-PSA",
+   "sizeBytes": 2171064561,
+   "resolution": "1080p",
+   "audio": "surround",
+   "seeders": 30,
+   "indexer": "TPB",
+   "infoHash": "2220dd2cc28c6ef3a2efc01ada1ddf07d7875061"
+  },
+  {
+   "kind": "indexer",
+   "title": "Dune Part Two 2024 BluRay 1080p HEVC HDR 8ch-CAPTCHA",
+   "sizeBytes": 10217289219,
+   "resolution": "1080p",
+   "audio": "surround",
+   "seeders": 25,
+   "indexer": "TPB",
+   "infoHash": "c68b6b7c3855b616f9bd6f25fc1ecdc9d8d05ad9"
+  }
+ ]
+}
