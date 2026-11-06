@@ -26,12 +26,12 @@ import { ChainActions } from "./ResultView";
  * `query` (pm search). Rows with a `title` also get completions: the most
  * common normalized release title, with its best-seeded hit as the default pick.
  */
-export function LiveSearch(props: { tree: Tree; route: Route; params: Record<string, string> }) {
+export function LiveSearch(props: { tree: Tree; route: Route; params: Record<string, string>; initialQuery?: string }) {
   const { tree, route, params } = props;
   const limit = String(Number(preferences().searchLimit) || 25);
   const filter = route.flags.find((f) => f.enum?.length && f.type === "string");
   const [filterValue, setFilterValue] = useState("");
-  const [text, setText] = useState("");
+  const [text, setText] = useState(props.initialQuery ?? "");
   const [state, setState] = useState<LiveState<Shaped>>({ status: "idle" });
 
   const flagValues = (query: string) => ({
