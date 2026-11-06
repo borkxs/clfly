@@ -6,6 +6,7 @@ import {
   childrenAt,
   commandLine,
   isDestructive,
+  isOpener,
   isLiveSearch,
   missingParams,
   paramCompleteFrom,
@@ -94,6 +95,11 @@ describe("classification", () => {
     expect(isDestructive({ path: ["rm"], meta: { readOnly: true }, flags: [], positionals: [] })).toBe(false);
     expect(isLiveSearch(search)).toBe(true);
     expect(isLiveSearch(add)).toBe(false);
+  });
+
+  it("treats an `open` leaf as an opener, even with a dynamic id after it", () => {
+    expect(isOpener({ path: ["open", ":id"], flags: [], positionals: [] })).toBe(true);
+    expect(isOpener(add)).toBe(false);
   });
 });
 

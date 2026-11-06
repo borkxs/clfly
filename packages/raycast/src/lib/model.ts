@@ -152,6 +152,14 @@ const DESTRUCTIVE_LEAVES = new Set([
 ]);
 
 /** `meta.destructive`, or a destructive-sounding leaf on a command not marked read-only. */
+const OPENING_LEAVES = new Set(["open"]);
+
+/** Commands whose job is to open something elsewhere (`dash open film`): nothing to read back in Raycast. */
+export function isOpener(route: Route): boolean {
+  const last = [...route.path].reverse().find((s) => !isDynamic(s));
+  return last !== undefined && OPENING_LEAVES.has(last);
+}
+
 export function isDestructive(route: Route): boolean {
   if (route.meta?.destructive) return true;
   if (route.meta?.readOnly) return false;
