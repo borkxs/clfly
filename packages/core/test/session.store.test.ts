@@ -191,7 +191,7 @@ describe("session store", () => {
     rmSync(root, { recursive: true, force: true });
   });
 
-  it("result_read slices arrays; result_query stubs", () => {
+  it("result_read slices arrays", () => {
     const root = mkdtempSync(join(tmpdir(), "clfly-read-"));
     const store = createSessionStore({ root });
     const value = Array.from({ length: 20 }, (_, i) => i);
@@ -209,10 +209,6 @@ describe("session store", () => {
       totalCount: 20,
       items: [5, 6, 7],
     });
-
-    const q = handleResultQuery(store, { ref, selector: "$.x" });
-    expect(q.isError).toBe(true);
-    expect(q.content[0]?.text).toMatch(/not implemented/i);
 
     rmSync(root, { recursive: true, force: true });
   });
@@ -257,6 +253,99 @@ describe("session store", () => {
     expect(total).toBeLessThanOrEqual(500);
 
     rmSync(root, { recursive: true, force: true });
+  });
+});
+
+describe("result_query (jq)", () => {
+  const episodes = [
+    { grandparentTitle: "The Curse", season: 1, title: "E1", plays: 1, lastViewedAt: "2026-11-01T20:00:00Z" },
+    { grandparentTitle: "The Curse", season: 1, title: "E2", plays: 2, lastViewedAt: "2026-11-02T20:00:00Z" },
+    { grandparentTitle: "Severance", season: 2, title: "E1", plays: 1, lastViewedAt: "2026-10-30T20:00:00Z" },
+  ];
+
+  function setup(threshold?: number) {
+    const root = mkdtempSync(join(tmpdir(), "clfly-query-"));
+    const store = createSessionStore({ root, ...(threshold ? { threshold } : {}) });
+    const { ref } = store.spool({ sessionId: "q1", command: "watched", argv: [], value: episodes });
+    return { root, store, ref, done: () => rmSync(root, { recursive: true, force: true }) };
+  }
+
+  it("projects fields", async () => {
+    const { store, ref, done } = setup();
+    const q = await handleResultQuery(store, {
+      ref,
+      selector: "map({title, plays, last: .lastViewedAt[:10]})",
+    });
+    expect(q.isError).toBeFalsy();
+    expect(JSON.parse(q.content[0]!.text as string)).toEqual([
+      { title: "E1", plays: 1, last: "2026-11-01" },
+      { title: "E2", plays: 2, last: "2026-11-02" },
+      { title: "E1", plays: 1, last: "2026-10-30" },
+    ]);
+    expect(q.structuredContent).toHaveProperty("result");
+    done();
+  });
+
+  it("groups with group_by; several outputs become an array", async () => {
+    const { store, ref, done } = setup();
+    const q = await handleResultQuery(store, {
+      ref,
+      selector:
+        "group_by(.grandparentTitle, .season) | map({show: .[0].grandparentTitle, season: .[0].season, eps: length})",
+    });
+    expect(JSON.parse(q.content[0]!.text as string)).toEqual([
+      { show: "Severance", season: 2, eps: 1 },
+      { show: "The Curse", season: 1, eps: 2 },
+    ]);
+    const many = await handleResultQuery(store, { ref, selector: ".[].plays" });
+    expect(JSON.parse(many.content[0]!.text as string)).toEqual([1, 2, 1]);
+    const one = await handleResultQuery(store, { ref, selector: "length" });
+    expect(one.content[0]!.text).toBe("3");
+    done();
+  });
+
+  it("surfaces jq errors as tool errors", async () => {
+    const { store, ref, done } = setup();
+    const q = await handleResultQuery(store, { ref, selector: "map(" });
+    expect(q.isError).toBe(true);
+    expect(q.content[0]!.text).toMatch(/jq failed/);
+    done();
+  });
+
+  it("rejects unknown refs and missing args", async () => {
+    const { store, done } = setup();
+    const q = await handleResultQuery(store, { ref: "q1/999", selector: "." });
+    expect(q.isError).toBe(true);
+    expect(q.content[0]!.text).toMatch(/Unknown result ref/);
+    expect((await handleResultQuery(store, { ref: "q1/001" })).isError).toBe(true);
+    done();
+  });
+
+  it("names brew install jq when the binary is missing", async () => {
+    const { store, ref, done } = setup();
+    const q = await handleResultQuery(store, { ref, selector: "." }, {
+      ...process.env,
+      CLFLY_JQ: "/nonexistent/jq",
+    });
+    expect(q.isError).toBe(true);
+    expect(q.content[0]!.text).toMatch(/brew install jq/);
+    done();
+  });
+
+  it("spools large query output as a new ref", async () => {
+    const { store, ref, done } = setup(200);
+    const q = await handleResultQuery(store, {
+      ref,
+      selector: "[range(100) as $i | {i: $i, pad: \"x\"}]",
+    });
+    expect(q.structuredContent).toMatchObject({
+      truncated: true,
+      ref: "q1/002",
+      totalCount: 100,
+    });
+    const page = handleResultRead(store, { ref: "q1/002", offset: 98, limit: 5 });
+    expect(page.structuredContent).toMatchObject({ items: [{ i: 98 }, { i: 99 }] });
+    done();
   });
 });
 

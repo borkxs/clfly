@@ -48,7 +48,7 @@ async function run(argv: string[]) {
   const out = collect();
   const err = collect();
   const cli = createCli({ name: "t", commandsDir: dir, stdout: out.stream, stderr: err.stream });
-  const result = await cli.run(argv);
+  const result = await cli.runUnlogged(argv, out.stream);
   return { exitCode: result.exitCode, stderr: err.text() };
 }
 

@@ -22,6 +22,7 @@ import {
   toolError,
   toolResultForError,
 } from "./project.js";
+import type { CallToolResult } from "./project.js";
 import {
   handleResultQuery,
   handleResultRead,
@@ -31,6 +32,9 @@ import {
   resultReadInputSchema,
 } from "./session-tools.js";
 import { watchCommandTree } from "./watch.js";
+import { invocationVia, logInvocation } from "../invocation-log.js";
+import type { Readable, Writable } from "node:stream";
+import type { JSONRPCMessage } from "@modelcontextprotocol/sdk/types.js";
 
 /** Build an MCP Server with tools projected from the command tree. */
 export async function createMcpServer(
@@ -99,7 +103,7 @@ export async function createMcpServer(
       {
         name: RESULT_QUERY_TOOL,
         description:
-          "Query a spooled session result (stub — not implemented; see session-store ADR)",
+          "Run a jq program over a spooled session result (project, filter, group); large results spool to a new ref",
         inputSchema: resultQueryInputSchema(),
         annotations: { readOnlyHint: true, idempotentHint: true },
       },
@@ -114,34 +118,92 @@ export async function createMcpServer(
       return handleResultRead(store, args);
     }
     if (name === RESULT_QUERY_TOOL) {
-      return handleResultQuery(store, args);
+      return handleResultQuery(store, args, env);
     }
 
     const tool = byName.get(name);
     if (!tool) {
       return toolError(`Unknown tool: ${name}`);
     }
+    const started = Date.now();
+    const logged = (result: CallToolResult, exitCode: number) => {
+      logInvocation(env, {
+        tree: options.name,
+        command: tool.path.join(" "),
+        via: invocationVia(env, true),
+        ms: Date.now() - started,
+        outBytes: Buffer.byteLength(JSON.stringify(result.content ?? [])),
+        exitCode,
+        ...(server.getClientVersion()?.name ? { client: server.getClientVersion()!.name } : {}),
+      });
+      return result;
+    };
     try {
-      return await invokeMcpTool(tool, args, {
+      const result = await invokeMcpTool(tool, args, {
         cwd: root,
         env,
         scoped: true,
         sessionStore: store,
         sessionId,
       });
+      return logged(result, result.isError ? 1 : 0);
     } catch (err) {
-      return toolResultForError(err).result;
+      const { result, exitCode } = toolResultForError(err);
+      return logged(result, exitCode);
     }
   });
 
   return server;
 }
 
-/** Serve the command tree over MCP stdio (stdout is the protocol channel). */
-export async function serveMcpStdio(options: CreateMcpOptions): Promise<void> {
+/**
+ * Serve the command tree over MCP stdio (stdout is the protocol channel).
+ * When stdin ends, every request already received is still answered, then the
+ * server closes (stopping the dev-mode watcher) so the process can exit:
+ * `echo '<request>' | <tree> mcp serve` prints its replies and returns.
+ */
+export async function serveMcpStdio(
+  options: CreateMcpOptions,
+  io: { stdin?: Readable; stdout?: Writable } = {},
+): Promise<Server> {
+  const stdin = io.stdin ?? process.stdin;
   const server = await createMcpServer(options);
-  const transport = new StdioServerTransport();
+  const transport = new StdioServerTransport(stdin, io.stdout ?? process.stdout);
   await server.connect(transport);
+
+  // Track at the transport: request ids in, responses out. Handlers start
+  // asynchronously inside the SDK, so counting inside them misses requests
+  // that arrived in the same chunk as EOF.
+  const pending = new Set<string | number>();
+  let eof = false;
+  let closed = false;
+  const maybeClose = () => {
+    if (eof && pending.size === 0 && !closed) {
+      closed = true;
+      void server.close();
+    }
+  };
+  const onmessage = transport.onmessage;
+  transport.onmessage = (message: JSONRPCMessage) => {
+    if ("method" in message && "id" in message) pending.add(message.id);
+    onmessage?.(message);
+  };
+  const send = transport.send.bind(transport);
+  transport.send = async (message: JSONRPCMessage) => {
+    await send(message);
+    if (!("method" in message) && "id" in message && message.id !== undefined) {
+      pending.delete(message.id);
+      maybeClose();
+    }
+  };
+  const onEof = () => {
+    eof = true;
+    // The transport parses buffered lines on "data"; let them dispatch first.
+    setImmediate(maybeClose);
+  };
+  stdin.once("end", onEof);
+  stdin.once("close", onEof);
+  return server;
 }
 
 export type { SessionStore };
