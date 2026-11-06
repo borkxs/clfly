@@ -18,6 +18,10 @@
           "default": false,
           "description": "Print actions without applying",
           "type": "boolean"
+        },
+        "spool": {
+          "type": "boolean",
+          "description": "Write the result to the session store and return its ref even when it is small, so another tool can take it as \"@<ref>\" in any argument without the result passing through the conversation."
         }
       }
     },
@@ -41,6 +45,10 @@
           "default": 50,
           "description": "Max rows",
           "type": "number"
+        },
+        "spool": {
+          "type": "boolean",
+          "description": "Write the result to the session store and return its ref even when it is small, so another tool can take it as \"@<ref>\" in any argument without the result passing through the conversation."
         }
       }
     },
@@ -55,6 +63,10 @@
         "id": {
           "type": "string",
           "description": "User id"
+        },
+        "spool": {
+          "type": "boolean",
+          "description": "Write the result to the session store and return its ref even when it is small, so another tool can take it as \"@<ref>\" in any argument without the result passing through the conversation."
         }
       },
       "required": [

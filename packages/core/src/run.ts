@@ -7,7 +7,7 @@ import type {
   RouteNode,
   RunResult,
 } from "./types.js";
-import { ClflyError, ValidationError } from "./errors.js";
+import { ClflyError, ReportedExit, ValidationError } from "./errors.js";
 import {
   listCommandFiles,
   loadAndValidateCommand,
@@ -47,6 +47,7 @@ import { createContext } from "./context.js";
 import {
   createSessionStore,
   DEFAULT_SPOOL_THRESHOLD,
+  resolveRefArgs,
   resolveSessionId,
   resolveThreshold,
 } from "./session/index.js";
@@ -143,11 +144,18 @@ export function createCli(options: CreateCliOptions): Cli {
           }
           return { exitCode: err.exitCode };
         }
+        if (err instanceof ReportedExit) {
+          // The command already told the terminal why; a --json caller still
+          // gets the error object for a failure (a cancel is not one).
+          if (json && err.exitCode !== 0) writeJsonError(stderr, err.message);
+          return { exitCode: err.exitCode };
+        }
         if (err instanceof ClflyError) {
+          const message = err.message || `Failed (exit ${err.exitCode}).`;
           if (json) {
-            writeJsonError(stderr, err.message);
+            writeJsonError(stderr, message);
           } else {
-            stderr.write(err.message + "\n");
+            stderr.write(message + "\n");
           }
           return { exitCode: err.exitCode };
         }
@@ -322,11 +330,20 @@ async function runCli(ctx: {
     argsInput[k] = v;
   }
   const { _: _extra, ...stripped } = argsInput;
-  const forArgs = assignRestPositionals(
+  const { args: forArgs, leftover } = assignRestPositionals(
     stripped,
     Array.isArray(_extra) ? _extra.map(String) : [],
     mod.args,
+    positionals,
   );
+  if (leftover.length > 0) {
+    const shown = leftover.map((t) => JSON.stringify(t)).join(" ");
+    throw new ClflyError(
+      `Unexpected argument${leftover.length > 1 ? "s" : ""}: ${shown}. ` +
+        `Quote multi-word values, or see \`${ctx.name} ${resolved.commandPath.join(" ")} --help\`.`,
+      2,
+    );
+  }
 
   const bindResolved = resolveBindField(
     forArgs,
@@ -358,9 +375,15 @@ async function runCli(ctx: {
     throw new ClflyError(assembled.message, 2);
   }
 
-  let opts: unknown = assembled.args;
+  // `@<sessionId>/<seq>` in any argument binds that spooled result in place
+  // (docs/spec/session-store.md); the store is the one `--spool` writes under cwd.
+  const bound = resolveRefArgs(assembled.args, (ref) =>
+    createSessionStore({ root: ctx.cwd }).readRefValue(ref),
+  );
+
+  let opts: unknown = bound.args;
   if (mod.args) {
-    const validated = await validateSchema(mod.args, assembled.args);
+    const validated = await validateSchema(mod.args, bound.args);
     if ("issues" in validated) {
       const excerpt = renderHelpExcerpt({
         name: ctx.name,

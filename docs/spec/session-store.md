@@ -159,6 +159,24 @@ Returns a tool error: not implemented.
 
 **Selector language (deferred):** Prefer a **JSONPath** subset later (RFC 9535) — structured, no shell, maps cleanly to “pick fields from a bound document.” A jq subset is more familiar to CLI users but needs an interpreter sandbox and invites Turing-complete footguns. Revisit when a second consumer needs field projection without a local `jq` binary; until then agents with FS access run `jq` against `path`, and FS-less agents page with `result_read`.
 
+## Feeding a result to another tool
+
+Any argument whose value is `@<sessionId>/<seq>` is replaced by that spooled result before
+validation, on the CLI and over MCP. The producer spools, the consumer binds, and the document never
+passes through the agent:
+
+```text
+pm du {spool: true}                              → { truncated: true, ref: "a1b2c3d4e5f60718/003", … }
+treemap render {input: "@a1b2c3d4e5f60718/003"} → { path: "…/treemap.html", nodes: 812, … }
+```
+
+Every projected tool takes `spool: true` (reserved, like the CLI flag) to force the ref even for a
+result under the threshold. On the CLI, `cmd --spool` prints the spool path; its last two segments
+are the ref (`…/sessions/<sessionId>/<seq>-<command>.json` → `@<sessionId>/<seq>`), so
+`treemap render @<sessionId>/<seq>` reuses it. Piping stays `producer --json | consumer --field -`.
+An unknown ref, or one outside the store, is a usage error (exit 2; a tool error over MCP). Only
+`@` followed by a ref binds: `@clfly/core` or `@user` stay strings.
+
 ---
 
 ## Containment

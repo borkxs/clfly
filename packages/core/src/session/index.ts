@@ -25,3 +25,4 @@ export {
   resolveThreshold,
 } from "./ref.js";
 export { SessionStore, createSessionStore } from "./store.js";
+export { parseRefArg, resolveRefArgs } from "./ref-args.js";

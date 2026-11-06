@@ -8,6 +8,26 @@ export class ClflyError extends Error {
   }
 }
 
+/**
+ * Stop a command whose terminal output already said why (a prompt cancel, an
+ * outro, a logged error), instead of calling `process.exit`. The CLI run path
+ * prints nothing for it and returns `exitCode`; with `--json` a failure still
+ * writes `{error:{message}}`, and over MCP a failure is a tool error with
+ * `message` while exit 0 (a cancel) is a plain result. `exitCode` 0 is a clean
+ * stop. `message` is for those machine channels; the terminal never shows it.
+ */
+export class ReportedExit extends ClflyError {
+  readonly reported = true;
+
+  constructor(exitCode = 1, message?: string) {
+    super(
+      message || (exitCode === 0 ? "Cancelled." : `Failed (exit ${exitCode}).`),
+      exitCode,
+    );
+    this.name = "ReportedExit";
+  }
+}
+
 export class ValidationError extends ClflyError {
   readonly issues: ValidationIssue[];
   readonly helpExcerpt?: string;

@@ -5,7 +5,6 @@ import {
   ListToolsRequestSchema,
 } from "@modelcontextprotocol/sdk/types.js";
 import { fileUrlToPath } from "../version.js";
-import { ClflyError, ValidationError } from "../errors.js";
 import {
   createSessionStore,
   DEFAULT_SPOOL_THRESHOLD,
@@ -21,6 +20,7 @@ import {
   resolveMcpRoot,
   resolveMcpVersion,
   toolError,
+  toolResultForError,
 } from "./project.js";
 import {
   handleResultQuery,
@@ -130,14 +130,7 @@ export async function createMcpServer(
         sessionId,
       });
     } catch (err) {
-      if (err instanceof ValidationError) {
-        return toolError(err.message);
-      }
-      if (err instanceof ClflyError) {
-        return toolError(err.message);
-      }
-      const message = err instanceof Error ? err.message : String(err);
-      return toolError(message);
+      return toolResultForError(err).result;
     }
   });
 
