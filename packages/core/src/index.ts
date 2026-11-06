@@ -3,6 +3,7 @@ export { defineCommand } from "./define-command.js";
 export { createContext } from "./context.js";
 export {
   ClflyError,
+  ReportedExit,
   ValidationError,
   ReservedFlagError,
   ManifestVersionError,

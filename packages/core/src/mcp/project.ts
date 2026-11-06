@@ -14,7 +14,7 @@ export interface CallToolResult {
   structuredContent?: Record<string, unknown>;
   [key: string]: unknown;
 }
-import { ClflyError, ValidationError } from "../errors.js";
+import { ClflyError, ReportedExit, ValidationError } from "../errors.js";
 import { listCommandFiles, loadAndValidateCommand, scanCommandsDir } from "../router/scan.js";
 import {
   toJsonSchema,
@@ -40,6 +40,7 @@ export {
   parseMcpServeFlags,
   type McpServeFlags,
 } from "./parse-serve-argv.js";
+import { resolveRefArgs } from "../session/ref-args.js";
 
 export type JsonSchemaObject = {
   type?: string;
@@ -127,9 +128,17 @@ export async function invokeMcpTool(
     .filter((p) => p.startsWith(":"))
     .map((p) => p.slice(1));
 
-  let opts: unknown = { ...args };
+  // `spool` is reserved (like the CLI flag) and never reaches the command.
+  const { [MCP_SPOOL_ARG]: spoolArg, ...given } = args;
+  // `@<sessionId>/<seq>` in any argument binds that spooled result in place.
+  const store = runtime.sessionStore;
+  const bound = store
+    ? resolveRefArgs(given, (ref) => store.readRefValue(ref)).args
+    : given;
+
+  let opts: unknown = { ...bound };
   if (mod.args) {
-    const validated = await validateSchema(mod.args, args);
+    const validated = await validateSchema(mod.args, bound);
     if ("issues" in validated) {
       throw new ValidationError(
         validated.issues.map((i) => ({
@@ -144,7 +153,7 @@ export async function invokeMcpTool(
   if (typeof opts === "object" && opts !== null) {
     const merged: Record<string, unknown> = { ...(opts as object) };
     for (const name of pathParamNames) {
-      if (args[name] !== undefined) merged[name] = args[name];
+      if (bound[name] !== undefined) merged[name] = bound[name];
     }
     opts = merged;
   }
@@ -185,7 +194,7 @@ export async function invokeMcpTool(
     runtime.sessionStore &&
     runtime.sessionId &&
     validatedValue !== undefined &&
-    runtime.sessionStore.exceedsThreshold(validatedValue)
+    (spoolArg === true || runtime.sessionStore.exceedsThreshold(validatedValue))
   ) {
     const spooled = runtime.sessionStore.spool({
       sessionId: runtime.sessionId,
@@ -284,6 +293,26 @@ export async function validateOutput(
   return validated.value;
 }
 
+/** Reserved tool argument: spool the result and return its ref even when small. */
+export const MCP_SPOOL_ARG = "spool";
+
+/** Add the reserved `spool` argument to a projected tool's inputSchema. */
+export function withSpoolArg(schema: JsonSchemaObject): JsonSchemaObject {
+  const properties: Record<string, unknown> = {
+    ...((schema.properties as Record<string, unknown> | undefined) ?? {}),
+  };
+  if (!(MCP_SPOOL_ARG in properties)) {
+    properties[MCP_SPOOL_ARG] = {
+      type: "boolean",
+      description:
+        "Write the result to the session store and return its ref even when it is small, " +
+        'so another tool can take it as "@<ref>" in any argument without the result ' +
+        "passing through the conversation.",
+    };
+  }
+  return { ...schema, properties };
+}
+
 export function mergePathParamsIntoSchema(
   schema: JsonSchemaObject,
   pathParams: string[],
@@ -356,6 +385,24 @@ export function toolError(message: string): CallToolResult {
     isError: true,
     content: [{ type: "text", text: message }],
   };
+}
+
+/**
+ * The tool result and logged exit code for an error a command threw. A
+ * `ReportedExit` with code 0 (a cancel) is a plain result, not a tool error;
+ * an error without a message still gets text, never a blank tool error.
+ */
+export function toolResultForError(err: unknown): {
+  result: CallToolResult;
+  exitCode: number;
+} {
+  const exitCode = err instanceof ClflyError ? err.exitCode : 1;
+  const raw = err instanceof Error ? err.message : String(err);
+  const message = raw || `Failed (exit ${exitCode}).`;
+  if (err instanceof ReportedExit && exitCode === 0) {
+    return { result: { content: [{ type: "text", text: message }] }, exitCode };
+  }
+  return { result: toolError(message), exitCode };
 }
 
 function buildToolResult(
@@ -450,7 +497,7 @@ function toolsFromManifest(
     tools.push({
       name,
       description,
-      inputSchema: mergePathParamsIntoSchema(baseSchema, pathParams),
+      inputSchema: withSpoolArg(mergePathParamsIntoSchema(baseSchema, pathParams)),
       ...(outputSchema ? { outputSchema } : {}),
       ...(annotations ? { annotations } : {}),
       path: route.path,
@@ -501,7 +548,7 @@ function toolDefFromModule(
   return {
     name,
     description: describeMeta(mod.meta, path),
-    inputSchema: mergePathParamsIntoSchema(base, pathParams),
+    inputSchema: withSpoolArg(mergePathParamsIntoSchema(base, pathParams)),
     ...(outputSchema ? { outputSchema } : {}),
     ...(annotations ? { annotations } : {}),
     path,
