@@ -19,6 +19,8 @@ export type ExecFn = (
   env: NodeJS.ProcessEnv,
 ) => Promise<ExecResult>;
 
+const WINDOWS = process.platform === "win32";
+
 export function spawnExec(
   command: string,
   args: string[],
@@ -26,7 +28,11 @@ export function spawnExec(
   env: NodeJS.ProcessEnv,
 ): Promise<ExecResult> {
   return new Promise((resolvePromise, reject) => {
-    const child = spawn(command, args, { cwd, env, stdio: ["ignore", "pipe", "pipe"] });
+    // On Windows npm and pnpm are .cmd shims, which only run through the shell; one command line,
+    // since Node deprecates (DEP0190) an args array with shell: true. The args are plain tokens.
+    const child = WINDOWS
+      ? spawn([command, ...args].join(" "), [], { cwd, env, stdio: ["ignore", "pipe", "pipe"], shell: true })
+      : spawn(command, args, { cwd, env, stdio: ["ignore", "pipe", "pipe"] });
     let stdout = "";
     let stderr = "";
     child.stdout.on("data", (chunk) => {
@@ -53,7 +59,9 @@ export function spawnExec(
 }
 
 export function which(name: string, env: NodeJS.ProcessEnv): string | null {
-  const result = spawnSync("which", [name], { env, encoding: "utf8" });
+  const result = WINDOWS
+    ? spawnSync("where.exe", [name], { env, encoding: "utf8" })
+    : spawnSync("which", [name], { env, encoding: "utf8" });
   if (result.status !== 0) return null;
   const line = (result.stdout ?? "").trim().split("\n")[0];
   return line || null;

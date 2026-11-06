@@ -59,9 +59,17 @@ import {
 import { readFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
+import {
+  commandPathFromArgv,
+  countingStream,
+  invocationVia,
+  logInvocation,
+} from "./invocation-log.js";
 
 export interface Cli {
   run: (argv?: string[]) => Promise<RunResult>;
+  /** {@link Cli.run} without the invocation log, writing to `stdout`. */
+  runUnlogged: (argv: string[], stdout: NodeJS.WritableStream) => Promise<RunResult>;
   /** Resolved route tree (dev scan or manifest). */
   readonly tree: RouteNode;
 }
@@ -115,9 +123,27 @@ export function createCli(options: CreateCliOptions): Cli {
       options.packageJsonPath,
     );
 
-  return {
+  const cli: Cli = {
     tree,
     async run(argv = process.argv.slice(2)): Promise<RunResult> {
+      const started = Date.now();
+      const counted = countingStream(stdout);
+      const command = commandPathFromArgv(tree, argv);
+      const result = await cli.runUnlogged(argv, counted.stream);
+      // Help, version and builtins have no command path; only real runs count.
+      if (command && !argv.includes("--help") && !argv.includes("-h")) {
+        logInvocation(env, {
+          tree: options.name,
+          command,
+          via: invocationVia(env, false),
+          ms: Date.now() - started,
+          outBytes: counted.bytes(),
+          exitCode: result.exitCode,
+        });
+      }
+      return result;
+    },
+    async runUnlogged(argv: string[], stdout: NodeJS.WritableStream): Promise<RunResult> {
       const json = wantsJson(argv);
       const spool = wantsSpool(argv);
       try {
@@ -163,6 +189,7 @@ export function createCli(options: CreateCliOptions): Cli {
       }
     },
   };
+  return cli;
 }
 
 async function runCli(ctx: {

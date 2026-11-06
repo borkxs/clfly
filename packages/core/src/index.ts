@@ -1,4 +1,5 @@
 export { createCli, resolveCommand, wantsJson, wantsSpool, type Cli } from "./run.js";
+export { invocationLogPath, logInvocation, type Invocation } from "./invocation-log.js";
 export { defineCommand } from "./define-command.js";
 export { createContext } from "./context.js";
 export {

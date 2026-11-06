@@ -1,14 +1,25 @@
 import { spawnSync } from "node:child_process";
 import { mkdtempSync, readFileSync, renameSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
-import { dirname, join } from "node:path";
+import { basename, dirname, join } from "node:path";
 import { ClflyError } from "@clfly/core";
 
 export function writeAtomic(file: string, contents: string): void {
   const dir = dirname(file);
-  const tmp = join(dir, `.${file.split("/").pop()}.${process.pid}.tmp`);
+  const tmp = join(dir, `.${basename(file)}.${process.pid}.tmp`);
   writeFileSync(tmp, contents);
-  renameSync(tmp, file);
+  // On Windows a rename over a file another process has open (Claude Code rewrites ~/.claude.json)
+  // fails with EPERM; a few short retries ride it out.
+  for (let attempt = 1; ; attempt++) {
+    try {
+      renameSync(tmp, file);
+      return;
+    } catch (err) {
+      const code = (err as NodeJS.ErrnoException).code;
+      if (process.platform !== "win32" || attempt >= 6 || (code !== "EPERM" && code !== "EBUSY")) throw err;
+      Atomics.wait(new Int32Array(new SharedArrayBuffer(4)), 0, 0, 100 * attempt);
+    }
+  }
 }
 
 /** Unified diff. Empty string when the texts match. `diff` exits 1 on a difference. */

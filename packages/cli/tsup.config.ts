@@ -23,6 +23,7 @@ export default defineConfig([
       "commands/init": "src/commands/init.ts",
       "commands/add": "src/commands/add.ts",
       "commands/build": "src/commands/build.ts",
+      "commands/changelog": "src/commands/changelog.ts",
       "commands/completions": "src/commands/completions.ts",
       "commands/skill/export": "src/commands/skill/export.ts",
       "commands/link": "src/commands/link.ts",
