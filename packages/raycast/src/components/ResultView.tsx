@@ -1,12 +1,13 @@
-import { Action, ActionPanel, Alert, confirmAlert, Detail, Icon, List, useNavigation } from "@raycast/api";
+import { Action, ActionPanel, Alert, confirmAlert, Detail, Icon, List, PopToRootType, showHUD, useNavigation } from "@raycast/api";
 import { usePromise } from "@raycast/utils";
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { runTree, type RunResult } from "../lib/exec";
 import {
   buildArgv,
   chainsFor,
   commandLine,
   isDestructive,
+  isOpener,
   rowAccessories,
   rowSubtitle,
   rowTitle,
@@ -55,6 +56,13 @@ export function ResultView(props: { tree: Tree; route: Route; params: Record<str
     [JSON.stringify(argv)],
     { abortable: abort },
   );
+
+  // An opener's output is just where it opened: close Raycast instead of showing it.
+  const opened = isOpener(route) && !!data && data !== "cancelled" && data.code === 0;
+  useEffect(() => {
+    if (!opened) return;
+    void showHUD(`↗ ${line.replace(/ --json$/, "")}`, { clearRootSearch: true, popToRootType: PopToRootType.Immediate });
+  }, [opened]);
 
   const common = (
     <>
