@@ -29,9 +29,7 @@ export const paramName = (segment: string) => segment.slice(1);
 
 /** `run :job show` with `{ job: "x" }` → `run x show`; unfilled params stay as `<job>`. */
 export function displayPath(template: string[], params: Record<string, string> = {}): string {
-  return template
-    .map((s) => (isDynamic(s) ? (params[paramName(s)] ?? `<${paramName(s)}>`) : s))
-    .join(" ");
+  return template.map((s) => (isDynamic(s) ? params[paramName(s)] ?? `<${paramName(s)}>` : s)).join(" ");
 }
 
 export interface Child {
@@ -62,7 +60,7 @@ export function childrenAt(tree: Tree, template: string[]): Child[] {
     bySegment.set(segment, child);
   }
   return [...bySegment.values()].sort(
-    (a, b) => Number(isDynamic(a.segment)) - Number(isDynamic(b.segment)) || a.segment.localeCompare(b.segment),
+    (a, b) => Number(isDynamic(a.segment)) - Number(isDynamic(b.segment)) || a.segment.localeCompare(b.segment)
   );
 }
 
@@ -83,7 +81,10 @@ export function formPositionals(route: Route): PositionalInfo[] {
 
 /** Path params of a route that `params` does not fill yet. */
 export function missingParams(route: Route, params: Record<string, string>): string[] {
-  return route.path.filter(isDynamic).map(paramName).filter((n) => !params[n]);
+  return route.path
+    .filter(isDynamic)
+    .map(paramName)
+    .filter((n) => !params[n]);
 }
 
 /**
@@ -96,7 +97,7 @@ export function buildArgv(route: Route, params: Record<string, string>, values: 
     const raw = values[p.name];
     const text = typeof raw === "string" ? raw.trim() : "";
     if (!text) break; // a later positional cannot be given without this one
-    if (p.variadic) argv.push(...splitWords(text));
+    if (p.variadic) argv.push(...tokenize(text));
     else if (text.startsWith("-") && p.alsoFlag) argv.push(`--${p.name}=${text}`);
     else argv.push(text);
   }
@@ -105,13 +106,17 @@ export function buildArgv(route: Route, params: Record<string, string>, values: 
     if (f.type === "boolean") {
       const on = raw === true;
       if (on && f.default !== true) argv.push(`--${f.name}`);
-      if (!on && f.default === true) argv.push(`--no-${f.name}`);
+      if (raw === false && f.default === true) argv.push(`--no-${f.name}`);
       continue;
     }
     const text = typeof raw === "string" ? raw.trim() : "";
     if (!text) continue;
     if (f.type === "array") {
-      for (const item of text.split(",").map((s) => s.trim()).filter(Boolean)) argv.push(`--${f.name}`, item);
+      for (const item of text
+        .split(",")
+        .map((s) => s.trim())
+        .filter(Boolean))
+        argv.push(`--${f.name}`, item);
     } else {
       argv.push(`--${f.name}`, text);
     }
@@ -129,12 +134,22 @@ function shellQuote(s: string): string {
   return /^[\w@%+=:,./-]+$/.test(s) ? s : `'${s.replace(/'/g, `'\\''`)}'`;
 }
 
-function splitWords(text: string): string[] {
-  return text.split(/\s+/).filter(Boolean);
+function quoteWord(word: string): string {
+  return /\s/.test(word) ? `"${word}"` : word;
 }
 
 /** Last static segments that mean "this changes or removes state". */
-const DESTRUCTIVE_LEAVES = new Set(["rm", "remove", "delete", "apply", "reset", "down", "uninstall", "unlink", "clean"]);
+const DESTRUCTIVE_LEAVES = new Set([
+  "rm",
+  "remove",
+  "delete",
+  "apply",
+  "reset",
+  "down",
+  "uninstall",
+  "unlink",
+  "clean",
+]);
 
 /** `meta.destructive`, or a destructive-sounding leaf on a command not marked read-only. */
 export function isDestructive(route: Route): boolean {
@@ -190,7 +205,8 @@ export function rowTitle(row: unknown): string {
 export function rowSubtitle(row: unknown): string | undefined {
   const obj = asObject(row);
   const title = rowTitle(row);
-  for (const k of SUBTITLE_KEYS) if (isScalar(obj[k]) && String(obj[k]) && String(obj[k]) !== title) return String(obj[k]);
+  for (const k of SUBTITLE_KEYS)
+    if (isScalar(obj[k]) && String(obj[k]) && String(obj[k]) !== title) return String(obj[k]);
   return undefined;
 }
 
@@ -253,7 +269,11 @@ export function chainsFor(tree: Tree, from: Route, shaped: Shaped): Chain[] {
   const out: Chain[] = [];
   for (const route of tree.routes) {
     const args: Array<{ name: string; cf?: CompleteFrom; source: Chain["source"] }> = [
-      ...route.positionals.map((p) => ({ name: p.name, cf: p.completeFrom, source: p.source === "path" ? ("path" as const) : ("positional" as const) })),
+      ...route.positionals.map((p) => ({
+        name: p.name,
+        cf: p.completeFrom,
+        source: p.source === "path" ? ("path" as const) : ("positional" as const),
+      })),
       ...route.flags.map((f) => ({ name: f.name, cf: f.completeFrom, source: "flag" as const })),
     ];
     for (const { name, cf, source } of args) {
@@ -347,7 +367,18 @@ export function tokenize(text: string): string[] {
  * and positionals for the command reached. Extra words join into the last positional.
  */
 export function parseTyped(tree: Tree, text: string): Typed {
-  const words = tokenize(text);
+  return parseWords(tree, tokenize(text));
+}
+
+export interface ParsedWords extends Typed {
+  /** Words that were not path segments or flags: the positionals, in order. */
+  loose: string[];
+  /** A value-taking flag that ended the words without its value (`--res`). */
+  pendingFlag?: FlagInfo;
+}
+
+/** `parseTyped` over already-split words. */
+export function parseWords(tree: Tree, words: string[]): ParsedWords {
   const template: string[] = [];
   const params: Record<string, string> = {};
   let i = 0;
@@ -355,16 +386,19 @@ export function parseTyped(tree: Tree, text: string): Typed {
     const children = childrenAt(tree, template);
     const fixed = children.find((c) => c.segment === words[i]);
     const dynamic = children.find((c) => isDynamic(c.segment));
-    const next = fixed ?? (routeAt(tree, template) ? undefined : dynamic);
+    // A dynamic segment takes the word unless the command ending here wants it as a positional.
+    const here = routeAt(tree, template);
+    const next = fixed ?? (here && formPositionals(here).length ? undefined : dynamic);
     if (!next) break;
     template.push(next.segment);
     if (isDynamic(next.segment)) params[paramName(next.segment)] = words[i]!;
   }
   const route = routeAt(tree, template);
   const values: FormValues = {};
-  if (!route) return { template, params, values, ready: false };
-
   const loose: string[] = [];
+  if (!route) return { template, params, values, ready: false, loose: words.slice(i) };
+
+  let pendingFlag: FlagInfo | undefined;
   for (; i < words.length; i++) {
     const w = words[i]!;
     if (!w.startsWith("--") || w === "--") {
@@ -379,16 +413,22 @@ export function parseTyped(tree: Tree, text: string): Typed {
     if (flag?.type === "boolean") values[key] = inline !== undefined ? inline !== "false" : !negated;
     else if (inline !== undefined) values[key] = inline;
     else if (i + 1 < words.length) values[key] = words[++i]!;
+    else if (flag) pendingFlag = flag;
     else values[key] = true;
   }
   const positionals = formPositionals(route);
   positionals.forEach((p, n) => {
     if (n >= loose.length) return;
     const last = n === positionals.length - 1;
-    values[p.name] = last ? loose.slice(n).join(" ") : loose[n]!;
+    // Variadic words keep their quotes so `"in/cone off.flac"` stays one argument.
+    values[p.name] = !last
+      ? loose[n]!
+      : p.variadic
+      ? loose.slice(n).map(quoteWord).join(" ")
+      : loose.slice(n).join(" ");
   });
 
-  return { template, params, route, values, ready: runsBare(route, params, values) };
+  return { template, params, route, values, ready: runsBare(route, params, values), loose, pendingFlag };
 }
 
 /** Every path param, required positional and required flag has a value (or a default), so the command can run without its form. */
