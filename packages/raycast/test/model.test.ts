@@ -9,6 +9,9 @@ import {
   isLiveSearch,
   missingParams,
   paramCompleteFrom,
+  parseTyped,
+  runsBare,
+  tokenize,
   rowAccessories,
   rowTitle,
   shapeOutput,
@@ -140,5 +143,34 @@ describe("release titles", () => {
     expect(top!.completion).toBe("Dune Part Two 2024");
     expect(top!.count).toBeGreaterThan(25);
     expect(top!.best.seeders).toBe(498);
+  });
+});
+
+describe("typed commands", () => {
+  it("tokenizes with quotes", () => {
+    expect(tokenize(`search "the dune" --res 1080p`)).toEqual(["search", "the dune", "--res", "1080p"]);
+  });
+  it("runs a command with nothing required", () => {
+    const t = parseTyped(run, "ls");
+    expect([t.route?.path, t.ready]).toEqual([["ls"], true]);
+  });
+  it("fills dynamic segments and flags", () => {
+    const t = parseTyped(run, "job nightly rm --no-keep --tag a");
+    expect([t.route?.path, t.params, t.values, t.ready]).toEqual([["job", ":job", "rm"], { job: "nightly" }, { keep: false, tag: "a" }, true]);
+  });
+  it("joins extra words into the last positional and reads flags", () => {
+    const t = parseTyped(pm, "search dune 2021 --res=1080p --copy-only");
+    expect([t.values, t.ready]).toEqual([{ query: "dune 2021", res: "1080p", "copy-only": true }, true]);
+  });
+  it("is not ready when a required positional is missing", () => {
+    expect(parseTyped(pm, "add --watch").ready).toBe(false);
+    expect(runsBare(add, {})).toBe(false);
+  });
+  it("stops at a group without a command", () => {
+    const t = parseTyped(run, "job");
+    expect([t.template, t.route]).toEqual([["job"], undefined]);
+  });
+  it("prefers a static child over a dynamic one", () => {
+    expect(parseTyped(pm, "prune apply").route?.path).toEqual(["prune", "apply"]);
   });
 });
