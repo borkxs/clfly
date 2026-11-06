@@ -41,12 +41,12 @@ export type Slot =
   | { kind: "none" };
 
 export interface Candidate {
-  kind: "tree" | "segment" | "choice" | "flag" | "value" | "run" | "search";
+  kind: "tree" | "segment" | "choice" | "flag" | "value" | "run" | "search" | "line";
   /** The word it puts on the line (`run` and `search` rows are actions instead). */
   text: string;
   title: string;
   subtitle?: string;
-  /** For `search`: the whole line it switches to. */
+  /** For `search` and quick-mode `line` rows: the whole line it switches to. */
   line?: string;
 }
 
@@ -214,7 +214,7 @@ export function candidates(state: LineState, trees: Tree[], choices: Choice[] = 
 
 /** The line after taking `c`. */
 export function accept(state: LineState, c: Candidate): string {
-  if (c.kind === "search" && c.line) return c.line;
+  if ((c.kind === "search" || c.kind === "line") && c.line) return c.line;
   if (c.kind === "run") return state.line;
   const raw = state.prefix ? state.line.match(/\S*$/)?.[0] ?? "" : "";
   return `${state.line.slice(0, state.line.length - raw.length)}${quote(c.text)} `;
@@ -233,6 +233,154 @@ export function chainLine(
   );
   const tail = source === "flag" ? [`--${arg}`, value] : source === "positional" ? [value] : [];
   return `${[tree.name, ...path, ...tail].map(quote).join(" ")} `;
+}
+
+// --- quick mode: fuzzy over whole lines ------------------------------------
+//
+// `doc` → `dash open chartbook`, `trh` → `tick run health-check`. When the line does not
+// start with a tree name and a space, every command (and each choice of a short choice
+// list, spelled out) is a candidate line, scored by letters in order with word starts
+// weighted, the way command palettes do it. ↵ on a complete line runs it.
+
+/** A choice list longer than this stays a picker instead of becoming lines. */
+export const MAX_EXPAND = 15;
+
+/** A route whose one required argument comes from a runnable, harmless choice source. */
+export interface Expansion {
+  tree: Tree;
+  route: Route;
+  /** The argument the choices fill: a `:param` path segment or a positional. */
+  arg: string;
+  cf: CompleteFrom;
+}
+
+export function expansions(trees: Tree[]): Expansion[] {
+  const out: Expansion[] = [];
+  for (const tree of trees) {
+    if (tree.error) continue;
+    for (const route of tree.routes) {
+      if (isDestructive(route) || route.meta?.interactive) continue;
+      const fed = route.positionals.filter(
+        (p) => p.completeFrom && (p.source === "path" || !p.optional) && sourceRunnable(tree, p.completeFrom)
+      );
+      if (fed.length === 1) out.push({ tree, route, arg: fed[0]!.name, cf: fed[0]!.completeFrom! });
+    }
+  }
+  return out;
+}
+
+export interface QuickLine {
+  line: string;
+  subtitle?: string;
+}
+
+/**
+ * Every line quick mode can offer: trees, each command with a fixed path, and each
+ * choice of an expansion. `choicesOf` returns the fetched choices for an expansion.
+ */
+export function quickLines(trees: Tree[], choicesOf: (e: Expansion) => Choice[] | undefined): QuickLine[] {
+  const out: QuickLine[] = [];
+  const byRoute = new Map(expansions(trees).map((e) => [e.route, e]));
+  for (const tree of trees) {
+    if (tree.error) continue;
+    out.push({ line: tree.name, subtitle: firstLine(tree.description) });
+    for (const route of tree.routes) {
+      if (route.path.length === 0) continue;
+      const desc = firstLine(route.meta?.description);
+      const exp = byRoute.get(route);
+      const fixed = route.path.every((s) => !isDynamic(s));
+      if (fixed) out.push({ line: [tree.name, ...route.path].join(" "), subtitle: desc });
+      if (!exp) continue;
+      const choices = choicesOf(exp) ?? [];
+      if (choices.length === 0 || choices.length > MAX_EXPAND) continue;
+      for (const c of choices) {
+        const path = route.path.map((s) => (isDynamic(s) && paramName(s) === exp.arg ? c.value : s));
+        const words = fixed ? [...path, c.value] : path;
+        out.push({ line: [tree.name, ...words].map(quote).join(" "), subtitle: [c.label, c.sub].filter(Boolean).join(" · ") || desc });
+      }
+    }
+  }
+  return out;
+}
+
+/**
+ * Score `query` against `text`: its letters in order (spaces ignored), the first on a word
+ * start. Word starts and runs score high, gaps cost a little, longer texts a little less.
+ * `undefined` when it doesn't match.
+ */
+export function fuzzyScore(query: string, text: string): number | undefined {
+  const q = query.toLowerCase().replace(/\s+/g, "");
+  const t = text.toLowerCase();
+  if (!q) return undefined;
+  const start = (j: number) => j === 0 || /[\s\-_/:.]/.test(t[j - 1]!);
+  let prev: number[] = [];
+  for (let i = 0; i < q.length; i++) {
+    const cur = new Array<number>(t.length).fill(-Infinity);
+    let best = -Infinity; // best prev[k] for k < j - 1
+    for (let j = 0; j < t.length; j++) {
+      if (i > 0 && j >= 2) best = Math.max(best, prev[j - 2]!);
+      if (t[j] !== q[i]) continue;
+      const bonus = start(j) ? 10 : 1;
+      if (i === 0) {
+        if (start(j)) cur[j] = bonus - j * 0.05;
+      } else {
+        const run = j > 0 ? prev[j - 1]! + 6 : -Infinity;
+        cur[j] = bonus + Math.max(run, best - 1);
+      }
+    }
+    prev = cur;
+  }
+  const top = Math.max(...prev);
+  if (top === -Infinity) return undefined;
+  // Typed literally (`pm`, `dash o`): the plain prefix wins over a scatter of word starts.
+  const typed = query.toLowerCase().trim();
+  const literal = t === typed ? 25 : t.startsWith(typed) ? 15 : 0;
+  return top + literal - t.length * 0.02;
+}
+
+/** Quick-mode rows for `query`, best first. `picks` maps a past query to the line chosen for it. */
+export function quickCandidates(
+  query: string,
+  lines: QuickLine[],
+  opts: { recent?: string[]; picks?: Record<string, string>; limit?: number } = {}
+): Candidate[] {
+  const q = query.trim();
+  const recent = opts.recent ?? [];
+  const learned = opts.picks?.[q.toLowerCase()];
+  return lines
+    .map((l) => {
+      let score = fuzzyScore(q, l.line);
+      if (score === undefined) return undefined;
+      const r = recent.indexOf(l.line);
+      if (r >= 0) score += 8 - Math.min(r, 7);
+      if (learned === l.line) score += 40;
+      return { l, score };
+    })
+    .filter((x): x is { l: QuickLine; score: number } => x !== undefined)
+    .sort((a, b) => b.score - a.score)
+    .slice(0, opts.limit ?? 30)
+    .map(({ l }) => ({ kind: "line" as const, text: l.line, title: l.line, subtitle: l.subtitle, line: `${l.line} ` }));
+}
+
+/** Quick mode is on while the first word is not (yet) a tree followed by a space. */
+export function isQuick(state: LineState): boolean {
+  return (state.slot.kind === "tree" && state.prefix !== "") || (state.slot.kind === "none" && !state.tree);
+}
+
+/**
+ * What ↵ on a row does: run the line it completes, or put it on the line to keep typing.
+ * A row runs when the line it makes can run and has nothing left to pick (no subcommands
+ * under it, no choices for an argument that is still open).
+ */
+export function onEnter(trees: Tree[], state: LineState, c: Candidate): { run: LineState } | { line: string } {
+  if (c.kind === "run") return { run: state };
+  if (c.kind === "search" || c.kind === "flag") return { line: accept(state, c) };
+  const next = c.kind === "line" ? c.line! : accept(state, c);
+  const ns = analyze(trees, next);
+  const more =
+    (ns.slot.kind === "segment" && childrenAt(ns.tree!, templateOf(ns)).some((x) => !isDynamic(x.segment))) ||
+    ((ns.slot.kind === "segment" || ns.slot.kind === "positional") && ns.source !== undefined);
+  return ns.runnable && !more ? { run: ns } : { line: next };
 }
 
 // --- helpers ----------------------------------------------------------------

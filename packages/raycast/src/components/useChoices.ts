@@ -4,7 +4,7 @@ import { useCachedPromise } from "@raycast/utils";
 import { execArgv } from "../lib/exec";
 import { sourceRunnable, type Tree } from "../lib/model";
 
-async function loadChoices(bin: string, argvKey: string, cfKey: string): Promise<CompletionChoice[]> {
+export async function loadChoices(bin: string, argvKey: string, cfKey: string): Promise<CompletionChoice[]> {
   const res = await execArgv(bin, JSON.parse(argvKey) as string[], { timeoutMs: 60_000 });
   if (res.code !== 0) throw new Error(res.error ?? `exited ${res.code}`);
   return selectCompletions(res.json, JSON.parse(cfKey) as CompleteFrom);

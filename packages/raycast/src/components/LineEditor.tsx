@@ -1,8 +1,22 @@
 import { Action, ActionPanel, Alert, confirmAlert, Icon, List, useNavigation } from "@raycast/api";
-import { useCachedState } from "@raycast/utils";
+import { useCachedPromise, useCachedState } from "@raycast/utils";
 import { useEffect, useMemo, useState } from "react";
 import { runTree } from "../lib/exec";
-import { accept, analyze, candidates, chainLine, type Candidate, type LineState } from "../lib/line";
+import {
+  accept,
+  analyze,
+  candidates,
+  chainLine,
+  expansions,
+  isQuick,
+  onEnter,
+  quickCandidates,
+  quickLines,
+  type Candidate,
+  type Choice,
+  type Expansion,
+  type LineState,
+} from "../lib/line";
 import { DEFAULT_POLICY, LiveSearcher, type LiveState } from "../lib/live";
 import {
   buildArgv,
@@ -19,7 +33,8 @@ import {
 } from "../lib/model";
 import { preferences } from "../lib/exec";
 import { ResultView } from "./ResultView";
-import { useChoices } from "./useChoices";
+import { loadChoices, useChoices } from "./useChoices";
+import { completeFromArgv } from "@clfly/core/complete";
 import { useTrees } from "./useTrees";
 
 const NO_TREE: Tree = { name: "", bin: "", root: "", routes: [] };
@@ -31,6 +46,7 @@ const ICONS: Record<Candidate["kind"], Icon> = {
   value: Icon.Dot,
   run: Icon.Play,
   search: Icon.MagnifyingGlass,
+  line: Icon.Terminal,
 };
 
 /**
@@ -46,22 +62,36 @@ export function LineEditor({ initial = "" }: { initial?: string }) {
   const state = useMemo(() => analyze(trees, line), [trees, line]);
   const choices = useChoices(state.tree ?? NO_TREE, state.source, state.values);
   const live = useLive(state);
-  const rows = candidates(state, trees, choices.data ?? []);
+  const [picks, setPicks] = useCachedState<Record<string, string>>("quick-picks", {});
+  const expanded = useExpansionChoices(trees);
+  const lines = useMemo(() => quickLines(trees, expanded), [trees, expanded]);
+  const quick = isQuick(state);
+  const rows = quick
+    ? quickCandidates(line, lines, { recent, picks })
+    : candidates(state, trees, choices.data ?? []);
 
-  async function run() {
-    const { tree, route } = state;
-    if (!tree || !route || !state.runnable) return;
-    if (state.destructive) {
+  async function run(s: LineState = state) {
+    const { tree, route } = s;
+    if (!tree || !route || !s.runnable) return;
+    if (s.destructive) {
       const ok = await confirmAlert({
-        title: `Run ${line.trim()}?`,
+        title: `Run ${s.line.trim()}?`,
         message: "This changes or removes something.",
         primaryAction: { title: "Run", style: Alert.ActionStyle.Destructive },
       });
       if (!ok) return;
     }
-    const trimmed = line.trim();
+    const trimmed = s.line.trim();
     setRecent([trimmed, ...recent.filter((l) => l !== trimmed)].slice(0, 20));
-    push(<ResultView tree={tree} route={route} params={state.params} values={state.values} />);
+    push(<ResultView tree={tree} route={route} params={s.params} values={s.values} />);
+  }
+
+  /** ↵ on a row: run the line it completes, or put it on the line. */
+  function enter(c: Candidate) {
+    if (quick && c.kind === "line") setPicks({ ...picks, [line.trim().toLowerCase()]: c.text });
+    const r = onEnter(trees, state, c);
+    if ("run" in r) void run(r.run);
+    else setLine(r.line);
   }
 
   const lineActions = (
@@ -97,7 +127,7 @@ export function LineEditor({ initial = "" }: { initial?: string }) {
       searchBarPlaceholder="pm search dune · dash open film · run ls"
       navigationTitle={title}
     >
-      {state.error && (
+      {state.error && !quick && (
         <List.EmptyView icon={Icon.Warning} title={state.error} description="Type a tree name: pm, dash, run…" />
       )}
       {line === "" && recent.length > 0 && (
@@ -126,12 +156,12 @@ export function LineEditor({ initial = "" }: { initial?: string }) {
             icon={c.kind === "run" && state.destructive ? Icon.Trash : ICONS[c.kind]}
             actions={
               <ActionPanel>
-                {c.kind === "run" ? (
-                  <Action title={state.destructive ? "Run (asks first)" : "Run"} icon={Icon.Play} onAction={run} />
-                ) : (
+                <Action title={enterTitle(trees, state, c)} icon={c.kind === "run" ? Icon.Play : Icon.ArrowRight} onAction={() => enter(c)} />
+                {c.kind !== "run" && (
                   <Action
                     title={`Take “${c.text}”`}
-                    icon={Icon.ArrowRight}
+                    icon={Icon.Text}
+                    shortcut={{ modifiers: ["opt"], key: "return" }}
                     onAction={() => setLine(accept(state, c))}
                   />
                 )}
@@ -188,7 +218,46 @@ export function LineEditor({ initial = "" }: { initial?: string }) {
   );
 }
 
+function enterTitle(trees: Tree[], state: LineState, c: Candidate): string {
+  const r = onEnter(trees, state, c);
+  if (!("run" in r)) return `Take “${c.text}”`;
+  return r.run.destructive ? "Run (asks first)" : `Run ${r.run.line.trim()}`;
+}
+
+/** Choices of every short, harmless choice list, so quick mode can offer `dash open film`. */
+function useExpansionChoices(trees: Tree[]): (e: Expansion) => Choice[] | undefined {
+  const sources = useMemo(() => {
+    const seen = new Map<string, { bin: string; argv: string[]; cf: Expansion["cf"] }>();
+    for (const e of expansions(trees)) {
+      const argv = completeFromArgv(e.cf, e.tree.name, {});
+      seen.set(`${e.tree.bin}\0${JSON.stringify(argv)}`, { bin: e.tree.bin, argv, cf: e.cf });
+    }
+    return [...seen.entries()];
+  }, [trees]);
+  const { data } = useCachedPromise(
+    async (key: string) => {
+      const list = JSON.parse(key) as [string, { bin: string; argv: string[]; cf: Expansion["cf"] }][];
+      const got = await Promise.all(
+        list.map(([k, s]) =>
+          loadChoices(s.bin, JSON.stringify(s.argv), JSON.stringify(s.cf)).then(
+            (c) => [k, c] as const,
+            () => [k, []] as const
+          )
+        )
+      );
+      return Object.fromEntries(got) as Record<string, Choice[]>;
+    },
+    [JSON.stringify(sources)],
+    { execute: sources.length > 0, keepPreviousData: true }
+  );
+  return useMemo(
+    () => (e: Expansion) => data?.[`${e.tree.bin}\0${JSON.stringify(completeFromArgv(e.cf, e.tree.name, {}))}`],
+    [data]
+  );
+}
+
 function sectionTitle(state: LineState): string {
+  if (isQuick(state)) return "Commands";
   switch (state.slot.kind) {
     case "tree":
       return "Trees";
