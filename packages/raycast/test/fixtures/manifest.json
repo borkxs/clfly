@@ -1,0 +1,4989 @@
+{
+ "trees": [
+  {
+   "name": "dash",
+   "bin": "/fixture/dash",
+   "root": "/fixture",
+   "routes": [
+    {
+     "path": [],
+     "meta": {
+      "description": "dash \u2014 one index of every project's dashboard; pass a command, or --help"
+     },
+     "flags": [],
+     "positionals": []
+    },
+    {
+     "path": [
+      "add"
+     ],
+     "meta": {
+      "description": "Register a project's dashboard.json (schema dash/v1) on the index; re-adding an id replaces it"
+     },
+     "flags": [],
+     "positionals": [
+      {
+       "name": "path",
+       "source": "export",
+       "optional": false,
+       "description": "Path to the manifest, e.g. ~/git/film/dashboard.json",
+       "alsoFlag": true
+      }
+     ],
+     "outputSchema": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "type": "object",
+      "properties": {
+       "id": {
+        "type": "string"
+       },
+       "name": {
+        "type": "string"
+       },
+       "area": {
+        "type": "string"
+       },
+       "path": {
+        "type": "string"
+       },
+       "replaced": {
+        "type": "boolean"
+       }
+      },
+      "required": [
+       "id",
+       "name",
+       "area",
+       "path",
+       "replaced"
+      ],
+      "additionalProperties": false
+     }
+    },
+    {
+     "path": [
+      "done"
+     ],
+     "meta": {
+      "description": "Clear a manual step from dash waits once it has been done"
+     },
+     "flags": [],
+     "positionals": [
+      {
+       "name": "n",
+       "source": "export",
+       "optional": false,
+       "description": "The wait's number (see dash waits)",
+       "alsoFlag": true
+      }
+     ],
+     "outputSchema": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "type": "object",
+      "properties": {
+       "n": {
+        "type": "number"
+       },
+       "id": {
+        "type": [
+         "string",
+         "null"
+        ]
+       },
+       "text": {
+        "type": "string"
+       },
+       "addedAt": {
+        "type": "string"
+       }
+      },
+      "required": [
+       "n",
+       "id",
+       "text",
+       "addedAt"
+      ],
+      "additionalProperties": false
+     }
+    },
+    {
+     "path": [
+      "down"
+     ],
+     "meta": {
+      "description": "Stop a dashboard's server: the one dash started, else whatever is listening on its port"
+     },
+     "flags": [],
+     "positionals": [
+      {
+       "name": "id",
+       "source": "export",
+       "optional": false,
+       "description": "Dashboard id (see dash ls)",
+       "alsoFlag": true,
+       "completeFrom": {
+        "cmd": "dash ls",
+        "field": "dashboards[].id",
+        "sub": "status"
+       }
+      }
+     ],
+     "outputSchema": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "type": "object",
+      "properties": {
+       "id": {
+        "type": "string"
+       },
+       "stopped": {
+        "type": "boolean"
+       },
+       "pids": {
+        "type": "array",
+        "items": {
+         "type": "number"
+        }
+       },
+       "how": {
+        "type": "string",
+        "enum": [
+         "dash",
+         "port",
+         "none"
+        ]
+       }
+      },
+      "required": [
+       "id",
+       "stopped",
+       "pids",
+       "how"
+      ],
+      "additionalProperties": false
+     }
+    },
+    {
+     "path": [
+      "install"
+     ],
+     "meta": {
+      "description": "Keep dash serve running: install it as a launchd user agent (KeepAlive, starts at login); re-running replaces it"
+     },
+     "flags": [
+      {
+       "name": "port",
+       "type": "number",
+       "description": "Port for the index (default 4100)",
+       "optional": true,
+       "default": 4100,
+       "deprecated": false
+      }
+     ],
+     "positionals": [],
+     "outputSchema": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "type": "object",
+      "properties": {
+       "label": {
+        "type": "string"
+       },
+       "plist": {
+        "type": "string"
+       },
+       "url": {
+        "type": "string"
+       }
+      },
+      "required": [
+       "label",
+       "plist",
+       "url"
+      ],
+      "additionalProperties": false
+     }
+    },
+    {
+     "path": [
+      "ls"
+     ],
+     "meta": {
+      "description": "List registered dashboards: area, status (up, down, file, link), port, latest stats"
+     },
+     "flags": [],
+     "positionals": [],
+     "outputSchema": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "type": "object",
+      "properties": {
+       "dashboards": {
+        "type": "array",
+        "items": {
+         "type": "object",
+         "properties": {
+          "id": {
+           "type": "string"
+          },
+          "name": {
+           "type": "string"
+          },
+          "area": {
+           "type": "string"
+          },
+          "status": {
+           "type": "string"
+          },
+          "entryUrl": {
+           "type": "string"
+          },
+          "port": {
+           "type": [
+            "number",
+            "null"
+           ]
+          },
+          "pid": {
+           "type": [
+            "number",
+            "null"
+           ]
+          },
+          "statsAt": {
+           "type": [
+            "string",
+            "null"
+           ]
+          },
+          "latest": {
+           "type": "object",
+           "propertyNames": {
+            "type": "string"
+           },
+           "additionalProperties": {
+            "type": "number"
+           }
+          },
+          "path": {
+           "type": "string"
+          }
+         },
+         "required": [
+          "id",
+          "name",
+          "area",
+          "status",
+          "entryUrl",
+          "port",
+          "pid",
+          "statsAt",
+          "latest",
+          "path"
+         ],
+         "additionalProperties": false
+        }
+       },
+       "broken": {
+        "type": "array",
+        "items": {
+         "type": "object",
+         "properties": {
+          "id": {
+           "type": "string"
+          },
+          "path": {
+           "type": "string"
+          },
+          "error": {
+           "type": "string"
+          }
+         },
+         "required": [
+          "id",
+          "path",
+          "error"
+         ],
+         "additionalProperties": false
+        }
+       }
+      },
+      "required": [
+       "dashboards",
+       "broken"
+      ],
+      "additionalProperties": false
+     }
+    },
+    {
+     "path": [
+      "open"
+     ],
+     "meta": {
+      "description": "Open a dashboard in the browser, starting its server first when it has one and it is down"
+     },
+     "flags": [
+      {
+       "name": "up",
+       "type": "boolean",
+       "description": "Start the server first if it is down (--no-up to just open)",
+       "optional": true,
+       "default": true,
+       "deprecated": false
+      }
+     ],
+     "positionals": [
+      {
+       "name": "id",
+       "source": "export",
+       "optional": false,
+       "description": "Dashboard id (see dash ls)",
+       "alsoFlag": true,
+       "completeFrom": {
+        "cmd": "dash ls",
+        "field": "dashboards[].id",
+        "sub": "status"
+       }
+      }
+     ],
+     "outputSchema": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "type": "object",
+      "properties": {
+       "id": {
+        "type": "string"
+       },
+       "url": {
+        "type": "string"
+       },
+       "started": {
+        "type": "boolean"
+       }
+      },
+      "required": [
+       "id",
+       "url",
+       "started"
+      ],
+      "additionalProperties": false
+     }
+    },
+    {
+     "path": [
+      "rm"
+     ],
+     "meta": {
+      "description": "Unregister a dashboard from the index (the project's manifest and collected stats are kept)",
+      "destructive": true
+     },
+     "flags": [],
+     "positionals": [
+      {
+       "name": "id",
+       "source": "export",
+       "optional": false,
+       "description": "Dashboard id (see dash ls)",
+       "alsoFlag": true,
+       "completeFrom": {
+        "cmd": "dash ls",
+        "field": "dashboards[].id",
+        "sub": "status"
+       }
+      }
+     ],
+     "outputSchema": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "type": "object",
+      "properties": {
+       "removed": {
+        "type": "string"
+       },
+       "path": {
+        "type": "string"
+       }
+      },
+      "required": [
+       "removed",
+       "path"
+      ],
+      "additionalProperties": false
+     }
+    },
+    {
+     "path": [
+      "serve"
+     ],
+     "meta": {
+      "description": "Serve the index page on localhost (status dots, start/stop, sparklines); runs until stopped, see dash install"
+     },
+     "flags": [
+      {
+       "name": "port",
+       "type": "number",
+       "description": "Port for the index (default 4100)",
+       "optional": true,
+       "default": 4100,
+       "deprecated": false
+      }
+     ],
+     "positionals": [],
+     "outputSchema": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "type": "object",
+      "properties": {
+       "port": {
+        "type": "number"
+       },
+       "url": {
+        "type": "string"
+       }
+      },
+      "required": [
+       "port",
+       "url"
+      ],
+      "additionalProperties": false
+     }
+    },
+    {
+     "path": [
+      "stats"
+     ],
+     "meta": {
+      "description": "Run every registered project's stats command (or one dashboard's) and record the numbers for the index's sparklines; schedule it with tick"
+     },
+     "flags": [],
+     "positionals": [
+      {
+       "name": "id",
+       "source": "export",
+       "optional": true,
+       "description": "Only this dashboard",
+       "alsoFlag": true
+      }
+     ],
+     "outputSchema": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "type": "object",
+      "properties": {
+       "collected": {
+        "type": "array",
+        "items": {
+         "type": "object",
+         "properties": {
+          "at": {
+           "type": "string"
+          },
+          "id": {
+           "type": "string"
+          },
+          "values": {
+           "type": "object",
+           "propertyNames": {
+            "type": "string"
+           },
+           "additionalProperties": {
+            "type": "number"
+           }
+          },
+          "ms": {
+           "type": "number"
+          }
+         },
+         "required": [
+          "at",
+          "id",
+          "values",
+          "ms"
+         ],
+         "additionalProperties": false
+        }
+       },
+       "errors": {
+        "type": "array",
+        "items": {
+         "type": "object",
+         "properties": {
+          "id": {
+           "type": "string"
+          },
+          "error": {
+           "type": "string"
+          }
+         },
+         "required": [
+          "id",
+          "error"
+         ],
+         "additionalProperties": false
+        }
+       }
+      },
+      "required": [
+       "collected",
+       "errors"
+      ],
+      "additionalProperties": false
+     }
+    },
+    {
+     "path": [
+      "uninstall"
+     ],
+     "meta": {
+      "description": "Stop the dash serve launchd agent and delete it (registered dashboards and stats are kept)",
+      "destructive": true
+     },
+     "flags": [],
+     "positionals": [],
+     "outputSchema": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "type": "object",
+      "properties": {
+       "removed": {
+        "type": "string"
+       },
+       "plist": {
+        "type": "string"
+       }
+      },
+      "required": [
+       "removed",
+       "plist"
+      ],
+      "additionalProperties": false
+     }
+    },
+    {
+     "path": [
+      "up"
+     ],
+     "meta": {
+      "description": "Start a dashboard's server (its manifest's serve command), detached, and wait until its port answers"
+     },
+     "flags": [
+      {
+       "name": "restart",
+       "type": "boolean",
+       "description": "Stop whatever is on the port first",
+       "optional": true,
+       "default": false,
+       "deprecated": false
+      }
+     ],
+     "positionals": [
+      {
+       "name": "id",
+       "source": "export",
+       "optional": false,
+       "description": "Dashboard id (see dash ls)",
+       "alsoFlag": true,
+       "completeFrom": {
+        "cmd": "dash ls",
+        "field": "dashboards[].id",
+        "sub": "status"
+       }
+      }
+     ],
+     "outputSchema": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "type": "object",
+      "properties": {
+       "id": {
+        "type": "string"
+       },
+       "port": {
+        "type": "number"
+       },
+       "pid": {
+        "type": [
+         "number",
+         "null"
+        ]
+       },
+       "started": {
+        "type": "boolean"
+       },
+       "log": {
+        "type": "string"
+       }
+      },
+      "required": [
+       "id",
+       "port",
+       "pid",
+       "started",
+       "log"
+      ],
+      "additionalProperties": false
+     }
+    },
+    {
+     "path": [
+      "wait"
+     ],
+     "meta": {
+      "description": "Record a manual step the work is waiting on (something only Erik can do); the index shows it as an alert until dash done clears it"
+     },
+     "flags": [
+      {
+       "name": "id",
+       "type": "string",
+       "description": "The dashboard it belongs to (see dash ls); omit for one that is not about a project",
+       "optional": true,
+       "deprecated": false
+      }
+     ],
+     "positionals": [
+      {
+       "name": "text",
+       "source": "export",
+       "optional": false,
+       "description": "What has to happen, e.g. \"run install.ps1 on Shadow\"",
+       "alsoFlag": true
+      }
+     ],
+     "outputSchema": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "type": "object",
+      "properties": {
+       "n": {
+        "type": "number"
+       },
+       "id": {
+        "type": [
+         "string",
+         "null"
+        ]
+       },
+       "text": {
+        "type": "string"
+       },
+       "addedAt": {
+        "type": "string"
+       }
+      },
+      "required": [
+       "n",
+       "id",
+       "text",
+       "addedAt"
+      ],
+      "additionalProperties": false
+     }
+    },
+    {
+     "path": [
+      "waits"
+     ],
+     "meta": {
+      "description": "List the manual steps the work is waiting on (dash wait adds them, dash done clears one)"
+     },
+     "flags": [],
+     "positionals": [],
+     "outputSchema": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "type": "object",
+      "properties": {
+       "waits": {
+        "type": "array",
+        "items": {
+         "type": "object",
+         "properties": {
+          "n": {
+           "type": "number"
+          },
+          "id": {
+           "type": [
+            "string",
+            "null"
+           ]
+          },
+          "text": {
+           "type": "string"
+          },
+          "addedAt": {
+           "type": "string"
+          }
+         },
+         "required": [
+          "n",
+          "id",
+          "text",
+          "addedAt"
+         ],
+         "additionalProperties": false
+        }
+       }
+      },
+      "required": [
+       "waits"
+      ],
+      "additionalProperties": false
+     }
+    }
+   ],
+   "description": "clfly tree that indexes every project's dashboard: one dash/v1 manifest per project, an index page on localhost with status dots, start/stop and sparklines, and a stats collector for tick to schedule.",
+   "commandsDir": "/Users/erik/git/borkxs-mono-main/packages/dash/commands"
+  },
+  {
+   "name": "plex",
+   "bin": "/fixture/plex",
+   "root": "/fixture",
+   "routes": [
+    {
+     "path": [],
+     "meta": {
+      "description": "plex \u2014 run a subcommand, or pass --help"
+     },
+     "flags": [],
+     "positionals": []
+    },
+    {
+     "path": [
+      "history"
+     ],
+     "meta": {
+      "description": "Plex watch history: every completed play, newest first",
+      "readOnly": true
+     },
+     "flags": [
+      {
+       "name": "type",
+       "type": "string",
+       "description": "movie, episode, or track",
+       "optional": true,
+       "enum": [
+        "movie",
+        "episode",
+        "track"
+       ],
+       "deprecated": false
+      },
+      {
+       "name": "section",
+       "type": "string",
+       "description": "Library section id (see `plex sections`)",
+       "optional": true,
+       "deprecated": false
+      },
+      {
+       "name": "account",
+       "type": "number",
+       "description": "Plex account id (1 = server owner)",
+       "optional": true,
+       "deprecated": false
+      },
+      {
+       "name": "since",
+       "type": "string",
+       "description": "Only plays since \"30d\", \"12w\", or a date",
+       "optional": true,
+       "deprecated": false
+      },
+      {
+       "name": "limit",
+       "type": "number",
+       "description": "Print at most N plays",
+       "optional": true,
+       "deprecated": false
+      }
+     ],
+     "positionals": [],
+     "outputSchema": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "type": "array",
+      "items": {
+       "type": "object",
+       "properties": {
+        "viewedAt": {
+         "type": "string",
+         "description": "ISO timestamp"
+        },
+        "type": {
+         "type": "string"
+        },
+        "title": {
+         "type": "string"
+        },
+        "grandparentTitle": {
+         "type": [
+          "string",
+          "null"
+         ]
+        },
+        "season": {
+         "type": [
+          "number",
+          "null"
+         ]
+        },
+        "episode": {
+         "type": [
+          "number",
+          "null"
+         ]
+        },
+        "year": {
+         "type": [
+          "number",
+          "null"
+         ]
+        },
+        "sectionId": {
+         "type": [
+          "string",
+          "null"
+         ]
+        },
+        "accountId": {
+         "type": [
+          "number",
+          "null"
+         ]
+        },
+        "ratingKey": {
+         "type": [
+          "string",
+          "null"
+         ]
+        }
+       },
+       "required": [
+        "viewedAt",
+        "type",
+        "title",
+        "grandparentTitle",
+        "season",
+        "episode",
+        "year",
+        "sectionId",
+        "accountId",
+        "ratingKey"
+       ],
+       "additionalProperties": false
+      }
+     }
+    },
+    {
+     "path": [
+      "scan"
+     ],
+     "meta": {
+      "description": "Scan Plex libraries for new files (all, one by id/title, or just the folder holding --path); starts a local server that is down"
+     },
+     "flags": [
+      {
+       "name": "section",
+       "type": "string",
+       "description": "Library id or title (default: all)",
+       "optional": true,
+       "deprecated": false
+      },
+      {
+       "name": "path",
+       "type": "string",
+       "description": "Scan only the library folder holding this file or folder",
+       "optional": true,
+       "deprecated": false
+      },
+      {
+       "name": "wait",
+       "type": "boolean",
+       "description": "Wait until Plex finishes scanning",
+       "optional": true,
+       "deprecated": false
+      }
+     ],
+     "positionals": [],
+     "outputSchema": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "type": "object",
+      "properties": {
+       "started": {
+        "type": "boolean"
+       },
+       "scanned": {
+        "type": "array",
+        "items": {
+         "type": "object",
+         "properties": {
+          "id": {
+           "type": "string"
+          },
+          "title": {
+           "type": "string"
+          }
+         },
+         "required": [
+          "id",
+          "title"
+         ],
+         "additionalProperties": false
+        }
+       },
+       "path": {
+        "type": [
+         "string",
+         "null"
+        ]
+       },
+       "finished": {
+        "type": "boolean"
+       }
+      },
+      "required": [
+       "started",
+       "scanned",
+       "path",
+       "finished"
+      ],
+      "additionalProperties": false
+     }
+    },
+    {
+     "path": [
+      "sections"
+     ],
+     "meta": {
+      "description": "List Plex libraries (sections) with their ids and folders",
+      "readOnly": true
+     },
+     "flags": [],
+     "positionals": [],
+     "outputSchema": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "type": "array",
+      "items": {
+       "type": "object",
+       "properties": {
+        "id": {
+         "type": "string"
+        },
+        "type": {
+         "type": "string"
+        },
+        "title": {
+         "type": "string"
+        },
+        "locations": {
+         "type": "array",
+         "items": {
+          "type": "string"
+         }
+        }
+       },
+       "required": [
+        "id",
+        "type",
+        "title",
+        "locations"
+       ],
+       "additionalProperties": false
+      }
+     }
+    },
+    {
+     "path": [
+      "watched"
+     ],
+     "meta": {
+      "description": "Titles watched on Plex, one row per title with play count and last watched; includes titles no longer in the library",
+      "readOnly": true
+     },
+     "flags": [
+      {
+       "name": "type",
+       "type": "string",
+       "description": "movie, episode, or track",
+       "optional": true,
+       "enum": [
+        "movie",
+        "episode",
+        "track"
+       ],
+       "deprecated": false
+      },
+      {
+       "name": "section",
+       "type": "string",
+       "description": "Library section id (see `plex sections`)",
+       "optional": true,
+       "deprecated": false
+      },
+      {
+       "name": "account",
+       "type": "number",
+       "description": "Plex account id (1 = server owner)",
+       "optional": true,
+       "deprecated": false
+      },
+      {
+       "name": "since",
+       "type": "string",
+       "description": "Only plays since \"30d\", \"12w\", or a date",
+       "optional": true,
+       "deprecated": false
+      }
+     ],
+     "positionals": [],
+     "outputSchema": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "type": "array",
+      "items": {
+       "type": "object",
+       "properties": {
+        "type": {
+         "type": "string"
+        },
+        "title": {
+         "type": "string"
+        },
+        "grandparentTitle": {
+         "type": [
+          "string",
+          "null"
+         ]
+        },
+        "season": {
+         "type": [
+          "number",
+          "null"
+         ]
+        },
+        "episode": {
+         "type": [
+          "number",
+          "null"
+         ]
+        },
+        "year": {
+         "type": [
+          "number",
+          "null"
+         ]
+        },
+        "plays": {
+         "type": "number"
+        },
+        "firstViewedAt": {
+         "type": "string"
+        },
+        "lastViewedAt": {
+         "type": "string"
+        },
+        "inLibrary": {
+         "type": "boolean",
+         "description": "Whether any play still points at a library item"
+        }
+       },
+       "required": [
+        "type",
+        "title",
+        "grandparentTitle",
+        "season",
+        "episode",
+        "year",
+        "plays",
+        "firstViewedAt",
+        "lastViewedAt",
+        "inLibrary"
+       ],
+       "additionalProperties": false
+      }
+     }
+    }
+   ],
+   "description": "clfly tree for querying a Plex Media Server: libraries and watch history.",
+   "commandsDir": "/Users/erik/git/borkxs-mono-main/packages/plex/commands"
+  },
+  {
+   "name": "pm",
+   "bin": "/fixture/pm",
+   "root": "/fixture",
+   "routes": [
+    {
+     "path": [
+      "account"
+     ],
+     "meta": {
+      "description": "Show Premiumize account info"
+     },
+     "flags": [],
+     "positionals": []
+    },
+    {
+     "path": [
+      "add"
+     ],
+     "meta": {
+      "description": "Add magnets to the Premiumize cloud. Downloads to this machine only with --watch or --download"
+     },
+     "flags": [
+      {
+       "name": "watch",
+       "type": "boolean",
+       "description": "Wait until the transfer finishes, then download",
+       "optional": true,
+       "deprecated": false
+      },
+      {
+       "name": "download",
+       "type": "boolean",
+       "description": "Download now if Premiumize already has it cached (without waiting)",
+       "optional": true,
+       "deprecated": false
+      },
+      {
+       "name": "tool",
+       "type": "string",
+       "description": "Downloader: auto|aria2c|curl (default: config or auto)",
+       "optional": true,
+       "enum": [
+        "auto",
+        "aria2c",
+        "curl"
+       ],
+       "deprecated": false
+      }
+     ],
+     "positionals": [
+      {
+       "name": "magnet",
+       "source": "export",
+       "optional": false,
+       "description": "Magnet URI or info hash; several separated by spaces/newlines, or a JSON array",
+       "alsoFlag": true,
+       "completeFrom": {
+        "cmd": "pm search",
+        "field": "hits[].magnet",
+        "label": "title",
+        "sub": "indexer"
+       }
+      }
+     ],
+     "outputSchema": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "anyOf": [
+       {
+        "type": "object",
+        "properties": {
+         "transferId": {
+          "type": "string"
+         },
+         "name": {
+          "type": "string"
+         },
+         "downloaded": {
+          "type": "boolean"
+         },
+         "path": {
+          "type": "string"
+         },
+         "files": {
+          "type": "array",
+          "items": {
+           "type": "object",
+           "properties": {
+            "name": {
+             "type": "string"
+            },
+            "path": {
+             "type": "string"
+            },
+            "downloaded": {
+             "type": "boolean"
+            }
+           },
+           "required": [
+            "name",
+            "path",
+            "downloaded"
+           ],
+           "additionalProperties": false
+          }
+         },
+         "message": {
+          "type": "string"
+         }
+        },
+        "required": [
+         "transferId",
+         "downloaded",
+         "message"
+        ],
+        "additionalProperties": false
+       },
+       {
+        "type": "array",
+        "items": {
+         "type": "object",
+         "properties": {
+          "transferId": {
+           "type": "string"
+          },
+          "name": {
+           "type": "string"
+          },
+          "downloaded": {
+           "type": "boolean"
+          },
+          "path": {
+           "type": "string"
+          },
+          "files": {
+           "type": "array",
+           "items": {
+            "type": "object",
+            "properties": {
+             "name": {
+              "type": "string"
+             },
+             "path": {
+              "type": "string"
+             },
+             "downloaded": {
+              "type": "boolean"
+             }
+            },
+            "required": [
+             "name",
+             "path",
+             "downloaded"
+            ],
+            "additionalProperties": false
+           }
+          },
+          "message": {
+           "type": "string"
+          }
+         },
+         "required": [
+          "transferId",
+          "downloaded",
+          "message"
+         ],
+         "additionalProperties": false
+        }
+       }
+      ]
+     }
+    },
+    {
+     "path": [
+      "config"
+     ],
+     "meta": {
+      "description": "View or update ~/.config/pm/config.json"
+     },
+     "flags": [],
+     "positionals": []
+    },
+    {
+     "path": [
+      "config",
+      "get"
+     ],
+     "meta": {
+      "description": "Get a config value (or dump all)"
+     },
+     "flags": [],
+     "positionals": [
+      {
+       "name": "key",
+       "source": "export",
+       "optional": true,
+       "description": "Config key",
+       "alsoFlag": true
+      }
+     ],
+     "outputSchema": {
+      "$schema": "http://json-schema.org/draft-07/schema#"
+     }
+    },
+    {
+     "path": [
+      "config",
+      "set"
+     ],
+     "meta": {
+      "description": "Set a config value"
+     },
+     "flags": [],
+     "positionals": [
+      {
+       "name": "key",
+       "source": "export",
+       "optional": false,
+       "description": "Config key",
+       "alsoFlag": true
+      },
+      {
+       "name": "value",
+       "source": "export",
+       "optional": false,
+       "description": "Value",
+       "alsoFlag": true
+      }
+     ]
+    },
+    {
+     "path": [
+      "download"
+     ],
+     "meta": {
+      "description": "Download one cloud file by path, e.g. \"Audio/Book/Chapter 01.mp3\", to --to (default: config download.path)"
+     },
+     "flags": [
+      {
+       "name": "to",
+       "type": "string",
+       "description": "Destination folder (default: config download.path)",
+       "optional": true,
+       "deprecated": false
+      },
+      {
+       "name": "tool",
+       "type": "string",
+       "description": "Downloader: auto|aria2c|curl (default: config or auto)",
+       "optional": true,
+       "enum": [
+        "auto",
+        "aria2c",
+        "curl"
+       ],
+       "deprecated": false
+      }
+     ],
+     "positionals": [
+      {
+       "name": "path",
+       "source": "export",
+       "optional": true,
+       "description": "Cloud file path by name, e.g. \"Audio/Book/ch01.mp3\"",
+       "alsoFlag": true
+      }
+     ],
+     "outputSchema": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "type": "object",
+      "properties": {
+       "cloudPath": {
+        "type": "string"
+       },
+       "id": {
+        "type": "string"
+       },
+       "name": {
+        "type": "string"
+       },
+       "size": {
+        "type": [
+         "number",
+         "null"
+        ]
+       },
+       "path": {
+        "type": "string"
+       },
+       "downloaded": {
+        "type": "boolean"
+       },
+       "message": {
+        "type": "string"
+       }
+      },
+      "required": [
+       "cloudPath",
+       "id",
+       "name",
+       "size",
+       "path",
+       "downloaded",
+       "message"
+      ],
+      "additionalProperties": false
+     }
+    },
+    {
+     "path": [
+      "du"
+     ],
+     "meta": {
+      "description": "Cloud disk usage: folder sizes summed recursively, plus space used and free",
+      "readOnly": true
+     },
+     "flags": [
+      {
+       "name": "id",
+       "type": "string",
+       "description": "Folder id (overrides path)",
+       "optional": true,
+       "deprecated": false
+      },
+      {
+       "name": "depth",
+       "type": "number",
+       "description": "Folder levels to print (default 1; --json always has the full tree)",
+       "optional": true,
+       "deprecated": false
+      }
+     ],
+     "positionals": [
+      {
+       "name": "path",
+       "source": "export",
+       "optional": true,
+       "description": "Folder path by name, e.g. \"Library/Movies\" (default: root)",
+       "alsoFlag": true
+      }
+     ],
+     "outputSchema": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "type": "object",
+      "properties": {
+       "spaceUsed": {
+        "type": [
+         "number",
+         "null"
+        ]
+       },
+       "capacity": {
+        "type": "number"
+       },
+       "capacitySource": {
+        "type": "string",
+        "enum": [
+         "config",
+         "default"
+        ]
+       },
+       "free": {
+        "type": [
+         "number",
+         "null"
+        ]
+       },
+       "tree": {
+        "$ref": "#/definitions/__schema0"
+       }
+      },
+      "required": [
+       "spaceUsed",
+       "capacity",
+       "capacitySource",
+       "free",
+       "tree"
+      ],
+      "additionalProperties": false,
+      "definitions": {
+       "__schema0": {
+        "type": "object",
+        "properties": {
+         "id": {
+          "type": "string"
+         },
+         "name": {
+          "type": "string"
+         },
+         "type": {
+          "type": "string",
+          "enum": [
+           "file",
+           "folder"
+          ]
+         },
+         "size": {
+          "type": "number"
+         },
+         "children": {
+          "type": "array",
+          "items": {
+           "$ref": "#/definitions/__schema0"
+          }
+         }
+        },
+        "required": [
+         "id",
+         "name",
+         "type",
+         "size"
+        ],
+        "additionalProperties": false
+       }
+      }
+     }
+    },
+    {
+     "path": [
+      "get"
+     ],
+     "meta": {
+      "description": "Search, take the best hit, and download it without prompting (waits for Premiumize)"
+     },
+     "flags": [
+      {
+       "name": "res",
+       "type": "string",
+       "description": "Filter resolution: 720p|1080p|2160p",
+       "optional": true,
+       "enum": [
+        "720p",
+        "1080p",
+        "2160p"
+       ],
+       "deprecated": false
+      },
+      {
+       "name": "max-size",
+       "type": "string",
+       "description": "Max size, e.g. 5GB",
+       "optional": true,
+       "deprecated": false
+      },
+      {
+       "name": "pick",
+       "type": "number",
+       "description": "Take the nth hit (1-based, pm search --json order); default 1",
+       "optional": true,
+       "deprecated": false
+      },
+      {
+       "name": "tool",
+       "type": "string",
+       "description": "Downloader: auto|aria2c|curl (default: config or auto)",
+       "optional": true,
+       "enum": [
+        "auto",
+        "aria2c",
+        "curl"
+       ],
+       "deprecated": false
+      }
+     ],
+     "positionals": [
+      {
+       "name": "query",
+       "source": "export",
+       "optional": false,
+       "description": "Search query, e.g. \"the village 2004\"",
+       "alsoFlag": true
+      }
+     ],
+     "outputSchema": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "type": "object",
+      "properties": {
+       "title": {
+        "type": "string"
+       },
+       "source": {
+        "type": "string",
+        "enum": [
+         "local",
+         "premiumize",
+         "indexer"
+        ]
+       },
+       "transferId": {
+        "type": "string"
+       },
+       "name": {
+        "type": "string"
+       },
+       "downloaded": {
+        "type": "boolean"
+       },
+       "path": {
+        "type": "string"
+       },
+       "message": {
+        "type": "string"
+       }
+      },
+      "required": [
+       "title",
+       "source",
+       "downloaded",
+       "message"
+      ],
+      "additionalProperties": false
+     }
+    },
+    {
+     "path": [
+      "indexers"
+     ],
+     "meta": {
+      "description": "List Prowlarr indexers and health"
+     },
+     "flags": [],
+     "positionals": []
+    },
+    {
+     "path": [
+      "links"
+     ],
+     "meta": {
+      "description": "Download a finished transfer, or chosen episodes of a season pack with --episodes. --json and MCP require an id and skip the picker"
+     },
+     "flags": [
+      {
+       "name": "watch",
+       "type": "boolean",
+       "description": "Wait until the transfer finishes, then download",
+       "optional": true,
+       "deprecated": false
+      },
+      {
+       "name": "all",
+       "type": "boolean",
+       "description": "Download every file, not just the best video",
+       "optional": true,
+       "deprecated": false
+      },
+      {
+       "name": "episodes",
+       "type": "string",
+       "description": "Episodes of a season pack: \"1-6\", \"1,3,8-10\" or \"all\"; saved to TV/Show (Year)/Season NN/. The id may be a cloud folder id",
+       "optional": true,
+       "deprecated": false
+      },
+      {
+       "name": "season",
+       "type": "number",
+       "description": "With --episodes: which season, when the pack holds several",
+       "optional": true,
+       "deprecated": false
+      },
+      {
+       "name": "copy",
+       "type": "boolean",
+       "description": "Copy CDN URL to clipboard instead of downloading",
+       "optional": true,
+       "deprecated": false
+      },
+      {
+       "name": "tool",
+       "type": "string",
+       "description": "Downloader: auto|aria2c|curl (default: config or auto)",
+       "optional": true,
+       "enum": [
+        "auto",
+        "aria2c",
+        "curl"
+       ],
+       "deprecated": false
+      }
+     ],
+     "positionals": [
+      {
+       "name": "transfer-id",
+       "source": "export",
+       "optional": true,
+       "description": "Transfer id (omit to pick among finished, not-yet-local)",
+       "alsoFlag": true
+      }
+     ],
+     "outputSchema": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "type": "object",
+      "properties": {
+       "transferId": {
+        "type": "string"
+       },
+       "name": {
+        "type": "string"
+       },
+       "downloaded": {
+        "type": "boolean"
+       },
+       "path": {
+        "type": "string"
+       },
+       "files": {
+        "type": "array",
+        "items": {
+         "type": "object",
+         "properties": {
+          "name": {
+           "type": "string"
+          },
+          "path": {
+           "type": "string"
+          },
+          "downloaded": {
+           "type": "boolean"
+          }
+         },
+         "required": [
+          "name",
+          "path",
+          "downloaded"
+         ],
+         "additionalProperties": false
+        }
+       },
+       "message": {
+        "type": "string"
+       }
+      },
+      "required": [
+       "transferId",
+       "downloaded",
+       "message"
+      ],
+      "additionalProperties": false
+     }
+    },
+    {
+     "path": [
+      "ls"
+     ],
+     "meta": {
+      "description": "List a Premiumize cloud folder (root by default)",
+      "readOnly": true
+     },
+     "flags": [
+      {
+       "name": "id",
+       "type": "string",
+       "description": "Folder id (overrides path)",
+       "optional": true,
+       "deprecated": false
+      }
+     ],
+     "positionals": [
+      {
+       "name": "path",
+       "source": "export",
+       "optional": true,
+       "description": "Folder path by name, e.g. \"Library/Movies\" (default: root)",
+       "alsoFlag": true
+      }
+     ],
+     "outputSchema": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "type": "array",
+      "items": {
+       "type": "object",
+       "properties": {
+        "id": {
+         "type": "string"
+        },
+        "name": {
+         "type": "string"
+        },
+        "type": {
+         "type": "string",
+         "enum": [
+          "file",
+          "folder"
+         ]
+        },
+        "size": {
+         "type": [
+          "number",
+          "null"
+         ]
+        },
+        "link": {
+         "type": [
+          "string",
+          "null"
+         ]
+        }
+       },
+       "required": [
+        "id",
+        "name",
+        "type",
+        "size",
+        "link"
+       ],
+       "additionalProperties": false
+      }
+     }
+    },
+    {
+     "path": [
+      "move"
+     ],
+     "meta": {
+      "description": "Dry-run a move of cloud files/folders into a folder (created if missing); apply with `pm move apply`",
+      "readOnly": true
+     },
+     "flags": [
+      {
+       "name": "paths",
+       "type": "unknown",
+       "description": "Cloud paths from the root (names may contain commas): a JSON array, or one per line",
+       "optional": false,
+       "deprecated": false
+      },
+      {
+       "name": "to",
+       "type": "string",
+       "description": "Destination folder from the root, e.g. \"projects/matrix\"",
+       "optional": false,
+       "deprecated": false
+      },
+      {
+       "name": "tree",
+       "type": "string",
+       "description": "A saved `pm du --json` file (default: walk the cloud now)",
+       "optional": true,
+       "deprecated": false
+      }
+     ],
+     "positionals": [],
+     "outputSchema": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "type": "object",
+      "properties": {
+       "dryRun": {
+        "type": "boolean",
+        "const": true
+       },
+       "to": {
+        "type": "string"
+       },
+       "units": {
+        "type": "array",
+        "items": {
+         "type": "object",
+         "properties": {
+          "path": {
+           "type": "string"
+          },
+          "id": {
+           "type": "string"
+          },
+          "type": {
+           "type": "string",
+           "enum": [
+            "file",
+            "folder"
+           ]
+          },
+          "size": {
+           "type": "number"
+          }
+         },
+         "required": [
+          "path",
+          "id",
+          "type",
+          "size"
+         ],
+         "additionalProperties": false
+        }
+       },
+       "missing": {
+        "type": "array",
+        "items": {
+         "type": "string"
+        }
+       },
+       "totalBytes": {
+        "type": "number"
+       }
+      },
+      "required": [
+       "dryRun",
+       "to",
+       "units",
+       "missing",
+       "totalBytes"
+      ],
+      "additionalProperties": false
+     }
+    },
+    {
+     "path": [
+      "move",
+      "apply"
+     ],
+     "meta": {
+      "description": "Move exactly the items in a reviewed `pm move --json` plan, after checking each still matches the cloud",
+      "destructive": true
+     },
+     "flags": [
+      {
+       "name": "plan",
+       "type": "unknown",
+       "description": "The reviewed plan from `pm move ... --json`: a file path, \"-\" for stdin, or the object inline",
+       "optional": false,
+       "deprecated": false
+      }
+     ],
+     "positionals": [],
+     "outputSchema": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "type": "object",
+      "properties": {
+       "to": {
+        "type": "string"
+       },
+       "moved": {
+        "type": "array",
+        "items": {
+         "type": "object",
+         "properties": {
+          "path": {
+           "type": "string"
+          },
+          "id": {
+           "type": "string"
+          },
+          "size": {
+           "type": "number"
+          }
+         },
+         "required": [
+          "path",
+          "id",
+          "size"
+         ],
+         "additionalProperties": false
+        }
+       },
+       "movedBytes": {
+        "type": "number"
+       }
+      },
+      "required": [
+       "to",
+       "moved",
+       "movedBytes"
+      ],
+      "additionalProperties": false
+     }
+    },
+    {
+     "path": [
+      "prune"
+     ],
+     "meta": {
+      "description": "Dry-run delete list: by default cloud movies you have watched (from `plex watched --json`); with --title/--episodes/--dedupe, only those picks. Deletes nothing",
+      "readOnly": true
+     },
+     "flags": [
+      {
+       "name": "watched",
+       "type": "unknown",
+       "description": "Output of `plex watched --json` (needed unless only --title/--dedupe): a JSON file path, \"-\" for stdin, or the value inline",
+       "optional": true,
+       "deprecated": false
+      },
+      {
+       "name": "title",
+       "type": "unknown",
+       "description": "Comma-separated movies or shows to remove entirely, e.g. \"Louie,Doctor Who\"",
+       "optional": true,
+       "deprecated": false
+      },
+      {
+       "name": "episodes",
+       "type": "unknown",
+       "description": "Comma-separated show-name prefixes; their watched episodes, e.g. \"I Love the,True Detective\"",
+       "optional": true,
+       "deprecated": false
+      },
+      {
+       "name": "dedupe",
+       "type": "unknown",
+       "description": "Comma-separated titles to keep one copy of (the largest)",
+       "optional": true,
+       "deprecated": false
+      },
+      {
+       "name": "tree",
+       "type": "unknown",
+       "description": "A saved `pm du --json` (default: walk the cloud now): a JSON file path, \"-\" for stdin, or the value inline",
+       "optional": true,
+       "deprecated": false
+      },
+      {
+       "name": "path",
+       "type": "string",
+       "description": "Cloud folder to consider when walking live (default: root)",
+       "optional": true,
+       "deprecated": false
+      },
+      {
+       "name": "grace",
+       "type": "number",
+       "description": "Hold movies watched in the last N days (default eviction.gracePeriodDays, 14)",
+       "optional": true,
+       "deprecated": false
+      }
+     ],
+     "positionals": [],
+     "outputSchema": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "type": "object",
+      "properties": {
+       "dryRun": {
+        "type": "boolean",
+        "const": true
+       },
+       "mode": {
+        "type": "string",
+        "enum": [
+         "watched",
+         "picks"
+        ]
+       },
+       "graceDays": {
+        "type": "number"
+       },
+       "candidates": {
+        "type": "array",
+        "items": {
+         "type": "object",
+         "properties": {
+          "path": {
+           "type": "string"
+          },
+          "id": {
+           "type": "string"
+          },
+          "type": {
+           "type": "string",
+           "enum": [
+            "file",
+            "folder"
+           ]
+          },
+          "size": {
+           "type": "number"
+          },
+          "title": {
+           "type": "string"
+          },
+          "match": {
+           "type": "string",
+           "enum": [
+            "title+year",
+            "title",
+            "picked",
+            "episode",
+            "duplicate",
+            "copy"
+           ]
+          },
+          "reason": {
+           "type": "string"
+          },
+          "plays": {
+           "type": [
+            "number",
+            "null"
+           ]
+          },
+          "lastViewedAt": {
+           "type": [
+            "string",
+            "null"
+           ]
+          },
+          "videos": {
+           "type": "number"
+          }
+         },
+         "required": [
+          "path",
+          "id",
+          "type",
+          "size",
+          "title",
+          "match",
+          "reason",
+          "plays",
+          "lastViewedAt",
+          "videos"
+         ],
+         "additionalProperties": false
+        }
+       },
+       "held": {
+        "type": "array",
+        "items": {
+         "type": "object",
+         "properties": {
+          "path": {
+           "type": "string"
+          },
+          "id": {
+           "type": "string"
+          },
+          "type": {
+           "type": "string",
+           "enum": [
+            "file",
+            "folder"
+           ]
+          },
+          "size": {
+           "type": "number"
+          },
+          "title": {
+           "type": "string"
+          },
+          "match": {
+           "type": "string",
+           "enum": [
+            "title+year",
+            "title",
+            "picked",
+            "episode",
+            "duplicate",
+            "copy"
+           ]
+          },
+          "reason": {
+           "type": "string"
+          },
+          "plays": {
+           "type": [
+            "number",
+            "null"
+           ]
+          },
+          "lastViewedAt": {
+           "type": [
+            "string",
+            "null"
+           ]
+          },
+          "videos": {
+           "type": "number"
+          }
+         },
+         "required": [
+          "path",
+          "id",
+          "type",
+          "size",
+          "title",
+          "match",
+          "reason",
+          "plays",
+          "lastViewedAt",
+          "videos"
+         ],
+         "additionalProperties": false
+        }
+       },
+       "unmatched": {
+        "type": "array",
+        "items": {
+         "type": "string"
+        }
+       },
+       "reclaimBytes": {
+        "type": "number"
+       },
+       "spaceUsed": {
+        "type": [
+         "number",
+         "null"
+        ]
+       },
+       "capacity": {
+        "type": "number"
+       }
+      },
+      "required": [
+       "dryRun",
+       "mode",
+       "graceDays",
+       "candidates",
+       "held",
+       "unmatched",
+       "reclaimBytes",
+       "spaceUsed",
+       "capacity"
+      ],
+      "additionalProperties": false
+     }
+    },
+    {
+     "path": [
+      "prune",
+      "apply"
+     ],
+     "meta": {
+      "description": "Delete exactly the units in a reviewed `pm prune --json` plan, after checking each still matches the cloud",
+      "destructive": true
+     },
+     "flags": [
+      {
+       "name": "plan",
+       "type": "unknown",
+       "description": "The reviewed plan from `pm prune ... --json`: a file path, \"-\" for stdin, or the object inline",
+       "optional": false,
+       "deprecated": false
+      }
+     ],
+     "positionals": [],
+     "outputSchema": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "type": "object",
+      "properties": {
+       "deleted": {
+        "type": "array",
+        "items": {
+         "type": "object",
+         "properties": {
+          "path": {
+           "type": "string"
+          },
+          "id": {
+           "type": "string"
+          },
+          "size": {
+           "type": "number"
+          }
+         },
+         "required": [
+          "path",
+          "id",
+          "size"
+         ],
+         "additionalProperties": false
+        }
+       },
+       "failed": {
+        "type": "array",
+        "items": {
+         "type": "object",
+         "properties": {
+          "path": {
+           "type": "string"
+          },
+          "id": {
+           "type": "string"
+          },
+          "error": {
+           "type": "string"
+          }
+         },
+         "required": [
+          "path",
+          "id",
+          "error"
+         ],
+         "additionalProperties": false
+        }
+       },
+       "deletedBytes": {
+        "type": "number"
+       }
+      },
+      "required": [
+       "deleted",
+       "failed",
+       "deletedBytes"
+      ],
+      "additionalProperties": false
+     }
+    },
+    {
+     "path": [
+      "reorg"
+     ],
+     "meta": {
+      "description": "Dry-run the flat library layout: Library/Movies/Title (Year).ext, Library/TV/Show (Year)/Show (Year) - S01E02.ext, everything else to Extras/",
+      "readOnly": true
+     },
+     "flags": [
+      {
+       "name": "tree",
+       "type": "string",
+       "description": "A saved `pm du --json` file (default: walk the cloud now)",
+       "optional": true,
+       "deprecated": false
+      }
+     ],
+     "positionals": [],
+     "outputSchema": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "type": "object",
+      "properties": {
+       "dryRun": {
+        "type": "boolean",
+        "const": true
+       },
+       "ops": {
+        "type": "array",
+        "items": {
+         "oneOf": [
+          {
+           "type": "object",
+           "properties": {
+            "op": {
+             "type": "string",
+             "const": "move"
+            },
+            "id": {
+             "type": "string"
+            },
+            "type": {
+             "type": "string",
+             "enum": [
+              "file",
+              "folder"
+             ]
+            },
+            "from": {
+             "type": "string"
+            },
+            "toFolder": {
+             "type": "string"
+            },
+            "name": {
+             "type": "string"
+            },
+            "role": {
+             "type": "string",
+             "enum": [
+              "movie",
+              "episode",
+              "subtitle",
+              "extras"
+             ]
+            },
+            "size": {
+             "type": "number"
+            }
+           },
+           "required": [
+            "op",
+            "id",
+            "type",
+            "from",
+            "toFolder",
+            "name",
+            "role",
+            "size"
+           ],
+           "additionalProperties": false
+          },
+          {
+           "type": "object",
+           "properties": {
+            "op": {
+             "type": "string",
+             "const": "delete-empty"
+            },
+            "id": {
+             "type": "string"
+            },
+            "path": {
+             "type": "string"
+            }
+           },
+           "required": [
+            "op",
+            "id",
+            "path"
+           ],
+           "additionalProperties": false
+          },
+          {
+           "type": "object",
+           "properties": {
+            "op": {
+             "type": "string",
+             "const": "delete"
+            },
+            "id": {
+             "type": "string"
+            },
+            "type": {
+             "type": "string",
+             "enum": [
+              "file",
+              "folder"
+             ]
+            },
+            "path": {
+             "type": "string"
+            },
+            "size": {
+             "type": "number"
+            },
+            "why": {
+             "type": "string",
+             "enum": [
+              "duplicate",
+              "junk"
+             ]
+            },
+            "keep": {
+             "type": "string"
+            },
+            "keepId": {
+             "type": "string"
+            }
+           },
+           "required": [
+            "op",
+            "id",
+            "type",
+            "path",
+            "size",
+            "why"
+           ],
+           "additionalProperties": false
+          }
+         ]
+        }
+       },
+       "units": {
+        "type": "array",
+        "items": {
+         "type": "object",
+         "properties": {
+          "path": {
+           "type": "string"
+          },
+          "kind": {
+           "type": "string",
+           "enum": [
+            "movie",
+            "tv",
+            "extras-only",
+            "empty"
+           ]
+          },
+          "canonical": {
+           "type": "string"
+          },
+          "source": {
+           "type": "string",
+           "enum": [
+            "tmdb",
+            "parsed",
+            "none"
+           ]
+          }
+         },
+         "required": [
+          "path",
+          "kind",
+          "canonical",
+          "source"
+         ],
+         "additionalProperties": false
+        }
+       },
+       "skipped": {
+        "type": "array",
+        "items": {
+         "type": "object",
+         "properties": {
+          "path": {
+           "type": "string"
+          },
+          "reason": {
+           "type": "string"
+          }
+         },
+         "required": [
+          "path",
+          "reason"
+         ],
+         "additionalProperties": false
+        }
+       }
+      },
+      "required": [
+       "dryRun",
+       "ops",
+       "units",
+       "skipped"
+      ],
+      "additionalProperties": false
+     }
+    },
+    {
+     "path": [
+      "reorg",
+      "apply"
+     ],
+     "meta": {
+      "description": "Apply a reviewed `pm reorg --json` plan: rename, move, delete copies and junk, and remove emptied folders",
+      "destructive": true
+     },
+     "flags": [
+      {
+       "name": "plan",
+       "type": "unknown",
+       "description": "The reviewed plan from `pm reorg --json`: a file path, \"-\" for stdin, or the object inline",
+       "optional": false,
+       "deprecated": false
+      }
+     ],
+     "positionals": [],
+     "outputSchema": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "type": "object",
+      "properties": {
+       "renamed": {
+        "type": "number"
+       },
+       "moved": {
+        "type": "number"
+       },
+       "deleted": {
+        "type": "number"
+       },
+       "deletedBytes": {
+        "type": "number"
+       },
+       "removedEmpty": {
+        "type": "number"
+       },
+       "failed": {
+        "type": "array",
+        "items": {
+         "type": "object",
+         "properties": {
+          "op": {
+           "type": "string"
+          },
+          "path": {
+           "type": "string"
+          },
+          "error": {
+           "type": "string"
+          }
+         },
+         "required": [
+          "op",
+          "path",
+          "error"
+         ],
+         "additionalProperties": false
+        }
+       }
+      },
+      "required": [
+       "renamed",
+       "moved",
+       "deleted",
+       "deletedBytes",
+       "removedEmpty",
+       "failed"
+      ],
+      "additionalProperties": false
+     }
+    },
+    {
+     "path": [
+      "rm"
+     ],
+     "meta": {
+      "description": "Delete a Premiumize transfer",
+      "destructive": true
+     },
+     "flags": [],
+     "positionals": [
+      {
+       "name": "transfer-id",
+       "source": "export",
+       "optional": false,
+       "description": "Transfer id",
+       "alsoFlag": true,
+       "completeFrom": {
+        "cmd": "pm status",
+        "field": "[].id",
+        "label": "name",
+        "sub": "status"
+       }
+      }
+     ]
+    },
+    {
+     "path": [
+      "search"
+     ],
+     "meta": {
+      "description": "Search indexers. --json and MCP return ranked hits and do not download",
+      "readOnly": true
+     },
+     "flags": [
+      {
+       "name": "res",
+       "type": "string",
+       "description": "Filter resolution: 720p|1080p|2160p",
+       "optional": true,
+       "enum": [
+        "720p",
+        "1080p",
+        "2160p"
+       ],
+       "deprecated": false
+      },
+      {
+       "name": "max-size",
+       "type": "string",
+       "description": "Max size, e.g. 5GB",
+       "optional": true,
+       "deprecated": false
+      },
+      {
+       "name": "sort",
+       "type": "string",
+       "description": "Tie-break after resolution and audio: seeders|size",
+       "optional": true,
+       "default": "seeders",
+       "enum": [
+        "seeders",
+        "size"
+       ],
+       "deprecated": false
+      },
+      {
+       "name": "limit",
+       "type": "number",
+       "description": "Max results",
+       "optional": true,
+       "deprecated": false
+      },
+      {
+       "name": "copy-only",
+       "type": "boolean",
+       "description": "Copy magnet only; skip Premiumize submit",
+       "optional": true,
+       "deprecated": false
+      },
+      {
+       "name": "copy-link",
+       "type": "boolean",
+       "description": "Copy CDN URL instead of downloading locally",
+       "optional": true,
+       "deprecated": false
+      },
+      {
+       "name": "tool",
+       "type": "string",
+       "description": "Downloader: auto|aria2c|curl (default: config or auto)",
+       "optional": true,
+       "enum": [
+        "auto",
+        "aria2c",
+        "curl"
+       ],
+       "deprecated": false
+      },
+      {
+       "name": "pick",
+       "type": "number",
+       "description": "Take the nth hit (1-based, --json order) instead of prompting",
+       "optional": true,
+       "deprecated": false
+      }
+     ],
+     "positionals": [
+      {
+       "name": "query",
+       "source": "export",
+       "optional": false,
+       "description": "Search query",
+       "alsoFlag": true
+      }
+     ],
+     "outputSchema": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "type": "object",
+      "properties": {
+       "query": {
+        "type": "string"
+       },
+       "normalized": {
+        "type": "string"
+       },
+       "warnings": {
+        "type": "array",
+        "items": {
+         "type": "string"
+        }
+       },
+       "hits": {
+        "type": "array",
+        "items": {
+         "type": "object",
+         "properties": {
+          "kind": {
+           "type": "string",
+           "enum": [
+            "local",
+            "premiumize",
+            "indexer"
+           ]
+          },
+          "title": {
+           "type": "string"
+          },
+          "sizeBytes": {
+           "type": "number",
+           "minimum": 0
+          },
+          "resolution": {
+           "type": "string"
+          },
+          "audio": {
+           "type": "string",
+           "enum": [
+            "surround",
+            "stereo",
+            "unknown"
+           ]
+          },
+          "seeders": {
+           "type": "integer",
+           "minimum": 0,
+           "maximum": 9007199254740991
+          },
+          "indexer": {
+           "type": "string"
+          },
+          "magnet": {
+           "type": "string"
+          },
+          "infoHash": {
+           "type": "string"
+          },
+          "path": {
+           "type": "string"
+          }
+         },
+         "required": [
+          "kind",
+          "title",
+          "sizeBytes"
+         ],
+         "additionalProperties": false
+        }
+       }
+      },
+      "required": [
+       "query",
+       "normalized",
+       "warnings",
+       "hits"
+      ],
+      "additionalProperties": false
+     }
+    },
+    {
+     "path": [
+      "setup"
+     ],
+     "meta": {
+      "description": "Interactive setup helpers"
+     },
+     "flags": [],
+     "positionals": []
+    },
+    {
+     "path": [
+      "setup",
+      "plex"
+     ],
+     "meta": {
+      "interactive": true,
+      "description": "Configure Plex URL, token, and library section mapping"
+     },
+     "flags": [],
+     "positionals": []
+    },
+    {
+     "path": [
+      "setup",
+      "prowlarr"
+     ],
+     "meta": {
+      "interactive": true,
+      "description": "Detect/launch Prowlarr and save API key"
+     },
+     "flags": [],
+     "positionals": []
+    },
+    {
+     "path": [
+      "status"
+     ],
+     "meta": {
+      "description": "List Premiumize transfers still running, queued or failed; --all adds finished ones",
+      "readOnly": true
+     },
+     "flags": [
+      {
+       "name": "all",
+       "type": "boolean",
+       "description": "Include finished transfers (hidden by default)",
+       "optional": true,
+       "alias": "a",
+       "deprecated": false
+      },
+      {
+       "name": "watch",
+       "type": "boolean",
+       "description": "Poll every 15s until all transfers are terminal",
+       "optional": true,
+       "deprecated": false
+      },
+      {
+       "name": "match",
+       "type": "string",
+       "description": "Only transfers whose name contains this text (case-insensitive)",
+       "optional": true,
+       "deprecated": false
+      }
+     ],
+     "positionals": [],
+     "outputSchema": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "type": "array",
+      "items": {
+       "type": "object",
+       "properties": {
+        "id": {
+         "type": "string",
+         "description": "Premiumize transfer id"
+        },
+        "name": {
+         "type": "string",
+         "description": "Transfer name (falls back to id)"
+        },
+        "state": {
+         "type": "string",
+         "enum": [
+          "queued",
+          "downloading",
+          "finished",
+          "failed",
+          "unknown"
+         ],
+         "description": "Normalized lifecycle state"
+        },
+        "status": {
+         "type": "string",
+         "description": "Raw Premiumize status string"
+        },
+        "progress": {
+         "anyOf": [
+          {
+           "type": "number",
+           "minimum": 0,
+           "maximum": 1
+          },
+          {
+           "type": "null"
+          }
+         ],
+         "description": "Fraction complete, 0\u20131; null when unknown"
+        },
+        "speed": {
+         "anyOf": [
+          {
+           "type": "number",
+           "minimum": 0
+          },
+          {
+           "type": "null"
+          }
+         ],
+         "description": "Bytes per second; null when idle or unknown"
+        },
+        "folderId": {
+         "description": "Cloud folder id, once the transfer resolves to a folder",
+         "type": [
+          "string",
+          "null"
+         ]
+        },
+        "fileId": {
+         "description": "Cloud file id, once the transfer resolves to a single file",
+         "type": [
+          "string",
+          "null"
+         ]
+        }
+       },
+       "required": [
+        "id",
+        "name",
+        "state",
+        "status",
+        "progress",
+        "speed",
+        "folderId",
+        "fileId"
+       ],
+       "additionalProperties": false
+      }
+     }
+    },
+    {
+     "path": [
+      "upload"
+     ],
+     "meta": {
+      "description": "Upload local files to a Premiumize cloud folder (created if missing), e.g. pm upload in/cone_off.flac --to Mashups. Prints the cloud path and a signed CDN link per file; same-size files already there are skipped"
+     },
+     "flags": [
+      {
+       "name": "to",
+       "type": "string",
+       "description": "Cloud folder path, e.g. \"Mashups\" (default: root)",
+       "optional": true,
+       "deprecated": false
+      }
+     ],
+     "positionals": [
+      {
+       "name": "files",
+       "source": "export",
+       "optional": true,
+       "variadic": true,
+       "description": "Local files to upload",
+       "alsoFlag": true
+      }
+     ],
+     "outputSchema": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "type": "object",
+      "properties": {
+       "folder": {
+        "type": "string"
+       },
+       "files": {
+        "type": "array",
+        "items": {
+         "type": "object",
+         "properties": {
+          "file": {
+           "type": "string"
+          },
+          "cloudPath": {
+           "type": "string"
+          },
+          "id": {
+           "type": [
+            "string",
+            "null"
+           ]
+          },
+          "size": {
+           "type": [
+            "number",
+            "null"
+           ]
+          },
+          "link": {
+           "type": [
+            "string",
+            "null"
+           ]
+          },
+          "uploaded": {
+           "type": "boolean"
+          }
+         },
+         "required": [
+          "file",
+          "cloudPath",
+          "id",
+          "size",
+          "link",
+          "uploaded"
+         ],
+         "additionalProperties": false
+        }
+       },
+       "message": {
+        "type": "string"
+       }
+      },
+      "required": [
+       "folder",
+       "files",
+       "message"
+      ],
+      "additionalProperties": false
+     }
+    }
+   ],
+   "description": "Premiumize.me CLI: search indexers, manage transfers, download CDN links, and manage the cloud library (size, prune, move, reorganize)",
+   "commandsDir": "/Users/erik/git/borkxs-mono-main/packages/pm/commands"
+  },
+  {
+   "name": "run",
+   "bin": "/fixture/run",
+   "root": "/fixture",
+   "routes": [
+    {
+     "path": [],
+     "meta": {
+      "description": "run \u2014 run a resumable job on a surface, or pass --help"
+     },
+     "flags": [],
+     "positionals": []
+    },
+    {
+     "path": [
+      ":job"
+     ],
+     "meta": {
+      "description": "Run a job on a surface, one unit (chapter, film, file) at a time; progress is saved after each unit, so rerunning after a shutdown continues where it stopped"
+     },
+     "flags": [
+      {
+       "name": "on",
+       "type": "string",
+       "description": "Surface to run on: laptop, shadow or modal (surfaces.json)",
+       "optional": false,
+       "deprecated": false,
+       "completeFrom": {
+        "cmd": "run ls",
+        "field": "jobs[].surfaces[]"
+       }
+      },
+      {
+       "name": "only",
+       "type": "string",
+       "description": "Only these units, comma-separated; numeric ranges like 1-3 expand",
+       "optional": true,
+       "deprecated": false
+      },
+      {
+       "name": "dryRun",
+       "type": "boolean",
+       "description": "List the units that would run, with their commands, and run nothing",
+       "optional": true,
+       "default": false,
+       "deprecated": false
+      },
+      {
+       "name": "keepGoing",
+       "type": "boolean",
+       "description": "Carry on past a failed unit instead of stopping there",
+       "optional": true,
+       "default": false,
+       "deprecated": false
+      },
+      {
+       "name": "vars",
+       "type": "string",
+       "description": "Vars that override the job's and the surface's, \"k=v,k=v\" (e.g. gpu=T4 on modal)",
+       "optional": true,
+       "deprecated": false
+      }
+     ],
+     "positionals": [
+      {
+       "name": "job",
+       "source": "path",
+       "optional": false,
+       "description": "Job id (see run ls) or a path to a .job.json manifest",
+       "alsoFlag": true,
+       "completeFrom": {
+        "cmd": "run ls",
+        "field": "jobs[].id",
+        "sub": "description"
+       }
+      }
+     ],
+     "outputSchema": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "type": "object",
+      "properties": {
+       "job": {
+        "type": "string"
+       },
+       "surface": {
+        "type": "string"
+       },
+       "executor": {
+        "type": "string"
+       },
+       "total": {
+        "type": "number"
+       },
+       "done": {
+        "type": "number"
+       },
+       "failed": {
+        "type": "number"
+       },
+       "remaining": {
+        "type": "number"
+       },
+       "stopped": {
+        "type": "boolean"
+       },
+       "units": {
+        "type": "array",
+        "items": {
+         "type": "object",
+         "properties": {
+          "id": {
+           "type": "string"
+          },
+          "status": {
+           "type": "string"
+          },
+          "ms": {
+           "type": "number"
+          },
+          "exitCode": {
+           "type": "number"
+          },
+          "command": {
+           "type": "string"
+          }
+         },
+         "required": [
+          "id",
+          "status"
+         ],
+         "additionalProperties": false
+        }
+       }
+      },
+      "required": [
+       "job",
+       "surface",
+       "executor",
+       "total",
+       "done",
+       "failed",
+       "remaining",
+       "stopped",
+       "units"
+      ],
+      "additionalProperties": false
+     }
+    },
+    {
+     "path": [
+      "artifacts"
+     ],
+     "meta": {
+      "description": "run artifacts \u2014 move a job's bucket artifacts and inputs with rclone: `run artifacts push|pull <job>` (run next and run <job> push after each run on their own)"
+     },
+     "flags": [],
+     "positionals": []
+    },
+    {
+     "path": [
+      "artifacts",
+      "pull"
+     ],
+     "meta": {
+      "description": "Copy a job's bucket artifacts (and with --inputs, its inputs) from the bucket into this machine's checkout, at the same repo paths; files newer here are kept"
+     },
+     "flags": [
+      {
+       "name": "on",
+       "type": "string",
+       "description": "Surface whose checkout receives them (default: the one this machine is)",
+       "optional": true,
+       "deprecated": false
+      },
+      {
+       "name": "only",
+       "type": "string",
+       "description": "Only these unit ids, comma-separated (default: every unit)",
+       "optional": true,
+       "deprecated": false
+      },
+      {
+       "name": "inputs",
+       "type": "boolean",
+       "description": "Also pull the job's inputs",
+       "optional": true,
+       "default": false,
+       "deprecated": false
+      },
+      {
+       "name": "vars",
+       "type": "string",
+       "description": "Vars that override the job's, \"k=v,k=v\"",
+       "optional": true,
+       "deprecated": false
+      },
+      {
+       "name": "dryRun",
+       "type": "boolean",
+       "description": "List what would be copied, copy nothing",
+       "optional": true,
+       "default": false,
+       "deprecated": false
+      }
+     ],
+     "positionals": [
+      {
+       "name": "job",
+       "source": "export",
+       "optional": false,
+       "description": "Job id or path to a .job.json",
+       "alsoFlag": true
+      }
+     ],
+     "outputSchema": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "type": "object",
+      "properties": {
+       "job": {
+        "type": "string"
+       },
+       "surface": {
+        "type": "string"
+       },
+       "bucket": {
+        "type": "string"
+       },
+       "transfers": {
+        "type": "array",
+        "items": {
+         "type": "object",
+         "properties": {
+          "path": {
+           "type": "string"
+          },
+          "local": {
+           "type": "string"
+          },
+          "remote": {
+           "type": "string"
+          },
+          "unit": {
+           "type": "string"
+          },
+          "status": {
+           "type": "string"
+          },
+          "exitCode": {
+           "type": "number"
+          }
+         },
+         "required": [
+          "path",
+          "local",
+          "remote",
+          "status"
+         ],
+         "additionalProperties": false
+        }
+       }
+      },
+      "required": [
+       "job",
+       "surface",
+       "bucket",
+       "transfers"
+      ],
+      "additionalProperties": false
+     }
+    },
+    {
+     "path": [
+      "artifacts",
+      "push"
+     ],
+     "meta": {
+      "description": "Copy a job's bucket artifacts from this machine's checkout of the surface's repo to the bucket (copyto --update: nothing deleted, newer copies in the bucket kept); e.g. a first backup of films made by hand"
+     },
+     "flags": [
+      {
+       "name": "on",
+       "type": "string",
+       "description": "Surface whose checkout holds the artifacts (the one this machine is)",
+       "optional": false,
+       "deprecated": false
+      },
+      {
+       "name": "only",
+       "type": "string",
+       "description": "Only these unit ids, comma-separated (default: every unit)",
+       "optional": true,
+       "deprecated": false
+      },
+      {
+       "name": "vars",
+       "type": "string",
+       "description": "Vars that override the job's, \"k=v,k=v\"",
+       "optional": true,
+       "deprecated": false
+      },
+      {
+       "name": "dryRun",
+       "type": "boolean",
+       "description": "List what would be copied, copy nothing",
+       "optional": true,
+       "default": false,
+       "deprecated": false
+      }
+     ],
+     "positionals": [
+      {
+       "name": "job",
+       "source": "export",
+       "optional": false,
+       "description": "Job id or path to a .job.json",
+       "alsoFlag": true
+      }
+     ],
+     "outputSchema": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "type": "object",
+      "properties": {
+       "job": {
+        "type": "string"
+       },
+       "surface": {
+        "type": "string"
+       },
+       "bucket": {
+        "type": "string"
+       },
+       "transfers": {
+        "type": "array",
+        "items": {
+         "type": "object",
+         "properties": {
+          "path": {
+           "type": "string"
+          },
+          "local": {
+           "type": "string"
+          },
+          "remote": {
+           "type": "string"
+          },
+          "unit": {
+           "type": "string"
+          },
+          "status": {
+           "type": "string"
+          },
+          "exitCode": {
+           "type": "number"
+          }
+         },
+         "required": [
+          "path",
+          "local",
+          "remote",
+          "status"
+         ],
+         "additionalProperties": false
+        }
+       }
+      },
+      "required": [
+       "job",
+       "surface",
+       "bucket",
+       "transfers"
+      ],
+      "additionalProperties": false
+     }
+    },
+    {
+     "path": [
+      "export"
+     ],
+     "meta": {
+      "description": "Copy this machine's ledgers and session log for a surface into the checkout (packages/run/state/<surface>/), so they travel with the outputs and `run stats` can read them elsewhere; the Shadow's pickup script runs it before committing"
+     },
+     "flags": [
+      {
+       "name": "on",
+       "type": "string",
+       "description": "Surface whose state to export (normally the one this machine is)",
+       "optional": false,
+       "deprecated": false
+      },
+      {
+       "name": "to",
+       "type": "string",
+       "description": "Target folder (default packages/run/state/<surface> in this checkout)",
+       "optional": true,
+       "deprecated": false
+      }
+     ],
+     "positionals": [],
+     "outputSchema": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "type": "object",
+      "properties": {
+       "surface": {
+        "type": "string"
+       },
+       "dir": {
+        "type": "string"
+       },
+       "ledgers": {
+        "type": "array",
+        "items": {
+         "type": "string"
+        }
+       },
+       "sessions": {
+        "type": "number"
+       }
+      },
+      "required": [
+       "surface",
+       "dir",
+       "ledgers",
+       "sessions"
+      ],
+      "additionalProperties": false
+     }
+    },
+    {
+     "path": [
+      "ls"
+     ],
+     "meta": {
+      "description": "List jobs, the surfaces each runs on, and progress recorded on this machine"
+     },
+     "flags": [],
+     "positionals": [],
+     "outputSchema": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "type": "object",
+      "properties": {
+       "here": {
+        "type": "array",
+        "items": {
+         "type": "string"
+        }
+       },
+       "spend": {
+        "type": "array",
+        "items": {
+         "type": "object",
+         "properties": {
+          "surface": {
+           "type": "string"
+          },
+          "month": {
+           "type": "string"
+          },
+          "usd": {
+           "type": "number"
+          },
+          "capUsd": {
+           "type": "number"
+          },
+          "units": {
+           "type": "number"
+          },
+          "hours": {
+           "type": "number"
+          }
+         },
+         "required": [
+          "surface",
+          "month",
+          "usd",
+          "units",
+          "hours"
+         ],
+         "additionalProperties": false
+        }
+       },
+       "jobs": {
+        "type": "array",
+        "items": {
+         "type": "object",
+         "properties": {
+          "id": {
+           "type": "string"
+          },
+          "description": {
+           "type": "string"
+          },
+          "surfaces": {
+           "type": "array",
+           "items": {
+            "type": "string"
+           }
+          },
+          "progress": {
+           "type": "array",
+           "items": {
+            "type": "object",
+            "properties": {
+             "surface": {
+              "type": "string"
+             },
+             "done": {
+              "type": "number"
+             },
+             "failed": {
+              "type": "number"
+             },
+             "running": {
+              "type": "number"
+             },
+             "updatedAt": {
+              "type": "string"
+             }
+            },
+            "required": [
+             "surface",
+             "done",
+             "failed",
+             "running",
+             "updatedAt"
+            ],
+            "additionalProperties": false
+           }
+          }
+         },
+         "required": [
+          "id",
+          "surfaces",
+          "progress"
+         ],
+         "additionalProperties": false
+        }
+       }
+      },
+      "required": [
+       "here",
+       "spend",
+       "jobs"
+      ],
+      "additionalProperties": false
+     }
+    },
+    {
+     "path": [
+      "modal"
+     ],
+     "meta": {
+      "description": "run modal \u2014 the Modal surface: `run modal sync` uploads a book's audio and corpus to the volume the jobs read"
+     },
+     "flags": [],
+     "positionals": []
+    },
+    {
+     "path": [
+      "modal",
+      "sync"
+     ],
+     "meta": {
+      "description": "Upload a book's chapter audio and data/corpus.json to the Modal volume (borkxs-audiobooks) that `run <job> --on modal` reads; files already there with the same size are skipped"
+     },
+     "flags": [
+      {
+       "name": "book",
+       "type": "number",
+       "description": "Book number: audio from audiobooks/<book> goes to <book>[/<edition>] in the volume (the volume is the checkout's audiobooks/ folder)",
+       "optional": false,
+       "deprecated": false
+      },
+      {
+       "name": "edition",
+       "type": "string",
+       "description": "Edition folder in the volume, matching the job's --audio path (e.g. full-cast)",
+       "optional": true,
+       "deprecated": false
+      },
+      {
+       "name": "from",
+       "type": "string",
+       "description": "Local audio folder (default audiobooks/<book>[/<edition>] in this machine's checkout, whichever exists)",
+       "optional": true,
+       "deprecated": false
+      },
+      {
+       "name": "only",
+       "type": "string",
+       "description": "Only these chapters, comma-separated; ranges like 2-3 expand",
+       "optional": true,
+       "deprecated": false
+      },
+      {
+       "name": "corpus",
+       "type": "string",
+       "description": "Corpus file to upload to data/ in the volume (relative to the checkout)",
+       "optional": true,
+       "default": "data/corpus.json",
+       "deprecated": false
+      },
+      {
+       "name": "volume",
+       "type": "string",
+       "description": "Modal volume name",
+       "optional": true,
+       "default": "borkxs-audiobooks",
+       "deprecated": false
+      },
+      {
+       "name": "dryRun",
+       "type": "boolean",
+       "description": "List what would be uploaded, upload nothing",
+       "optional": true,
+       "default": false,
+       "deprecated": false
+      }
+     ],
+     "positionals": [],
+     "outputSchema": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "type": "object",
+      "properties": {
+       "volume": {
+        "type": "string"
+       },
+       "remoteDir": {
+        "type": "string"
+       },
+       "uploaded": {
+        "type": "array",
+        "items": {
+         "type": "object",
+         "properties": {
+          "local": {
+           "type": "string"
+          },
+          "remote": {
+           "type": "string"
+          },
+          "bytes": {
+           "type": "number"
+          }
+         },
+         "required": [
+          "local",
+          "remote",
+          "bytes"
+         ],
+         "additionalProperties": false
+        }
+       },
+       "skipped": {
+        "type": "array",
+        "items": {
+         "type": "string"
+        }
+       }
+      },
+      "required": [
+       "volume",
+       "remoteDir",
+       "uploaded",
+       "skipped"
+      ],
+      "additionalProperties": false
+     }
+    },
+    {
+     "path": [
+      "next"
+     ],
+     "meta": {
+      "description": "Run the next queued job that still has pending units on a surface (queue.json order; the ledger says what is pending), with the guards an unattended machine needs; prints \"nothing pending\" and exits 0 once the queue is drained"
+     },
+     "flags": [
+      {
+       "name": "on",
+       "type": "string",
+       "description": "Surface to pick up work for: laptop, shadow or modal",
+       "optional": false,
+       "deprecated": false,
+       "completeFrom": {
+        "cmd": "run ls",
+        "field": "jobs[].surfaces[]"
+       }
+      },
+      {
+       "name": "keepGoing",
+       "type": "boolean",
+       "description": "After this job, take the next entry, and carry on past failed units, until the queue is drained or a guard says stop",
+       "optional": true,
+       "default": false,
+       "deprecated": false
+      },
+      {
+       "name": "deadline",
+       "type": "string",
+       "description": "No new unit starts after this time: an ISO time, or minutes from now (\"110\" for a Shadow session)",
+       "optional": true,
+       "deprecated": false
+      },
+      {
+       "name": "idleMinutes",
+       "type": "number",
+       "description": "Before each unit, wait until nobody has touched the keyboard or mouse for this many minutes (0: don't check)",
+       "optional": true,
+       "default": 0,
+       "deprecated": false
+      },
+      {
+       "name": "minFreeGb",
+       "type": "number",
+       "description": "Stop when the disk holding the outputs has less than this free (0: don't check)",
+       "optional": true,
+       "default": 0,
+       "deprecated": false
+      },
+      {
+       "name": "maxUnits",
+       "type": "number",
+       "description": "Start at most this many units in this call (0: no limit)",
+       "optional": true,
+       "default": 0,
+       "deprecated": false
+      }
+     ],
+     "positionals": [],
+     "outputSchema": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "type": "object",
+      "properties": {
+       "surface": {
+        "type": "string"
+       },
+       "drained": {
+        "type": "boolean"
+       },
+       "stoppedBy": {
+        "type": "string"
+       },
+       "ran": {
+        "type": "array",
+        "items": {
+         "type": "object",
+         "properties": {
+          "job": {
+           "type": "string"
+          },
+          "total": {
+           "type": "number"
+          },
+          "done": {
+           "type": "number"
+          },
+          "failed": {
+           "type": "number"
+          },
+          "remaining": {
+           "type": "number"
+          },
+          "stoppedBy": {
+           "type": "string"
+          }
+         },
+         "required": [
+          "job",
+          "total",
+          "done",
+          "failed",
+          "remaining"
+         ],
+         "additionalProperties": false
+        }
+       },
+       "outputs": {
+        "type": "array",
+        "items": {
+         "type": "object",
+         "properties": {
+          "root": {
+           "type": "string"
+          },
+          "path": {
+           "type": "string"
+          }
+         },
+         "required": [
+          "root",
+          "path"
+         ],
+         "additionalProperties": false
+        }
+       },
+       "artifacts": {
+        "type": "array",
+        "items": {
+         "type": "object",
+         "properties": {
+          "job": {
+           "type": "string"
+          },
+          "direction": {
+           "type": "string",
+           "enum": [
+            "push",
+            "pull"
+           ]
+          },
+          "path": {
+           "type": "string"
+          },
+          "remote": {
+           "type": "string"
+          },
+          "status": {
+           "type": "string"
+          }
+         },
+         "required": [
+          "job",
+          "direction",
+          "path",
+          "remote",
+          "status"
+         ],
+         "additionalProperties": false
+        }
+       },
+       "skipped": {
+        "type": "array",
+        "items": {
+         "type": "object",
+         "properties": {
+          "job": {
+           "type": "string"
+          },
+          "reason": {
+           "type": "string"
+          }
+         },
+         "required": [
+          "job",
+          "reason"
+         ],
+         "additionalProperties": false
+        }
+       },
+       "spend": {
+        "type": "object",
+        "properties": {
+         "month": {
+          "type": "string"
+         },
+         "usd": {
+          "type": "number"
+         },
+         "capUsd": {
+          "type": "number"
+         }
+        },
+        "required": [
+         "month",
+         "usd"
+        ],
+        "additionalProperties": false
+       }
+      },
+      "required": [
+       "surface",
+       "drained",
+       "ran",
+       "outputs",
+       "artifacts",
+       "skipped"
+      ],
+      "additionalProperties": false
+     }
+    },
+    {
+     "path": [
+      "queue"
+     ],
+     "meta": {
+      "description": "run queue \u2014 the ordered list of jobs each surface picks up with `run next`: `run queue ls|add|rm`"
+     },
+     "flags": [],
+     "positionals": []
+    },
+    {
+     "path": [
+      "queue",
+      "add"
+     ],
+     "meta": {
+      "description": "Queue a job for a surface (replacing an entry for the same job and surface); `run next --on <surface>` picks the highest priority first"
+     },
+     "flags": [
+      {
+       "name": "on",
+       "type": "string",
+       "description": "Surface the entry is for",
+       "optional": false,
+       "deprecated": false
+      },
+      {
+       "name": "priority",
+       "type": "number",
+       "description": "Higher runs first; ties keep queue order",
+       "optional": true,
+       "default": 0,
+       "deprecated": false
+      },
+      {
+       "name": "note",
+       "type": "string",
+       "description": "Why it is queued",
+       "optional": true,
+       "deprecated": false
+      },
+      {
+       "name": "vars",
+       "type": "string",
+       "description": "Vars that override the job's for this entry, \"k=v,k=v\" (e.g. gpu=T4 on modal)",
+       "optional": true,
+       "deprecated": false
+      }
+     ],
+     "positionals": [
+      {
+       "name": "job",
+       "source": "export",
+       "optional": false,
+       "description": "Job id",
+       "alsoFlag": true
+      }
+     ],
+     "outputSchema": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "type": "object",
+      "properties": {
+       "job": {
+        "type": "string"
+       },
+       "surface": {
+        "type": "string"
+       },
+       "priority": {
+        "type": "number"
+       },
+       "replaced": {
+        "type": "boolean"
+       },
+       "entries": {
+        "type": "number"
+       }
+      },
+      "required": [
+       "job",
+       "surface",
+       "priority",
+       "replaced",
+       "entries"
+      ],
+      "additionalProperties": false
+     }
+    },
+    {
+     "path": [
+      "queue",
+      "ls"
+     ],
+     "meta": {
+      "description": "List the queue in pickup order, with what the ledger here says is still pending for each entry"
+     },
+     "flags": [
+      {
+       "name": "on",
+       "type": "string",
+       "description": "Only this surface's entries",
+       "optional": true,
+       "deprecated": false
+      }
+     ],
+     "positionals": [],
+     "outputSchema": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "type": "object",
+      "properties": {
+       "queue": {
+        "type": "string"
+       },
+       "entries": {
+        "type": "array",
+        "items": {
+         "type": "object",
+         "properties": {
+          "job": {
+           "type": "string"
+          },
+          "surface": {
+           "type": "string"
+          },
+          "priority": {
+           "type": "number"
+          },
+          "note": {
+           "type": "string"
+          },
+          "added": {
+           "type": "string"
+          },
+          "vars": {
+           "type": "object",
+           "propertyNames": {
+            "type": "string"
+           },
+           "additionalProperties": {
+            "type": "string"
+           }
+          },
+          "pending": {
+           "type": [
+            "number",
+            "null"
+           ]
+          },
+          "exhausted": {
+           "type": "number"
+          },
+          "done": {
+           "type": "number"
+          },
+          "total": {
+           "type": "number"
+          },
+          "problem": {
+           "type": "string"
+          }
+         },
+         "required": [
+          "job",
+          "surface",
+          "priority",
+          "added",
+          "pending",
+          "exhausted",
+          "done",
+          "total"
+         ],
+         "additionalProperties": false
+        }
+       }
+      },
+      "required": [
+       "queue",
+       "entries"
+      ],
+      "additionalProperties": false
+     }
+    },
+    {
+     "path": [
+      "queue",
+      "rm"
+     ],
+     "meta": {
+      "description": "Remove a job's entry for a surface from the queue (progress in the ledger is kept)"
+     },
+     "flags": [
+      {
+       "name": "on",
+       "type": "string",
+       "description": "Surface whose entry to remove",
+       "optional": false,
+       "deprecated": false,
+       "completeFrom": {
+        "cmd": "run ls",
+        "field": "jobs[].surfaces[]"
+       }
+      }
+     ],
+     "positionals": [
+      {
+       "name": "job",
+       "source": "export",
+       "optional": false,
+       "description": "Job id",
+       "alsoFlag": true,
+       "completeFrom": {
+        "cmd": "run ls",
+        "field": "jobs[].id",
+        "sub": "description"
+       }
+      }
+     ],
+     "outputSchema": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "type": "object",
+      "properties": {
+       "job": {
+        "type": "string"
+       },
+       "surface": {
+        "type": "string"
+       },
+       "removed": {
+        "type": "boolean"
+       },
+       "entries": {
+        "type": "number"
+       }
+      },
+      "required": [
+       "job",
+       "surface",
+       "removed",
+       "entries"
+      ],
+      "additionalProperties": false
+     }
+    },
+    {
+     "path": [
+      "reset"
+     ],
+     "meta": {
+      "description": "Forget recorded progress for a job on a surface (all units, or --only some), so the next run redoes them"
+     },
+     "flags": [
+      {
+       "name": "on",
+       "type": "string",
+       "description": "Surface whose progress to forget",
+       "optional": false,
+       "deprecated": false,
+       "completeFrom": {
+        "cmd": "run ls",
+        "field": "jobs[].surfaces[]"
+       }
+      },
+      {
+       "name": "only",
+       "type": "string",
+       "description": "Only these unit ids, comma-separated",
+       "optional": true,
+       "deprecated": false
+      }
+     ],
+     "positionals": [
+      {
+       "name": "job",
+       "source": "export",
+       "optional": false,
+       "description": "Job id",
+       "alsoFlag": true,
+       "completeFrom": {
+        "cmd": "run ls",
+        "field": "jobs[].id",
+        "sub": "description"
+       }
+      }
+     ],
+     "outputSchema": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "type": "object",
+      "properties": {
+       "job": {
+        "type": "string"
+       },
+       "surface": {
+        "type": "string"
+       },
+       "cleared": {
+        "type": "array",
+        "items": {
+         "type": "string"
+        }
+       }
+      },
+      "required": [
+       "job",
+       "surface",
+       "cleared"
+      ],
+      "additionalProperties": false
+     }
+    },
+    {
+     "path": [
+      "shadow-start"
+     ],
+     "meta": {
+      "description": "The Mac's alarm clock for the Shadow: keep the Mac awake (caffeinate), open the Shadow PC launcher, click Start, confirm the stream window appeared; one launch, no input afterwards, no reconnect loop (the Shadow runs its two-hour session and shuts itself down). Schedule it with tick: tick add shadow-night --at 02:00 --cmd \"run shadow-start\""
+     },
+     "flags": [
+      {
+       "name": "button",
+       "type": "string",
+       "description": "Label of the launcher button to click (case-insensitive substring)",
+       "optional": true,
+       "default": "Start",
+       "deprecated": false
+      },
+      {
+       "name": "timeout",
+       "type": "number",
+       "description": "Seconds to wait for the stream window after the click",
+       "optional": true,
+       "default": 180,
+       "deprecated": false
+      },
+      {
+       "name": "awakeMinutes",
+       "type": "number",
+       "description": "How long caffeinate keeps the Mac awake",
+       "optional": true,
+       "default": 135,
+       "deprecated": false
+      },
+      {
+       "name": "inspect",
+       "type": "boolean",
+       "description": "List the launcher window's buttons instead of clicking (checks Accessibility too)",
+       "optional": true,
+       "default": false,
+       "deprecated": false
+      }
+     ],
+     "positionals": [],
+     "outputSchema": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "type": "object",
+      "properties": {
+       "ok": {
+        "type": "boolean"
+       },
+       "outcome": {
+        "type": "string"
+       },
+       "note": {
+        "type": "string"
+       },
+       "buttons": {
+        "type": "array",
+        "items": {
+         "type": "string"
+        }
+       },
+       "seconds": {
+        "type": "number"
+       }
+      },
+      "required": [
+       "ok",
+       "outcome",
+       "seconds"
+      ],
+      "additionalProperties": false
+     }
+    },
+    {
+     "path": [
+      "stats"
+     ],
+     "meta": {
+      "description": "Shadow busy hours per week (ledger unit timings), sessions launched against pickups that drained the queue, this month's estimated Modal spend, and what each job costs per surface (minutes per unit, CPU/GPU/memory while units ran, bytes moved): JSON with flat numbers on top (for dash stats) and text lines; reads this machine's state plus the snapshots under packages/run/state"
+     },
+     "flags": [
+      {
+       "name": "weeks",
+       "type": "number",
+       "description": "How many weeks of Shadow history to list",
+       "optional": true,
+       "default": 8,
+       "deprecated": false
+      }
+     ],
+     "positionals": [],
+     "outputSchema": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "type": "object",
+      "properties": {
+       "at": {
+        "type": "string"
+       },
+       "shadowBusyHoursThisWeek": {
+        "type": "number"
+       },
+       "shadowUnitsThisWeek": {
+        "type": "number"
+       },
+       "shadowLaunchesThisWeek": {
+        "type": "number"
+       },
+       "shadowPickupsThisWeek": {
+        "type": "number"
+       },
+       "shadowDrainedThisWeek": {
+        "type": "number"
+       },
+       "modalSpendUsdThisMonth": {
+        "type": "number"
+       },
+       "modalCapUsd": {
+        "type": "number"
+       },
+       "shadow": {
+        "type": "object",
+        "properties": {
+         "weeks": {
+          "type": "array",
+          "items": {
+           "type": "object",
+           "properties": {
+            "week": {
+             "type": "string"
+            },
+            "hours": {
+             "type": "number"
+            },
+            "units": {
+             "type": "number"
+            },
+            "launches": {
+             "type": "number"
+            },
+            "pickups": {
+             "type": "number"
+            },
+            "drained": {
+             "type": "number"
+            }
+           },
+           "required": [
+            "week",
+            "hours",
+            "units",
+            "launches",
+            "pickups",
+            "drained"
+           ],
+           "additionalProperties": false
+          }
+         },
+         "launches": {
+          "type": "number"
+         },
+         "pickups": {
+          "type": "number"
+         },
+         "drained": {
+          "type": "number"
+         },
+         "lastLaunch": {
+          "type": "string"
+         },
+         "lastPickup": {
+          "type": "string"
+         },
+         "lastStoppedBy": {
+          "type": "string"
+         }
+        },
+        "required": [
+         "weeks",
+         "launches",
+         "pickups",
+         "drained"
+        ],
+        "additionalProperties": false
+       },
+       "modal": {
+        "type": "object",
+        "properties": {
+         "month": {
+          "type": "string"
+         },
+         "usd": {
+          "type": "number"
+         },
+         "units": {
+          "type": "number"
+         },
+         "hours": {
+          "type": "number"
+         },
+         "capUsd": {
+          "type": "number"
+         },
+         "byGpu": {
+          "type": "object",
+          "propertyNames": {
+           "type": "string"
+          },
+          "additionalProperties": {
+           "type": "object",
+           "properties": {
+            "units": {
+             "type": "number"
+            },
+            "hours": {
+             "type": "number"
+            },
+            "usd": {
+             "type": "number"
+            }
+           },
+           "required": [
+            "units",
+            "hours",
+            "usd"
+           ],
+           "additionalProperties": false
+          }
+         }
+        },
+        "required": [
+         "month",
+         "usd",
+         "units",
+         "hours",
+         "byGpu"
+        ],
+        "additionalProperties": false
+       },
+       "jobs": {
+        "type": "array",
+        "items": {
+         "type": "object",
+         "properties": {
+          "job": {
+           "type": "string"
+          },
+          "surface": {
+           "type": "string"
+          },
+          "units": {
+           "type": "number"
+          },
+          "minutesPerUnit": {
+           "type": "number"
+          },
+          "sampled": {
+           "type": "number"
+          },
+          "cpuMean": {
+           "type": "number"
+          },
+          "cpuPeak": {
+           "type": "number"
+          },
+          "memPeakMb": {
+           "type": "number"
+          },
+          "gpu": {
+           "type": "string"
+          },
+          "gpuSmMean": {
+           "type": "number"
+          },
+          "gpuSmPeak": {
+           "type": "number"
+          },
+          "gpuMemPeakMb": {
+           "type": "number"
+          },
+          "gpuPowerMeanW": {
+           "type": "number"
+          },
+          "xRealtime": {
+           "type": "number"
+          },
+          "pulledMb": {
+           "type": "number"
+          },
+          "pushedMb": {
+           "type": "number"
+          },
+          "transferMbps": {
+           "type": "number"
+          }
+         },
+         "required": [
+          "job",
+          "surface",
+          "units",
+          "minutesPerUnit",
+          "sampled",
+          "pulledMb",
+          "pushedMb"
+         ],
+         "additionalProperties": false
+        }
+       },
+       "text": {
+        "type": "string"
+       }
+      },
+      "required": [
+       "at",
+       "shadowBusyHoursThisWeek",
+       "shadowUnitsThisWeek",
+       "shadowLaunchesThisWeek",
+       "shadowPickupsThisWeek",
+       "shadowDrainedThisWeek",
+       "modalSpendUsdThisMonth",
+       "shadow",
+       "modal",
+       "jobs",
+       "text"
+      ],
+      "additionalProperties": false
+     }
+    },
+    {
+     "path": [
+      "units"
+     ],
+     "meta": {
+      "description": "Per-unit cost of a job on a surface from this machine's ledger: wall and audio seconds, x real time, CPU and GPU SM (mean/p95), GPU power and peak VRAM while it ran, and the phase timings the command reported (##run metric lines)"
+     },
+     "flags": [
+      {
+       "name": "on",
+       "type": "string",
+       "description": "Surface whose ledger to read",
+       "optional": false,
+       "deprecated": false,
+       "completeFrom": {
+        "cmd": "run ls",
+        "field": "jobs[].surfaces[]"
+       }
+      },
+      {
+       "name": "last",
+       "type": "number",
+       "description": "Only the most recent N units",
+       "optional": true,
+       "deprecated": false
+      }
+     ],
+     "positionals": [
+      {
+       "name": "job",
+       "source": "export",
+       "optional": false,
+       "description": "Job id",
+       "alsoFlag": true,
+       "completeFrom": {
+        "cmd": "run ls",
+        "field": "jobs[].id",
+        "sub": "description"
+       }
+      }
+     ],
+     "outputSchema": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "type": "object",
+      "properties": {
+       "job": {
+        "type": "string"
+       },
+       "surface": {
+        "type": "string"
+       },
+       "xRealtime": {
+        "type": "number"
+       },
+       "units": {
+        "type": "array",
+        "items": {
+         "type": "object",
+         "properties": {
+          "id": {
+           "type": "string"
+          },
+          "status": {
+           "type": "string"
+          },
+          "startedAt": {
+           "type": "string"
+          },
+          "finishedAt": {
+           "type": "string"
+          },
+          "wallS": {
+           "type": "number"
+          },
+          "audioS": {
+           "type": "number"
+          },
+          "xRealtime": {
+           "type": "number"
+          },
+          "cpuMean": {
+           "type": "number"
+          },
+          "cpuP95": {
+           "type": "number"
+          },
+          "smMean": {
+           "type": "number"
+          },
+          "smP95": {
+           "type": "number"
+          },
+          "powerMeanW": {
+           "type": "number"
+          },
+          "gpuMemPeakMb": {
+           "type": "number"
+          },
+          "phases": {
+           "type": "object",
+           "propertyNames": {
+            "type": "string"
+           },
+           "additionalProperties": {
+            "type": "number"
+           }
+          },
+          "metrics": {
+           "type": "object",
+           "propertyNames": {
+            "type": "string"
+           },
+           "additionalProperties": {
+            "type": "number"
+           }
+          },
+          "trace": {
+           "type": "string"
+          }
+         },
+         "required": [
+          "id",
+          "status"
+         ],
+         "additionalProperties": false
+        }
+       }
+      },
+      "required": [
+       "job",
+       "surface",
+       "units"
+      ],
+      "additionalProperties": false
+     }
+    }
+   ],
+   "description": "clfly tree that runs resumable jobs on a surface (laptop or shadow): one command per unit, progress saved after each, so a rerun continues where it stopped.",
+   "commandsDir": "/Users/erik/git/borkxs-mono-main/packages/run/commands"
+  },
+  {
+   "name": "tick",
+   "bin": "/fixture/tick",
+   "root": "/fixture",
+   "routes": [
+    {
+     "path": [],
+     "meta": {
+      "description": "tick \u2014 run a subcommand, or pass --help"
+     },
+     "flags": [],
+     "positionals": []
+    },
+    {
+     "path": [
+      "add"
+     ],
+     "meta": {
+      "description": "Schedule a command (usually another clfly command) as a launchd agent that runs every --every or daily --at; re-adding a name replaces it"
+     },
+     "flags": [
+      {
+       "name": "cmd",
+       "type": "string",
+       "description": "Command line to run, through /bin/sh, e.g. \"usage sync\"",
+       "optional": false,
+       "deprecated": false
+      },
+      {
+       "name": "every",
+       "type": "string",
+       "description": "Interval: \"15m\", \"2h\", \"1d\"",
+       "optional": true,
+       "deprecated": false
+      },
+      {
+       "name": "at",
+       "type": "string",
+       "description": "Daily at this local time: \"09:00\"",
+       "optional": true,
+       "deprecated": false
+      },
+      {
+       "name": "cwd",
+       "type": "string",
+       "description": "Working directory (default: your home folder)",
+       "optional": true,
+       "deprecated": false
+      }
+     ],
+     "positionals": [
+      {
+       "name": "name",
+       "source": "export",
+       "optional": false,
+       "description": "Job name, e.g. usage-sync",
+       "alsoFlag": true
+      }
+     ],
+     "outputSchema": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "type": "object",
+      "properties": {
+       "name": {
+        "type": "string"
+       },
+       "command": {
+        "type": "string"
+       },
+       "schedule": {
+        "type": "string"
+       },
+       "plist": {
+        "type": "string"
+       },
+       "replaced": {
+        "type": "boolean"
+       }
+      },
+      "required": [
+       "name",
+       "command",
+       "schedule",
+       "plist",
+       "replaced"
+      ],
+      "additionalProperties": false
+     }
+    },
+    {
+     "path": [
+      "logs"
+     ],
+     "meta": {
+      "description": "Show a job's output from its last runs"
+     },
+     "flags": [
+      {
+       "name": "runs",
+       "type": "number",
+       "description": "How many recent runs (default 1)",
+       "optional": true,
+       "deprecated": false
+      }
+     ],
+     "positionals": [
+      {
+       "name": "name",
+       "source": "export",
+       "optional": false,
+       "description": "Job name",
+       "alsoFlag": true,
+       "completeFrom": {
+        "cmd": "tick ls",
+        "field": "jobs[].name",
+        "sub": "schedule"
+       }
+      }
+     ],
+     "outputSchema": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "type": "object",
+      "properties": {
+       "path": {
+        "type": "string"
+       },
+       "text": {
+        "type": "string"
+       }
+      },
+      "required": [
+       "path",
+       "text"
+      ],
+      "additionalProperties": false
+     }
+    },
+    {
+     "path": [
+      "ls"
+     ],
+     "meta": {
+      "description": "List scheduled jobs: schedule, whether launchd has them loaded, last run and result, next run"
+     },
+     "flags": [],
+     "positionals": [],
+     "outputSchema": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "type": "object",
+      "properties": {
+       "jobs": {
+        "type": "array",
+        "items": {
+         "type": "object",
+         "properties": {
+          "name": {
+           "type": "string"
+          },
+          "command": {
+           "type": "string"
+          },
+          "schedule": {
+           "type": "string"
+          },
+          "loaded": {
+           "type": "boolean"
+          },
+          "running": {
+           "type": "boolean"
+          },
+          "runs": {
+           "type": "number"
+          },
+          "failures": {
+           "type": "number"
+          },
+          "lastAt": {
+           "type": [
+            "string",
+            "null"
+           ]
+          },
+          "lastExit": {
+           "type": [
+            "number",
+            "null"
+           ]
+          },
+          "nextAt": {
+           "type": [
+            "string",
+            "null"
+           ]
+          }
+         },
+         "required": [
+          "name",
+          "command",
+          "schedule",
+          "loaded",
+          "running",
+          "runs",
+          "failures",
+          "lastAt",
+          "lastExit",
+          "nextAt"
+         ],
+         "additionalProperties": false
+        }
+       }
+      },
+      "required": [
+       "jobs"
+      ],
+      "additionalProperties": false
+     }
+    },
+    {
+     "path": [
+      "rm"
+     ],
+     "meta": {
+      "description": "Unload a scheduled job and delete its launchd agent (run history and log are kept)",
+      "destructive": true
+     },
+     "flags": [],
+     "positionals": [
+      {
+       "name": "name",
+       "source": "export",
+       "optional": false,
+       "description": "Job name",
+       "alsoFlag": true,
+       "completeFrom": {
+        "cmd": "tick ls",
+        "field": "jobs[].name",
+        "sub": "schedule"
+       }
+      }
+     ],
+     "outputSchema": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "type": "object",
+      "properties": {
+       "removed": {
+        "type": "string"
+       }
+      },
+      "required": [
+       "removed"
+      ],
+      "additionalProperties": false
+     }
+    },
+    {
+     "path": [
+      "run"
+     ],
+     "meta": {
+      "description": "Run a scheduled job now, logging its output and recording the run; this is also what launchd calls on schedule"
+     },
+     "flags": [],
+     "positionals": [
+      {
+       "name": "name",
+       "source": "export",
+       "optional": false,
+       "description": "Job name",
+       "alsoFlag": true,
+       "completeFrom": {
+        "cmd": "tick ls",
+        "field": "jobs[].name",
+        "sub": "schedule"
+       }
+      }
+     ],
+     "outputSchema": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "type": "object",
+      "properties": {
+       "job": {
+        "type": "string"
+       },
+       "at": {
+        "type": "string"
+       },
+       "ms": {
+        "type": "number"
+       },
+       "exitCode": {
+        "type": "number"
+       },
+       "outBytes": {
+        "type": "number"
+       }
+      },
+      "required": [
+       "job",
+       "at",
+       "ms",
+       "exitCode",
+       "outBytes"
+      ],
+      "additionalProperties": false
+     }
+    }
+   ],
+   "description": "clfly tree that schedules commands (mostly other clfly commands) as launchd agents, with logs and run history.",
+   "commandsDir": "/Users/erik/git/borkxs-mono-main/packages/tick/commands"
+  }
+ ]
+}

@@ -1,0 +1,47 @@
+{
+  "about": "Line-editor cases: what typing a line should offer and run. Read by test/line.test.ts against fixtures/manifest.json; the prose list is docs/launcher-cases.md. `choices` stubs each completeFrom source's output.",
+  "choices": {
+    "dash ls": [
+      { "value": "film", "sub": "up" },
+      { "value": "songs", "sub": "down" },
+      { "value": "usage-review", "sub": "up" }
+    ],
+    "run ls": [
+      { "value": "transcribe-batch", "sub": "Whisper a folder" },
+      { "value": "separate-batch", "sub": "Demucs stems" }
+    ],
+    "tick ls": [
+      { "value": "health-check", "sub": "every 1h" },
+      { "value": "usage-sync", "sub": "every 15m" }
+    ],
+    "pm status": [{ "value": "abc123", "label": "Dune (2021) 1080p", "sub": "running" }]
+  },
+  "cases": [
+    { "id": "empty", "line": "", "expect": { "slot": "tree", "includes": ["pm", "dash", "run"] } },
+    { "id": "tree-prefix", "line": "p", "expect": { "slot": "tree", "includes": ["pm", "plex"], "excludes": ["dash"] } },
+    { "id": "tree-space", "line": "pm ", "expect": { "slot": "segment", "includes": ["search", "status", "add", "ls"] } },
+    { "id": "segment-prefix", "line": "pm st", "expect": { "first": "status", "accept": { "pick": "status", "line": "pm status " } } },
+    { "id": "runs-bare", "line": "pm status ", "expect": { "first": "run", "runnable": true, "argv": ["status", "--json"] } },
+    { "id": "flag-names", "line": "pm status --", "expect": { "slot": "flag", "includes": ["--all", "--watch"] } },
+    { "id": "flag-set", "line": "pm status --all ", "expect": { "runnable": true, "argv": ["status", "--all", "--json"] } },
+    { "id": "needs-query", "line": "pm search ", "expect": { "slot": "positional", "hint": ["query"], "runnable": false } },
+    { "id": "live-search", "line": "pm search dune 2021", "expect": { "live": "dune 2021" } },
+    { "id": "enum-values", "line": "pm search dune --res ", "expect": { "slot": "flagValue", "includes": ["720p", "1080p", "2160p"] } },
+    { "id": "enum-prefix", "line": "pm search dune --res 10", "expect": { "first": "1080p", "accept": { "pick": "1080p", "line": "pm search dune --res 1080p " } } },
+    { "id": "words-not-a-command", "line": "pm the brave one 2007", "expect": { "first": "search", "accept": { "pick": "search", "line": "pm search the brave one 2007" } } },
+    { "id": "chain-only-source", "line": "pm add ", "expect": { "slot": "positional", "hint": ["magnet"], "source": null, "runnable": false } },
+    { "id": "choices-from-status", "line": "pm rm ", "expect": { "source": "pm status", "includes": ["abc123"], "destructive": true } },
+    { "id": "destructive-ready", "line": "pm rm abc123 ", "expect": { "runnable": true, "destructive": true, "first": "run" } },
+    { "id": "dash-open-choices", "line": "dash open ", "expect": { "source": "dash ls", "includes": ["film", "songs"] } },
+    { "id": "dash-open-prefix", "line": "dash open fi", "expect": { "first": "film", "accept": { "pick": "film", "line": "dash open film " } } },
+    { "id": "dash-open-ready", "line": "dash open film ", "expect": { "first": "run", "argv": ["open", "film", "--json"] } },
+    { "id": "run-jobs-beside-segments", "line": "run ", "expect": { "includes": ["ls", "queue", "transcribe-batch"] } },
+    { "id": "run-job-needs-on", "line": "run transcribe-batch ", "expect": { "runnable": false, "hint": ["--on"], "first": "--on" } },
+    { "id": "run-job", "line": "run transcribe-batch --on laptop ", "expect": { "runnable": true, "first": "run", "argv": ["transcribe-batch", "--on", "laptop", "--json"] } },
+    { "id": "run-queue-rm", "line": "run queue rm ", "expect": { "includes": ["separate-batch"], "destructive": true } },
+    { "id": "tick-run-prefix", "line": "tick run he", "expect": { "first": "health-check" } },
+    { "id": "quoted-path", "line": "pm upload \"in/cone off.flac\" --to Mashups ", "expect": { "argv": ["upload", "in/cone off.flac", "--to", "Mashups", "--json"] } },
+    { "id": "interactive", "line": "pm setup plex ", "expect": { "interactive": true, "runnable": false } },
+    { "id": "unknown-tree", "line": "foo ", "expect": { "error": "No tree named foo" } }
+  ]
+}

@@ -1,27 +1,17 @@
 #!/usr/bin/env node
-// Generate Raycast root-search commands from `clfly manifest --json`:
-//   - one per tree ("pm"), opening its command list;
-//   - one per route ("pm status", "pm search"), with Raycast arguments only for required positionals
-//     that have no choice source ("pm search" ⇥ query);
-//   - one per choice of a short `completeFrom` list ("dash open film", "run transcribe-batch"), run now at gen time.
-// Raycast reads commands from package.json at build time, so rerun after linking a tree or when choices change:
+// One Raycast root-search command per linked clfly tree ("pm"), opening the line editor with "pm " typed.
+// Everything below the tree name is completed inside the editor (src/lib/line.ts), so this stays at one
+// command per tree. Raycast reads commands from package.json at build time, so rerun after linking a tree:
 //   npm run gen-trees            (uses ../cli/dist/bin.js, else `clfly` on PATH; CLFLY_BIN overrides)
 // The .tsx files it writes are gitignored; `npm run dev` / `npm run build` regenerate them first.
 import { execFileSync } from "node:child_process";
 import { existsSync, readFileSync, writeFileSync, readdirSync, unlinkSync } from "node:fs";
 import { join, dirname } from "node:path";
 import { fileURLToPath } from "node:url";
-import { completeFromArgv, selectCompletions } from "@clfly/core/complete";
 
 const root = join(dirname(fileURLToPath(import.meta.url)), "..");
 const src = join(root, "src");
 const PREFIXES = ["tree-", "cmd-"];
-/** A choice list longer than this stays a picker instead of becoming commands. */
-const MAX_EXPAND = 15;
-/** Raycast allows at most three arguments per command. */
-const MAX_ARGS = 3;
-const DESTRUCTIVE_LEAVES = new Set(["rm", "remove", "delete", "apply", "reset", "down", "uninstall", "unlink", "clean"]);
-
 const run = (bin, argv) => {
   const viaNode = /\.(c|m)?js$/.test(bin);
   return execFileSync(viaNode ? process.execPath : bin, viaNode ? [bin, ...argv] : argv, {
@@ -37,133 +27,29 @@ const clfly = process.env.CLFLY_BIN || (existsSync(sibling) ? sibling : "clfly")
 const { trees } = JSON.parse(run(clfly, ["manifest", "--json"]));
 
 const slug = (s) => s.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "") || "x";
-const isDynamic = (s) => s.startsWith(":");
-const shown = (path) => path.map((s) => (isDynamic(s) ? `‹${s.slice(1)}›` : s)).join(" ");
 const firstSentence = (text) => (text || "").split(/(?<=[.:;])\s/)[0].slice(0, 120);
-const samePath = (a, b) => a.length === b.length && a.every((s, i) => s === b[i]);
-const cmdPath = (cmd, tree) => {
-  const p = cmd.split(/\s+/).filter(Boolean);
-  if (p[0] === tree && p.length > 1) p.shift();
-  return p;
-};
 
-function isDestructive(route) {
-  if (route.meta?.destructive) return true;
-  if (route.meta?.readOnly) return false;
-  const last = [...route.path].reverse().find((s) => !isDynamic(s));
-  return last !== undefined && DESTRUCTIVE_LEAVES.has(last);
-}
-
-/** Same rule as model.ts sourceRunnable: the source exists and needs no positional we cannot give. */
-function sourceRunnable(tree, cf) {
-  const source = tree.routes.find((r) => samePath(r.path, cmdPath(cf.cmd, tree.name)));
-  if (!source) return false;
-  return source.positionals.filter((p) => p.source === "export").every((p) => p.optional || cf.args?.[p.name] !== undefined);
-}
-
-const choiceCache = new Map();
-function choicesFor(tree, cf) {
-  const argv = completeFromArgv(cf, tree.name, {});
-  const key = `${tree.bin}\0${JSON.stringify(argv)}\0${JSON.stringify(cf)}`;
-  if (!choiceCache.has(key)) {
-    try {
-      choiceCache.set(key, selectCompletions(JSON.parse(run(tree.bin, argv)), cf));
-    } catch (e) {
-      console.warn(`  skip ${tree.name} ${cf.cmd}: ${String(e.message).split("\n")[0]}`);
-      choiceCache.set(key, []);
-    }
-  }
-  return choiceCache.get(key);
-}
-
-/** The one required argument worth expanding into a command per choice, if any. */
-function expandable(tree, route) {
-  if (isDestructive(route)) return undefined;
-  const candidates = route.positionals.filter(
-    (p) => p.completeFrom && (p.source === "path" || !p.optional) && sourceRunnable(tree, p.completeFrom),
-  );
-  if (candidates.length !== 1) return undefined;
-  const arg = candidates[0];
-  const choices = choicesFor(tree, arg.completeFrom);
-  if (choices.length === 0 || choices.length > MAX_EXPAND) return undefined;
-  return { arg, choices };
-}
-
-const files = new Map();
 const commands = [];
-const names = new Set();
-function add({ name, title, description, file, args = [] }) {
-  let unique = name;
-  for (let n = 2; names.has(unique); n++) unique = `${name}-${n}`;
-  names.add(unique);
-  files.set(unique, file);
+for (const f of readdirSync(src)) if (PREFIXES.some((p) => f.startsWith(p)) && f.endsWith(".tsx")) unlinkSync(join(src, f));
+for (const tree of trees.filter((t) => !t.error).sort((a, b) => a.name.localeCompare(b.name))) {
+  const name = `tree-${slug(tree.name)}`;
+  writeFileSync(
+    join(src, `${name}.tsx`),
+    `// Generated by scripts/gen-tree-commands.mjs; do not edit.\nimport { LineEditor } from "./components/LineEditor";\n\nexport default function Command() {\n  return <LineEditor initial=${JSON.stringify(`${tree.name} `)} />;\n}\n`,
+  );
+  const description = firstSentence(tree.description);
   commands.push({
-    name: unique,
-    title,
+    name,
+    title: tree.name,
     subtitle: "clfly",
     // Raycast wants 12+ characters.
-    description: (description || "").length >= 12 ? description : `Run ${title} (clfly)${description && description !== title ? ` · ${description}` : ""}`,
+    description: description.length >= 12 ? description : `${tree.name} commands (clfly)`,
     mode: "view",
-    ...(args.length ? { arguments: args } : {}),
   });
 }
-
-const header = `// Generated by scripts/gen-tree-commands.mjs; do not edit.\n`;
-const routeFile = (spec, withArgs) =>
-  header +
-  `import type { LaunchProps } from "@raycast/api";\nimport { RouteCommand } from "./components/RouteCommand";\n\n` +
-  `export default function Command(props: LaunchProps${withArgs ? "<{ arguments: Record<string, string> }>" : ""}) {\n` +
-  `  return <RouteCommand spec={${JSON.stringify(spec)}}${withArgs ? " args={props.arguments}" : ""} />;\n}\n`;
-
-let expanded = 0;
-for (const tree of trees.filter((t) => !t.error).sort((a, b) => a.name.localeCompare(b.name))) {
-  add({
-    name: `tree-${slug(tree.name)}`,
-    title: tree.name,
-    description: firstSentence(tree.description) || `${tree.name} commands`,
-    file:
-      header +
-      `import { TreeRoot } from "./components/TreeRoot";\n\nexport default function Command() {\n  return <TreeRoot name=${JSON.stringify(tree.name)} />;\n}\n`,
-  });
-
-  for (const route of [...tree.routes].sort((a, b) => a.path.join(" ").localeCompare(b.path.join(" ")))) {
-    if (route.path.length === 0 || route.meta?.interactive) continue;
-    const base = { tree: tree.name, path: route.path };
-    const title = `${tree.name} ${shown(route.path)}`;
-    const description = firstSentence(route.meta?.description) || title;
-
-    const required = route.positionals.filter((p) => p.source === "export" && !p.optional && !p.completeFrom).slice(0, MAX_ARGS);
-    const args = required.map((p, i) => ({ name: `a${i}`, type: "text", placeholder: p.name, required: true }));
-    add({
-      name: `cmd-${slug(tree.name)}-${route.path.map(slug).join("-")}`,
-      title,
-      description,
-      args,
-      file: routeFile({ ...base, argNames: required.map((p) => p.name) }, args.length > 0),
-    });
-
-    const ex = expandable(tree, route);
-    if (!ex) continue;
-    for (const c of ex.choices) {
-      const fill = ex.arg.source === "path" ? { params: { [ex.arg.name]: c.value } } : { values: { [ex.arg.name]: c.value } };
-      const path = route.path.map((s) => (s === `:${ex.arg.name}` ? c.value : s));
-      add({
-        name: `cmd-${slug(tree.name)}-${route.path.map(slug).join("-")}--${slug(c.value)}`,
-        title: `${tree.name} ${ex.arg.source === "path" ? shown(path) : `${shown(route.path)} ${c.value}`}`,
-        description: c.sub || c.label || description,
-        file: routeFile({ ...base, ...fill }, false),
-      });
-      expanded++;
-    }
-  }
-}
-
-for (const f of readdirSync(src)) if (PREFIXES.some((p) => f.startsWith(p)) && f.endsWith(".tsx")) unlinkSync(join(src, f));
-for (const [name, file] of files) writeFileSync(join(src, `${name}.tsx`), file);
 
 const pkgPath = join(root, "package.json");
 const pkg = JSON.parse(readFileSync(pkgPath, "utf8"));
 pkg.commands = [...pkg.commands.filter((c) => !PREFIXES.some((p) => c.name.startsWith(p))), ...commands];
 writeFileSync(pkgPath, JSON.stringify(pkg, null, 2) + "\n");
-const treeCount = commands.filter((c) => c.name.startsWith("tree-")).length;
-console.log(`${commands.length} commands: ${treeCount} trees, ${commands.length - treeCount - expanded} routes, ${expanded} expanded choices`);
+console.log(`${commands.length} tree commands: ${commands.map((c) => c.title).join(", ")}`);
