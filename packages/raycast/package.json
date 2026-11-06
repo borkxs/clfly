@@ -55,13 +55,6 @@
       "mode": "view"
     },
     {
-      "name": "tree-clfly",
-      "title": "clfly",
-      "subtitle": "clfly",
-      "description": "File-based routing for CLIs — one commands/ tree becomes a CLI, shell completions, and an MCP server.",
-      "mode": "view"
-    },
-    {
       "name": "tree-dash",
       "title": "dash",
       "subtitle": "clfly",
