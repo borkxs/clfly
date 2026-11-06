@@ -321,3 +321,82 @@ function isScalar(v: unknown): v is string | number | boolean | null {
 function asObject(v: unknown): Record<string, unknown> {
   return v && typeof v === "object" && !Array.isArray(v) ? (v as Record<string, unknown>) : {};
 }
+
+/** Where typed text like `ls --all` lands in a tree. */
+export interface Typed {
+  /** Deepest path reached (statics and filled params). */
+  template: string[];
+  params: Record<string, string>;
+  /** The command at `template`, if one ends there. */
+  route?: Route;
+  values: FormValues;
+  /** True when every required positional and flag has a value, so it can run without a form. */
+  ready: boolean;
+}
+
+/** Shell-like split: whitespace separates, single or double quotes group. No escapes or expansion. */
+export function tokenize(text: string): string[] {
+  const out: string[] = [];
+  for (const m of text.matchAll(/"([^"]*)"|'([^']*)'|(\S+)/g)) out.push(m[1] ?? m[2] ?? m[3]!);
+  return out;
+}
+
+/**
+ * Resolve typed words against a tree: walk static segments (dynamic ones take
+ * the word as a param), then read `--flag value`, `--flag=value`, `--no-flag`
+ * and positionals for the command reached. Extra words join into the last positional.
+ */
+export function parseTyped(tree: Tree, text: string): Typed {
+  const words = tokenize(text);
+  const template: string[] = [];
+  const params: Record<string, string> = {};
+  let i = 0;
+  for (; i < words.length && !words[i]!.startsWith("-"); i++) {
+    const children = childrenAt(tree, template);
+    const fixed = children.find((c) => c.segment === words[i]);
+    const dynamic = children.find((c) => isDynamic(c.segment));
+    const next = fixed ?? (routeAt(tree, template) ? undefined : dynamic);
+    if (!next) break;
+    template.push(next.segment);
+    if (isDynamic(next.segment)) params[paramName(next.segment)] = words[i]!;
+  }
+  const route = routeAt(tree, template);
+  const values: FormValues = {};
+  if (!route) return { template, params, values, ready: false };
+
+  const loose: string[] = [];
+  for (; i < words.length; i++) {
+    const w = words[i]!;
+    if (!w.startsWith("--") || w === "--") {
+      loose.push(w);
+      continue;
+    }
+    const [rawName, inline] = w.slice(2).split(/=(.*)/s, 2) as [string, string | undefined];
+    const negated = rawName.startsWith("no-") && !route.flags.some((f) => f.name === rawName);
+    const name = negated ? rawName.slice(3) : rawName;
+    const flag = route.flags.find((f) => f.name === name || f.alias === name);
+    const key = flag?.name ?? route.positionals.find((p) => p.alsoFlag && p.name === name)?.name ?? name;
+    if (flag?.type === "boolean") values[key] = inline !== undefined ? inline !== "false" : !negated;
+    else if (inline !== undefined) values[key] = inline;
+    else if (i + 1 < words.length) values[key] = words[++i]!;
+    else values[key] = true;
+  }
+  const positionals = formPositionals(route);
+  positionals.forEach((p, n) => {
+    if (n >= loose.length) return;
+    const last = n === positionals.length - 1;
+    values[p.name] = last ? loose.slice(n).join(" ") : loose[n]!;
+  });
+
+  return { template, params, route, values, ready: runsBare(route, params, values) };
+}
+
+/** Every path param, required positional and required flag has a value (or a default), so the command can run without its form. */
+export function runsBare(route: Route, params: Record<string, string>, values: FormValues = {}): boolean {
+  const filled = (v: unknown) => (typeof v === "string" ? v.trim() !== "" : v !== undefined);
+  return (
+    missingParams(route, params).length === 0 &&
+    formPositionals(route).every((p) => p.optional || filled(values[p.name])) &&
+    route.flags.every((f) => f.optional || f.default !== undefined || f.type === "boolean" || filled(values[f.name]))
+  );
+}
