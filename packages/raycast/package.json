@@ -6,7 +6,9 @@
   "icon": "icon.png",
   "author": "borkxs",
   "private": true,
-  "categories": ["Developer Tools"],
+  "categories": [
+    "Developer Tools"
+  ],
   "license": "MIT",
   "commands": [
     {
@@ -28,6 +30,111 @@
       "title": "Run clfly Command",
       "subtitle": "clfly",
       "description": "Target of pinned-command quicklinks; opens the command passed in the deeplink context",
+      "mode": "view"
+    },
+    {
+      "name": "tree-bookcli",
+      "title": "bookcli",
+      "subtitle": "clfly",
+      "description": "bookcli commands",
+      "mode": "view"
+    },
+    {
+      "name": "tree-clfly",
+      "title": "clfly",
+      "subtitle": "clfly",
+      "description": "File-based routing for CLIs — one commands/ tree becomes a CLI, shell completions, and an MCP server.",
+      "mode": "view"
+    },
+    {
+      "name": "tree-dash",
+      "title": "dash",
+      "subtitle": "clfly",
+      "description": "clfly tree that indexes every project's dashboard:",
+      "mode": "view"
+    },
+    {
+      "name": "tree-forkspace",
+      "title": "forkspace",
+      "subtitle": "clfly",
+      "description": "Isolated local dev/test environments for multi-repo compose stacks.",
+      "mode": "view"
+    },
+    {
+      "name": "tree-health",
+      "title": "health",
+      "subtitle": "clfly",
+      "description": "clfly tree that checks this Mac's process and memory health:",
+      "mode": "view"
+    },
+    {
+      "name": "tree-library",
+      "title": "library",
+      "subtitle": "clfly",
+      "description": "clfly tree that searches the Mid-Hudson Library System catalog (Encore/Sierra) and shows which copies sit at your home l",
+      "mode": "view"
+    },
+    {
+      "name": "tree-map",
+      "title": "map",
+      "subtitle": "clfly",
+      "description": "clfly tree that builds the tool → idea → pattern map:",
+      "mode": "view"
+    },
+    {
+      "name": "tree-plex",
+      "title": "plex",
+      "subtitle": "clfly",
+      "description": "clfly tree for querying a Plex Media Server:",
+      "mode": "view"
+    },
+    {
+      "name": "tree-pm",
+      "title": "pm",
+      "subtitle": "clfly",
+      "description": "Premiumize.me CLI:",
+      "mode": "view"
+    },
+    {
+      "name": "tree-run",
+      "title": "run",
+      "subtitle": "clfly",
+      "description": "clfly tree that runs resumable jobs on a surface (laptop or shadow):",
+      "mode": "view"
+    },
+    {
+      "name": "tree-share",
+      "title": "share",
+      "subtitle": "clfly",
+      "description": "clfly tree that puts private local UIs behind one PIN on the LAN:",
+      "mode": "view"
+    },
+    {
+      "name": "tree-texts-cli",
+      "title": "texts-cli",
+      "subtitle": "clfly",
+      "description": "clfly tree that spawns the corpus, align and transcribe CLIs.",
+      "mode": "view"
+    },
+    {
+      "name": "tree-tick",
+      "title": "tick",
+      "subtitle": "clfly",
+      "description": "clfly tree that schedules commands (mostly other clfly commands) as launchd agents, with logs and run history.",
+      "mode": "view"
+    },
+    {
+      "name": "tree-treemap",
+      "title": "treemap",
+      "subtitle": "clfly",
+      "description": "clfly tree that renders any sized tree as a WinDirStat-style treemap page.",
+      "mode": "view"
+    },
+    {
+      "name": "tree-usage",
+      "title": "usage",
+      "subtitle": "clfly",
+      "description": "clfly tree that reports where agent tokens and time go:",
       "mode": "view"
     }
   ],
@@ -62,7 +169,8 @@
     "dev": "ray develop",
     "lint": "ray lint",
     "typecheck": "tsc --noEmit",
-    "test": "vitest run"
+    "test": "vitest run",
+    "gen-trees": "node scripts/gen-tree-commands.mjs"
   },
   "dependencies": {
     "@clfly/core": "file:../core",
