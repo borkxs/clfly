@@ -1,3 +1,5 @@
 node_modules
 dist
 raycast-env.d.ts
+src/tree-*.tsx
+src/cmd-*.tsx
