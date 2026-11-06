@@ -12,6 +12,21 @@
   "license": "MIT",
   "commands": [
     {
+      "name": "clfly",
+      "title": "clfly",
+      "subtitle": "clfly",
+      "description": "Type any clfly command (pm status --all); set it as a Raycast fallback command to run what is in root search",
+      "mode": "view",
+      "arguments": [
+        {
+          "name": "command",
+          "type": "text",
+          "placeholder": "pm status --all",
+          "required": false
+        }
+      ]
+    },
+    {
       "name": "trees",
       "title": "clfly Trees",
       "subtitle": "clfly",
@@ -37,208 +52,1452 @@
       "title": "bookcli",
       "subtitle": "clfly",
       "description": "bookcli commands",
-      "mode": "view",
-      "arguments": [
-        {
-          "name": "command",
-          "type": "text",
-          "placeholder": "command…",
-          "required": false
-        }
-      ]
+      "mode": "view"
+    },
+    {
+      "name": "cmd-bookcli-hello",
+      "title": "bookcli hello",
+      "subtitle": "clfly",
+      "description": "Run bookcli hello (clfly) · Say hello",
+      "mode": "view"
     },
     {
       "name": "tree-clfly",
       "title": "clfly",
       "subtitle": "clfly",
       "description": "File-based routing for CLIs — one commands/ tree becomes a CLI, shell completions, and an MCP server.",
-      "mode": "view",
-      "arguments": [
-        {
-          "name": "command",
-          "type": "text",
-          "placeholder": "command…",
-          "required": false
-        }
-      ]
+      "mode": "view"
+    },
+    {
+      "name": "cmd-clfly-add",
+      "title": "clfly add",
+      "subtitle": "clfly",
+      "description": "Add command file stubs to the commands/ tree",
+      "mode": "view"
+    },
+    {
+      "name": "cmd-clfly-build",
+      "title": "clfly build",
+      "subtitle": "clfly",
+      "description": "Compile commands/ into a lazy load manifest",
+      "mode": "view"
+    },
+    {
+      "name": "cmd-clfly-completions",
+      "title": "clfly completions",
+      "subtitle": "clfly",
+      "description": "Generate shell completions from the command tree",
+      "mode": "view"
+    },
+    {
+      "name": "cmd-clfly-init",
+      "title": "clfly init",
+      "subtitle": "clfly",
+      "description": "Scaffold a new clfly CLI (or retrofit with --force)",
+      "mode": "view"
+    },
+    {
+      "name": "cmd-clfly-link",
+      "title": "clfly link",
+      "subtitle": "clfly",
+      "description": "Put a tree's bin on PATH and record it in the clfly registry",
+      "mode": "view"
+    },
+    {
+      "name": "cmd-clfly-ls",
+      "title": "clfly ls",
+      "subtitle": "clfly",
+      "description": "List linked trees, whether their bins resolve, and where they are registered",
+      "mode": "view"
+    },
+    {
+      "name": "cmd-clfly-memory",
+      "title": "clfly memory",
+      "subtitle": "clfly",
+      "description": "Write a Claude Code memory file listing every linked tree and its commands (rewrites only on change)",
+      "mode": "view"
+    },
+    {
+      "name": "cmd-clfly-register",
+      "title": "clfly register",
+      "subtitle": "clfly",
+      "description": "Write one tree's MCP server entry into an agent harness config",
+      "mode": "view"
+    },
+    {
+      "name": "cmd-clfly-skill-export",
+      "title": "clfly skill export",
+      "subtitle": "clfly",
+      "description": "Write a SKILL.md generated from this tree's command manifest",
+      "mode": "view"
+    },
+    {
+      "name": "cmd-clfly-unlink",
+      "title": "clfly unlink",
+      "subtitle": "clfly",
+      "description": "Remove a tree's bin from PATH and delete its registry entry",
+      "mode": "view"
     },
     {
       "name": "tree-dash",
       "title": "dash",
       "subtitle": "clfly",
       "description": "clfly tree that indexes every project's dashboard:",
+      "mode": "view"
+    },
+    {
+      "name": "cmd-dash-add",
+      "title": "dash add",
+      "subtitle": "clfly",
+      "description": "Register a project's dashboard.json (schema dash/v1) on the index;",
       "mode": "view",
       "arguments": [
         {
-          "name": "command",
+          "name": "a0",
           "type": "text",
-          "placeholder": "command…",
-          "required": false
+          "placeholder": "path",
+          "required": true
         }
       ]
+    },
+    {
+      "name": "cmd-dash-done",
+      "title": "dash done",
+      "subtitle": "clfly",
+      "description": "Clear a manual step from dash waits once it has been done",
+      "mode": "view",
+      "arguments": [
+        {
+          "name": "a0",
+          "type": "text",
+          "placeholder": "n",
+          "required": true
+        }
+      ]
+    },
+    {
+      "name": "cmd-dash-down",
+      "title": "dash down",
+      "subtitle": "clfly",
+      "description": "Stop a dashboard's server:",
+      "mode": "view"
+    },
+    {
+      "name": "cmd-dash-install",
+      "title": "dash install",
+      "subtitle": "clfly",
+      "description": "Keep dash serve running:",
+      "mode": "view"
+    },
+    {
+      "name": "cmd-dash-ls",
+      "title": "dash ls",
+      "subtitle": "clfly",
+      "description": "List registered dashboards:",
+      "mode": "view"
+    },
+    {
+      "name": "cmd-dash-open",
+      "title": "dash open",
+      "subtitle": "clfly",
+      "description": "Open a dashboard in the browser, starting its server first when it has one and it is down",
+      "mode": "view"
+    },
+    {
+      "name": "cmd-dash-open--songs",
+      "title": "dash open songs",
+      "subtitle": "clfly",
+      "description": "Run dash open songs (clfly) · static",
+      "mode": "view"
+    },
+    {
+      "name": "cmd-dash-open--shot-viewer",
+      "title": "dash open shot-viewer",
+      "subtitle": "clfly",
+      "description": "Run dash open shot-viewer (clfly) · up",
+      "mode": "view"
+    },
+    {
+      "name": "cmd-dash-open--bookshelf",
+      "title": "dash open bookshelf",
+      "subtitle": "clfly",
+      "description": "Run dash open bookshelf (clfly) · up",
+      "mode": "view"
+    },
+    {
+      "name": "cmd-dash-open--learning",
+      "title": "dash open learning",
+      "subtitle": "clfly",
+      "description": "Run dash open learning (clfly) · up",
+      "mode": "view"
+    },
+    {
+      "name": "cmd-dash-open--tool-friction",
+      "title": "dash open tool-friction",
+      "subtitle": "clfly",
+      "description": "Run dash open tool-friction (clfly) · up",
+      "mode": "view"
+    },
+    {
+      "name": "cmd-dash-open--map",
+      "title": "dash open map",
+      "subtitle": "clfly",
+      "description": "Run dash open map (clfly) · static",
+      "mode": "view"
+    },
+    {
+      "name": "cmd-dash-open--loftplan",
+      "title": "dash open loftplan",
+      "subtitle": "clfly",
+      "description": "Run dash open loftplan (clfly) · up",
+      "mode": "view"
+    },
+    {
+      "name": "cmd-dash-open--usage-review",
+      "title": "dash open usage-review",
+      "subtitle": "clfly",
+      "description": "Run dash open usage-review (clfly) · static",
+      "mode": "view"
+    },
+    {
+      "name": "cmd-dash-rm",
+      "title": "dash rm",
+      "subtitle": "clfly",
+      "description": "Unregister a dashboard from the index (the project's manifest and collected stats are kept)",
+      "mode": "view"
+    },
+    {
+      "name": "cmd-dash-serve",
+      "title": "dash serve",
+      "subtitle": "clfly",
+      "description": "Serve the index page on localhost (status dots, start/stop, sparklines);",
+      "mode": "view"
+    },
+    {
+      "name": "cmd-dash-stats",
+      "title": "dash stats",
+      "subtitle": "clfly",
+      "description": "Run every registered project's stats command (or one dashboard's) and record the numbers for the index's sparklines;",
+      "mode": "view"
+    },
+    {
+      "name": "cmd-dash-uninstall",
+      "title": "dash uninstall",
+      "subtitle": "clfly",
+      "description": "Stop the dash serve launchd agent and delete it (registered dashboards and stats are kept)",
+      "mode": "view"
+    },
+    {
+      "name": "cmd-dash-up",
+      "title": "dash up",
+      "subtitle": "clfly",
+      "description": "Start a dashboard's server (its manifest's serve command), detached, and wait until its port answers",
+      "mode": "view"
+    },
+    {
+      "name": "cmd-dash-up--songs",
+      "title": "dash up songs",
+      "subtitle": "clfly",
+      "description": "Run dash up songs (clfly) · static",
+      "mode": "view"
+    },
+    {
+      "name": "cmd-dash-up--shot-viewer",
+      "title": "dash up shot-viewer",
+      "subtitle": "clfly",
+      "description": "Run dash up shot-viewer (clfly) · up",
+      "mode": "view"
+    },
+    {
+      "name": "cmd-dash-up--bookshelf",
+      "title": "dash up bookshelf",
+      "subtitle": "clfly",
+      "description": "Run dash up bookshelf (clfly) · up",
+      "mode": "view"
+    },
+    {
+      "name": "cmd-dash-up--learning",
+      "title": "dash up learning",
+      "subtitle": "clfly",
+      "description": "Run dash up learning (clfly) · up",
+      "mode": "view"
+    },
+    {
+      "name": "cmd-dash-up--tool-friction",
+      "title": "dash up tool-friction",
+      "subtitle": "clfly",
+      "description": "Run dash up tool-friction (clfly) · up",
+      "mode": "view"
+    },
+    {
+      "name": "cmd-dash-up--map",
+      "title": "dash up map",
+      "subtitle": "clfly",
+      "description": "Run dash up map (clfly) · static",
+      "mode": "view"
+    },
+    {
+      "name": "cmd-dash-up--loftplan",
+      "title": "dash up loftplan",
+      "subtitle": "clfly",
+      "description": "Run dash up loftplan (clfly) · up",
+      "mode": "view"
+    },
+    {
+      "name": "cmd-dash-up--usage-review",
+      "title": "dash up usage-review",
+      "subtitle": "clfly",
+      "description": "Run dash up usage-review (clfly) · static",
+      "mode": "view"
+    },
+    {
+      "name": "cmd-dash-wait",
+      "title": "dash wait",
+      "subtitle": "clfly",
+      "description": "Record a manual step the work is waiting on (something only Erik can do);",
+      "mode": "view",
+      "arguments": [
+        {
+          "name": "a0",
+          "type": "text",
+          "placeholder": "text",
+          "required": true
+        }
+      ]
+    },
+    {
+      "name": "cmd-dash-waits",
+      "title": "dash waits",
+      "subtitle": "clfly",
+      "description": "List the manual steps the work is waiting on (dash wait adds them, dash done clears one)",
+      "mode": "view"
     },
     {
       "name": "tree-forkspace",
       "title": "forkspace",
       "subtitle": "clfly",
       "description": "Isolated local dev/test environments for multi-repo compose stacks.",
-      "mode": "view",
-      "arguments": [
-        {
-          "name": "command",
-          "type": "text",
-          "placeholder": "command…",
-          "required": false
-        }
-      ]
+      "mode": "view"
+    },
+    {
+      "name": "cmd-forkspace-check",
+      "title": "forkspace check",
+      "subtitle": "clfly",
+      "description": "Validate forkspace.yml against the workspace (compose files, services, port conflicts)",
+      "mode": "view"
+    },
+    {
+      "name": "cmd-forkspace-down",
+      "title": "forkspace down",
+      "subtitle": "clfly",
+      "description": "Stop an instance (drops volumes unless the environment is persistent)",
+      "mode": "view"
+    },
+    {
+      "name": "cmd-forkspace-down-env",
+      "title": "forkspace down ‹env›",
+      "subtitle": "clfly",
+      "description": "Stop an instance (drops volumes unless the environment is persistent)",
+      "mode": "view"
+    },
+    {
+      "name": "cmd-forkspace-env",
+      "title": "forkspace env",
+      "subtitle": "clfly",
+      "description": "Print the env file for an instance (eval-able:",
+      "mode": "view"
+    },
+    {
+      "name": "cmd-forkspace-env-env",
+      "title": "forkspace env ‹env›",
+      "subtitle": "clfly",
+      "description": "Print the env file for an instance (eval-able:",
+      "mode": "view"
+    },
+    {
+      "name": "cmd-forkspace-init",
+      "title": "forkspace init",
+      "subtitle": "clfly",
+      "description": "Write a starter forkspace.yml in the current directory",
+      "mode": "view"
+    },
+    {
+      "name": "cmd-forkspace-ls",
+      "title": "forkspace ls",
+      "subtitle": "clfly",
+      "description": "List instances",
+      "mode": "view"
+    },
+    {
+      "name": "cmd-forkspace-prune",
+      "title": "forkspace prune",
+      "subtitle": "clfly",
+      "description": "Remove docker compose projects and workspace artifacts not tracked in state",
+      "mode": "view"
+    },
+    {
+      "name": "cmd-forkspace-up",
+      "title": "forkspace up",
+      "subtitle": "clfly",
+      "description": "Start an environment (optionally as an isolated fork)",
+      "mode": "view"
+    },
+    {
+      "name": "cmd-forkspace-up-env",
+      "title": "forkspace up ‹env›",
+      "subtitle": "clfly",
+      "description": "Start an environment (optionally as an isolated fork)",
+      "mode": "view"
     },
     {
       "name": "tree-health",
       "title": "health",
       "subtitle": "clfly",
       "description": "clfly tree that checks this Mac's process and memory health:",
-      "mode": "view",
-      "arguments": [
-        {
-          "name": "command",
-          "type": "text",
-          "placeholder": "command…",
-          "required": false
-        }
-      ]
+      "mode": "view"
+    },
+    {
+      "name": "cmd-health-check",
+      "title": "health check",
+      "subtitle": "clfly",
+      "description": "Quick process and memory health check:",
+      "mode": "view"
     },
     {
       "name": "tree-library",
       "title": "library",
       "subtitle": "clfly",
       "description": "clfly tree that searches the Mid-Hudson Library System catalog (Encore/Sierra) and shows which copies sit at your home l",
+      "mode": "view"
+    },
+    {
+      "name": "cmd-library-record",
+      "title": "library record",
+      "subtitle": "clfly",
+      "description": "Every copy of one catalog record across the Mid-Hudson system:",
       "mode": "view",
       "arguments": [
         {
-          "name": "command",
+          "name": "a0",
           "type": "text",
-          "placeholder": "command…",
-          "required": false
+          "placeholder": "id",
+          "required": true
         }
       ]
+    },
+    {
+      "name": "cmd-library-search",
+      "title": "library search",
+      "subtitle": "clfly",
+      "description": "Search the Mid-Hudson Library System catalog and show which hits are at your home libraries (Hudson, Claverack, Philmont",
+      "mode": "view"
     },
     {
       "name": "tree-map",
       "title": "map",
       "subtitle": "clfly",
       "description": "clfly tree that builds the tool → idea → pattern map:",
-      "mode": "view",
-      "arguments": [
-        {
-          "name": "command",
-          "type": "text",
-          "placeholder": "command…",
-          "required": false
-        }
-      ]
+      "mode": "view"
+    },
+    {
+      "name": "cmd-map-build",
+      "title": "map build",
+      "subtitle": "clfly",
+      "description": "Build the map page and JSON from data/*.jsonl:",
+      "mode": "view"
+    },
+    {
+      "name": "cmd-map-signals",
+      "title": "map signals",
+      "subtitle": "clfly",
+      "description": "Kill and promote lists derived from the map data:",
+      "mode": "view"
     },
     {
       "name": "tree-plex",
       "title": "plex",
       "subtitle": "clfly",
       "description": "clfly tree for querying a Plex Media Server:",
-      "mode": "view",
-      "arguments": [
-        {
-          "name": "command",
-          "type": "text",
-          "placeholder": "command…",
-          "required": false
-        }
-      ]
+      "mode": "view"
+    },
+    {
+      "name": "cmd-plex-history",
+      "title": "plex history",
+      "subtitle": "clfly",
+      "description": "Plex watch history:",
+      "mode": "view"
+    },
+    {
+      "name": "cmd-plex-scan",
+      "title": "plex scan",
+      "subtitle": "clfly",
+      "description": "Scan Plex libraries for new files (all, one by id/title, or just the folder holding --path);",
+      "mode": "view"
+    },
+    {
+      "name": "cmd-plex-sections",
+      "title": "plex sections",
+      "subtitle": "clfly",
+      "description": "List Plex libraries (sections) with their ids and folders",
+      "mode": "view"
+    },
+    {
+      "name": "cmd-plex-watched",
+      "title": "plex watched",
+      "subtitle": "clfly",
+      "description": "Titles watched on Plex, one row per title with play count and last watched;",
+      "mode": "view"
     },
     {
       "name": "tree-pm",
       "title": "pm",
       "subtitle": "clfly",
       "description": "Premiumize.me CLI:",
+      "mode": "view"
+    },
+    {
+      "name": "cmd-pm-account",
+      "title": "pm account",
+      "subtitle": "clfly",
+      "description": "Show Premiumize account info",
+      "mode": "view"
+    },
+    {
+      "name": "cmd-pm-add",
+      "title": "pm add",
+      "subtitle": "clfly",
+      "description": "Add magnets to the Premiumize cloud.",
+      "mode": "view"
+    },
+    {
+      "name": "cmd-pm-config",
+      "title": "pm config",
+      "subtitle": "clfly",
+      "description": "View or update ~/.config/pm/config.json",
+      "mode": "view"
+    },
+    {
+      "name": "cmd-pm-config-get",
+      "title": "pm config get",
+      "subtitle": "clfly",
+      "description": "Get a config value (or dump all)",
+      "mode": "view"
+    },
+    {
+      "name": "cmd-pm-config-set",
+      "title": "pm config set",
+      "subtitle": "clfly",
+      "description": "Set a config value",
       "mode": "view",
       "arguments": [
         {
-          "name": "command",
+          "name": "a0",
           "type": "text",
-          "placeholder": "command…",
-          "required": false
+          "placeholder": "key",
+          "required": true
+        },
+        {
+          "name": "a1",
+          "type": "text",
+          "placeholder": "value",
+          "required": true
         }
       ]
+    },
+    {
+      "name": "cmd-pm-download",
+      "title": "pm download",
+      "subtitle": "clfly",
+      "description": "Download one cloud file by path, e.g.",
+      "mode": "view"
+    },
+    {
+      "name": "cmd-pm-du",
+      "title": "pm du",
+      "subtitle": "clfly",
+      "description": "Cloud disk usage:",
+      "mode": "view"
+    },
+    {
+      "name": "cmd-pm-get",
+      "title": "pm get",
+      "subtitle": "clfly",
+      "description": "Search, take the best hit, and download it without prompting (waits for Premiumize)",
+      "mode": "view",
+      "arguments": [
+        {
+          "name": "a0",
+          "type": "text",
+          "placeholder": "query",
+          "required": true
+        }
+      ]
+    },
+    {
+      "name": "cmd-pm-indexers",
+      "title": "pm indexers",
+      "subtitle": "clfly",
+      "description": "List Prowlarr indexers and health",
+      "mode": "view"
+    },
+    {
+      "name": "cmd-pm-links",
+      "title": "pm links",
+      "subtitle": "clfly",
+      "description": "Download a finished transfer, or chosen episodes of a season pack with --episodes.",
+      "mode": "view"
+    },
+    {
+      "name": "cmd-pm-ls",
+      "title": "pm ls",
+      "subtitle": "clfly",
+      "description": "List a Premiumize cloud folder (root by default)",
+      "mode": "view"
+    },
+    {
+      "name": "cmd-pm-move",
+      "title": "pm move",
+      "subtitle": "clfly",
+      "description": "Dry-run a move of cloud files/folders into a folder (created if missing);",
+      "mode": "view"
+    },
+    {
+      "name": "cmd-pm-move-apply",
+      "title": "pm move apply",
+      "subtitle": "clfly",
+      "description": "Move exactly the items in a reviewed `pm move --json` plan, after checking each still matches the cloud",
+      "mode": "view"
+    },
+    {
+      "name": "cmd-pm-prune",
+      "title": "pm prune",
+      "subtitle": "clfly",
+      "description": "Dry-run delete list:",
+      "mode": "view"
+    },
+    {
+      "name": "cmd-pm-prune-apply",
+      "title": "pm prune apply",
+      "subtitle": "clfly",
+      "description": "Delete exactly the units in a reviewed `pm prune --json` plan, after checking each still matches the cloud",
+      "mode": "view"
+    },
+    {
+      "name": "cmd-pm-reorg",
+      "title": "pm reorg",
+      "subtitle": "clfly",
+      "description": "Dry-run the flat library layout:",
+      "mode": "view"
+    },
+    {
+      "name": "cmd-pm-reorg-apply",
+      "title": "pm reorg apply",
+      "subtitle": "clfly",
+      "description": "Apply a reviewed `pm reorg --json` plan:",
+      "mode": "view"
+    },
+    {
+      "name": "cmd-pm-rm",
+      "title": "pm rm",
+      "subtitle": "clfly",
+      "description": "Delete a Premiumize transfer",
+      "mode": "view"
+    },
+    {
+      "name": "cmd-pm-search",
+      "title": "pm search",
+      "subtitle": "clfly",
+      "description": "Search indexers.",
+      "mode": "view",
+      "arguments": [
+        {
+          "name": "a0",
+          "type": "text",
+          "placeholder": "query",
+          "required": true
+        }
+      ]
+    },
+    {
+      "name": "cmd-pm-setup",
+      "title": "pm setup",
+      "subtitle": "clfly",
+      "description": "Interactive setup helpers",
+      "mode": "view"
+    },
+    {
+      "name": "cmd-pm-status",
+      "title": "pm status",
+      "subtitle": "clfly",
+      "description": "List Premiumize transfers still running, queued or failed;",
+      "mode": "view"
+    },
+    {
+      "name": "cmd-pm-upload",
+      "title": "pm upload",
+      "subtitle": "clfly",
+      "description": "Upload local files to a Premiumize cloud folder (created if missing), e.g.",
+      "mode": "view"
     },
     {
       "name": "tree-run",
       "title": "run",
       "subtitle": "clfly",
       "description": "clfly tree that runs resumable jobs on a surface (laptop or shadow):",
+      "mode": "view"
+    },
+    {
+      "name": "cmd-run-job",
+      "title": "run ‹job›",
+      "subtitle": "clfly",
+      "description": "Run a job on a surface, one unit (chapter, film, file) at a time;",
+      "mode": "view"
+    },
+    {
+      "name": "cmd-run-job--align-hp4-full-cast",
+      "title": "run align-hp4-full-cast",
+      "subtitle": "clfly",
+      "description": "Forced-align Goblet of Fire (Audible UK full cast) one chapter per unit. Audio comes from the bucket into audiobooks/4/full-cast before the units run (files already here are kept), or put it there with align job run <audio-job> --fetch-only.",
+      "mode": "view"
+    },
+    {
+      "name": "cmd-run-job--align-hp5-full-cast-vote-recombine",
+      "title": "run align-hp5-full-cast-vote-recombine",
+      "subtitle": "clfly",
+      "description": "Recombine HP5 Full Cast from the finished vote passes in data/align/b5.json.vote/ (no aligner pass runs when all 38 chapters are in each pass file), so a vote fix (PR align-vote-order: rigid's end with rigid's start, enforce_order) reaches data/align/b5.json without a GPU re-run. Runs align qa (no --skip-qa).",
+      "mode": "view"
+    },
+    {
+      "name": "cmd-run-job--align-hp5-full-cast-vote",
+      "title": "run align-hp5-full-cast-vote",
+      "subtitle": "clfly",
+      "description": "Re-align Order of the Phoenix (Audible UK full cast) with align align --vote, one chapter per unit: rigid, sparse-join and whisper-anchored passes under data/align/b5.json.vote/, then whisper-onset with rigid's start where sparse-close-gaps backs it. Needs the word transcripts from whisper-words-hp5-full-cast. Each unit merges its chapter into data/align/b5.json.",
+      "mode": "view"
+    },
+    {
+      "name": "cmd-run-job--bench-align-shadow",
+      "title": "run bench-align-shadow",
+      "subtitle": "clfly",
+      "description": "align --vote throughput on the Shadow: HP5 full-cast chapter 32 (2,248 s) per unit, each into its own scratch out (.scratch/bench/align/<unit>/b5.json, never data/align), varying --threads; phase timings per vote pass land in the ledger. A unit's out dir must be deleted before rerunning it, since vote passes resume. `bench-align-shadow` units named beside-* are concurrency trials: start them together with the matching bench-whisper-shadow unit.",
+      "mode": "view"
+    },
+    {
+      "name": "cmd-run-job--bench-whisper-shadow",
+      "title": "run bench-whisper-shadow",
+      "subtitle": "clfly",
+      "description": "Whisper throughput sweep on the Shadow: one HP5 full-cast chapter (ch 32, 2,248 s) transcribed with large-v3 --words per unit, varying --batch-size and --compute-type, each into its own scratch dir with --force. Compare with `run units bench-whisper-shadow --on shadow` (x real time, SM, power, VRAM). Run with nothing else on the GPU unless the unit is a concurrency trial.",
+      "mode": "view"
+    },
+    {
+      "name": "cmd-run-job--separate-batch",
+      "title": "run separate-batch",
+      "subtitle": "clfly",
+      "description": "Stem separation in the borkxs/mashups repo: one song per unit, names from in/separate.txt (one per line, matching in/<name>.mp3|wav|flac|m4a). scripts/separate.py skips a name whose stems exist, so a lost ledger costs nothing. bsroformer (best vocal, ~1 min on the Shadow GPU, ~25 min on the Mac CPU) by default; htdemucs on the laptop. Stems are 40 MB wavs, so they are bucket artifacts; the audio comes down as a job input.",
+      "mode": "view"
+    },
+    {
+      "name": "cmd-run-job--shots-batch",
+      "title": "run shots-batch",
+      "subtitle": "clfly",
+      "description": "One film per unit: TransNetV2 shot detection streamed from its CDN link, then build.mjs (clips, posters, thumbs). Units come from apps/shots/films.local.json (git-ignored: the links are personal and expire), e.g. [{\"id\": \"prestige\", \"url\": \"https://...\", \"title\": \"The Prestige (2006)\"}]. shots.json goes to git; media goes to the bucket.",
+      "mode": "view"
+    },
+    {
+      "name": "cmd-run-job--transcribe-batch",
+      "title": "run transcribe-batch",
+      "subtitle": "clfly",
+      "description": "faster-whisper transcription, one audio file per unit, from the paths in data/transcripts/inputs.txt (one per line, absolute or relative to the repo). Writes data/transcripts/batch/<stem>.json, .txt and .srt. transcribe skips files it already finished, so a lost ledger costs nothing.",
+      "mode": "view"
+    },
+    {
+      "name": "cmd-run-job--whisper-words-hp5-full-cast",
+      "title": "run whisper-words-hp5-full-cast",
+      "subtitle": "clfly",
+      "description": "Word-level Whisper transcripts (faster-whisper large-v3, --words) of every Order of the Phoenix full-cast chapter, into the align eval transcript dir; files already transcribed there (ch 1, ch 31 from the eval) are skipped. Needed by align-hp5-full-cast-vote.",
+      "mode": "view"
+    },
+    {
+      "name": "cmd-run-artifacts",
+      "title": "run artifacts",
+      "subtitle": "clfly",
+      "description": "run artifacts — move a job's bucket artifacts and inputs with rclone:",
+      "mode": "view"
+    },
+    {
+      "name": "cmd-run-artifacts-pull",
+      "title": "run artifacts pull",
+      "subtitle": "clfly",
+      "description": "Copy a job's bucket artifacts (and with --inputs, its inputs) from the bucket into this machine's checkout, at the same ",
       "mode": "view",
       "arguments": [
         {
-          "name": "command",
+          "name": "a0",
           "type": "text",
-          "placeholder": "command…",
-          "required": false
+          "placeholder": "job",
+          "required": true
         }
       ]
+    },
+    {
+      "name": "cmd-run-artifacts-push",
+      "title": "run artifacts push",
+      "subtitle": "clfly",
+      "description": "Copy a job's bucket artifacts from this machine's checkout of the surface's repo to the bucket (copyto --update:",
+      "mode": "view",
+      "arguments": [
+        {
+          "name": "a0",
+          "type": "text",
+          "placeholder": "job",
+          "required": true
+        }
+      ]
+    },
+    {
+      "name": "cmd-run-export",
+      "title": "run export",
+      "subtitle": "clfly",
+      "description": "Copy this machine's ledgers and session log for a surface into the checkout (packages/run/state/<surface>/), so they tra",
+      "mode": "view"
+    },
+    {
+      "name": "cmd-run-ls",
+      "title": "run ls",
+      "subtitle": "clfly",
+      "description": "List jobs, the surfaces each runs on, and progress recorded on this machine",
+      "mode": "view"
+    },
+    {
+      "name": "cmd-run-modal",
+      "title": "run modal",
+      "subtitle": "clfly",
+      "description": "run modal — the Modal surface:",
+      "mode": "view"
+    },
+    {
+      "name": "cmd-run-modal-sync",
+      "title": "run modal sync",
+      "subtitle": "clfly",
+      "description": "Upload a book's chapter audio and data/corpus.json to the Modal volume (borkxs-audiobooks) that `run <job> --on modal` r",
+      "mode": "view"
+    },
+    {
+      "name": "cmd-run-next",
+      "title": "run next",
+      "subtitle": "clfly",
+      "description": "Run the next queued job that still has pending units on a surface (queue.json order;",
+      "mode": "view"
+    },
+    {
+      "name": "cmd-run-queue",
+      "title": "run queue",
+      "subtitle": "clfly",
+      "description": "run queue — the ordered list of jobs each surface picks up with `run next`:",
+      "mode": "view"
+    },
+    {
+      "name": "cmd-run-queue-add",
+      "title": "run queue add",
+      "subtitle": "clfly",
+      "description": "Queue a job for a surface (replacing an entry for the same job and surface);",
+      "mode": "view",
+      "arguments": [
+        {
+          "name": "a0",
+          "type": "text",
+          "placeholder": "job",
+          "required": true
+        }
+      ]
+    },
+    {
+      "name": "cmd-run-queue-ls",
+      "title": "run queue ls",
+      "subtitle": "clfly",
+      "description": "List the queue in pickup order, with what the ledger here says is still pending for each entry",
+      "mode": "view"
+    },
+    {
+      "name": "cmd-run-queue-rm",
+      "title": "run queue rm",
+      "subtitle": "clfly",
+      "description": "Remove a job's entry for a surface from the queue (progress in the ledger is kept)",
+      "mode": "view"
+    },
+    {
+      "name": "cmd-run-reset",
+      "title": "run reset",
+      "subtitle": "clfly",
+      "description": "Forget recorded progress for a job on a surface (all units, or --only some), so the next run redoes them",
+      "mode": "view"
+    },
+    {
+      "name": "cmd-run-shadow-start",
+      "title": "run shadow-start",
+      "subtitle": "clfly",
+      "description": "The Mac's alarm clock for the Shadow:",
+      "mode": "view"
+    },
+    {
+      "name": "cmd-run-stats",
+      "title": "run stats",
+      "subtitle": "clfly",
+      "description": "Shadow busy hours per week (ledger unit timings), sessions launched against pickups that drained the queue, this month's",
+      "mode": "view"
+    },
+    {
+      "name": "cmd-run-units",
+      "title": "run units",
+      "subtitle": "clfly",
+      "description": "Per-unit cost of a job on a surface from this machine's ledger:",
+      "mode": "view"
+    },
+    {
+      "name": "cmd-run-units--align-hp4-full-cast",
+      "title": "run units align-hp4-full-cast",
+      "subtitle": "clfly",
+      "description": "Forced-align Goblet of Fire (Audible UK full cast) one chapter per unit. Audio comes from the bucket into audiobooks/4/full-cast before the units run (files already here are kept), or put it there with align job run <audio-job> --fetch-only.",
+      "mode": "view"
+    },
+    {
+      "name": "cmd-run-units--align-hp5-full-cast-vote-recombine",
+      "title": "run units align-hp5-full-cast-vote-recombine",
+      "subtitle": "clfly",
+      "description": "Recombine HP5 Full Cast from the finished vote passes in data/align/b5.json.vote/ (no aligner pass runs when all 38 chapters are in each pass file), so a vote fix (PR align-vote-order: rigid's end with rigid's start, enforce_order) reaches data/align/b5.json without a GPU re-run. Runs align qa (no --skip-qa).",
+      "mode": "view"
+    },
+    {
+      "name": "cmd-run-units--align-hp5-full-cast-vote",
+      "title": "run units align-hp5-full-cast-vote",
+      "subtitle": "clfly",
+      "description": "Re-align Order of the Phoenix (Audible UK full cast) with align align --vote, one chapter per unit: rigid, sparse-join and whisper-anchored passes under data/align/b5.json.vote/, then whisper-onset with rigid's start where sparse-close-gaps backs it. Needs the word transcripts from whisper-words-hp5-full-cast. Each unit merges its chapter into data/align/b5.json.",
+      "mode": "view"
+    },
+    {
+      "name": "cmd-run-units--bench-align-shadow",
+      "title": "run units bench-align-shadow",
+      "subtitle": "clfly",
+      "description": "align --vote throughput on the Shadow: HP5 full-cast chapter 32 (2,248 s) per unit, each into its own scratch out (.scratch/bench/align/<unit>/b5.json, never data/align), varying --threads; phase timings per vote pass land in the ledger. A unit's out dir must be deleted before rerunning it, since vote passes resume. `bench-align-shadow` units named beside-* are concurrency trials: start them together with the matching bench-whisper-shadow unit.",
+      "mode": "view"
+    },
+    {
+      "name": "cmd-run-units--bench-whisper-shadow",
+      "title": "run units bench-whisper-shadow",
+      "subtitle": "clfly",
+      "description": "Whisper throughput sweep on the Shadow: one HP5 full-cast chapter (ch 32, 2,248 s) transcribed with large-v3 --words per unit, varying --batch-size and --compute-type, each into its own scratch dir with --force. Compare with `run units bench-whisper-shadow --on shadow` (x real time, SM, power, VRAM). Run with nothing else on the GPU unless the unit is a concurrency trial.",
+      "mode": "view"
+    },
+    {
+      "name": "cmd-run-units--separate-batch",
+      "title": "run units separate-batch",
+      "subtitle": "clfly",
+      "description": "Stem separation in the borkxs/mashups repo: one song per unit, names from in/separate.txt (one per line, matching in/<name>.mp3|wav|flac|m4a). scripts/separate.py skips a name whose stems exist, so a lost ledger costs nothing. bsroformer (best vocal, ~1 min on the Shadow GPU, ~25 min on the Mac CPU) by default; htdemucs on the laptop. Stems are 40 MB wavs, so they are bucket artifacts; the audio comes down as a job input.",
+      "mode": "view"
+    },
+    {
+      "name": "cmd-run-units--shots-batch",
+      "title": "run units shots-batch",
+      "subtitle": "clfly",
+      "description": "One film per unit: TransNetV2 shot detection streamed from its CDN link, then build.mjs (clips, posters, thumbs). Units come from apps/shots/films.local.json (git-ignored: the links are personal and expire), e.g. [{\"id\": \"prestige\", \"url\": \"https://...\", \"title\": \"The Prestige (2006)\"}]. shots.json goes to git; media goes to the bucket.",
+      "mode": "view"
+    },
+    {
+      "name": "cmd-run-units--transcribe-batch",
+      "title": "run units transcribe-batch",
+      "subtitle": "clfly",
+      "description": "faster-whisper transcription, one audio file per unit, from the paths in data/transcripts/inputs.txt (one per line, absolute or relative to the repo). Writes data/transcripts/batch/<stem>.json, .txt and .srt. transcribe skips files it already finished, so a lost ledger costs nothing.",
+      "mode": "view"
+    },
+    {
+      "name": "cmd-run-units--whisper-words-hp5-full-cast",
+      "title": "run units whisper-words-hp5-full-cast",
+      "subtitle": "clfly",
+      "description": "Word-level Whisper transcripts (faster-whisper large-v3, --words) of every Order of the Phoenix full-cast chapter, into the align eval transcript dir; files already transcribed there (ch 1, ch 31 from the eval) are skipped. Needed by align-hp5-full-cast-vote.",
+      "mode": "view"
     },
     {
       "name": "tree-share",
       "title": "share",
       "subtitle": "clfly",
       "description": "clfly tree that puts private local UIs behind one PIN on the LAN:",
+      "mode": "view"
+    },
+    {
+      "name": "cmd-share-add",
+      "title": "share add",
+      "subtitle": "clfly",
+      "description": "Put a local UI behind the gateway on its own LAN port;",
       "mode": "view",
       "arguments": [
         {
-          "name": "command",
+          "name": "a0",
           "type": "text",
-          "placeholder": "command…",
-          "required": false
+          "placeholder": "id",
+          "required": true
         }
       ]
+    },
+    {
+      "name": "cmd-share-cloud",
+      "title": "share cloud",
+      "subtitle": "clfly",
+      "description": "share cloud — personal apps on <id>.<subdomain>.workers.dev that only Erik can open (Cloudflare Access + a Worker that r",
+      "mode": "view"
+    },
+    {
+      "name": "cmd-share-cloud-add",
+      "title": "share cloud add",
+      "subtitle": "clfly",
+      "description": "Deploy an app to <id>.<subdomain>.workers.dev behind Cloudflare Access:",
+      "mode": "view",
+      "arguments": [
+        {
+          "name": "a0",
+          "type": "text",
+          "placeholder": "id",
+          "required": true
+        }
+      ]
+    },
+    {
+      "name": "cmd-share-cloud-check",
+      "title": "share cloud check",
+      "subtitle": "clfly",
+      "description": "Request each cloud app (or one) without logging in and report what a stranger gets:",
+      "mode": "view"
+    },
+    {
+      "name": "cmd-share-cloud-ls",
+      "title": "share cloud ls",
+      "subtitle": "clfly",
+      "description": "List cloud apps (URL, mode, target), the team domain, and whether the tunnel agent is running",
+      "mode": "view"
+    },
+    {
+      "name": "cmd-share-cloud-rm",
+      "title": "share cloud rm",
+      "subtitle": "clfly",
+      "description": "Delete a cloud app's Worker, its VPC service, its access.json entry and (with the Access API token) its Access applicati",
+      "mode": "view",
+      "arguments": [
+        {
+          "name": "a0",
+          "type": "text",
+          "placeholder": "id",
+          "required": true
+        }
+      ]
+    },
+    {
+      "name": "cmd-share-cloud-sync",
+      "title": "share cloud sync",
+      "subtitle": "clfly",
+      "description": "Make Cloudflare Access match ~/.local/state/share/cloud/access.json:",
+      "mode": "view"
+    },
+    {
+      "name": "cmd-share-cloud-who",
+      "title": "share cloud who",
+      "subtitle": "clfly",
+      "description": "Who can get into a cloud app:",
+      "mode": "view",
+      "arguments": [
+        {
+          "name": "a0",
+          "type": "text",
+          "placeholder": "id",
+          "required": true
+        }
+      ]
+    },
+    {
+      "name": "cmd-share-install",
+      "title": "share install",
+      "subtitle": "clfly",
+      "description": "Keep share serve running:",
+      "mode": "view"
+    },
+    {
+      "name": "cmd-share-ls",
+      "title": "share ls",
+      "subtitle": "clfly",
+      "description": "List shared apps with their LAN URLs and whether the app and the gateway answer",
+      "mode": "view"
+    },
+    {
+      "name": "cmd-share-pin",
+      "title": "share pin",
+      "subtitle": "clfly",
+      "description": "Set the PIN guests type (random 4 digits when omitted);",
+      "mode": "view"
+    },
+    {
+      "name": "cmd-share-rm",
+      "title": "share rm",
+      "subtitle": "clfly",
+      "description": "Take an app off the gateway (the app itself is untouched)",
+      "mode": "view",
+      "arguments": [
+        {
+          "name": "a0",
+          "type": "text",
+          "placeholder": "id",
+          "required": true
+        }
+      ]
+    },
+    {
+      "name": "cmd-share-serve",
+      "title": "share serve",
+      "subtitle": "clfly",
+      "description": "Run the gateway in the foreground:",
+      "mode": "view"
+    },
+    {
+      "name": "cmd-share-uninstall",
+      "title": "share uninstall",
+      "subtitle": "clfly",
+      "description": "Stop the share serve launchd agent and delete it (the PIN and shared apps are kept)",
+      "mode": "view"
     },
     {
       "name": "tree-texts-cli",
       "title": "texts-cli",
       "subtitle": "clfly",
       "description": "clfly tree that spawns the corpus, align and transcribe CLIs.",
+      "mode": "view"
+    },
+    {
+      "name": "cmd-texts-cli-align-agree",
+      "title": "texts-cli align agree",
+      "subtitle": "clfly",
+      "description": "N-version agreement check:",
+      "mode": "view"
+    },
+    {
+      "name": "cmd-texts-cli-align-align",
+      "title": "texts-cli align align",
+      "subtitle": "clfly",
+      "description": "align audiobook audio to corpus sentences.",
+      "mode": "view"
+    },
+    {
+      "name": "cmd-texts-cli-align-doctor",
+      "title": "texts-cli align doctor",
+      "subtitle": "clfly",
+      "description": "localize sync drift via distinctive unanchored probes + bisection.",
+      "mode": "view"
+    },
+    {
+      "name": "cmd-texts-cli-align-eval-board",
+      "title": "texts-cli align eval board",
+      "subtitle": "clfly",
+      "description": "variant scoring loop:",
+      "mode": "view"
+    },
+    {
+      "name": "cmd-texts-cli-align-eval-plan",
+      "title": "texts-cli align eval plan",
+      "subtitle": "clfly",
+      "description": "variant scoring loop:",
+      "mode": "view"
+    },
+    {
+      "name": "cmd-texts-cli-align-eval-run",
+      "title": "texts-cli align eval run",
+      "subtitle": "clfly",
+      "description": "variant scoring loop:",
+      "mode": "view"
+    },
+    {
+      "name": "cmd-texts-cli-align-fetch",
+      "title": "texts-cli align fetch",
+      "subtitle": "clfly",
+      "description": "download chapters from audiobooks/manifests/",
+      "mode": "view"
+    },
+    {
+      "name": "cmd-texts-cli-align-gold-build",
+      "title": "texts-cli align gold build",
+      "subtitle": "clfly",
+      "description": "Run texts-cli align gold build (clfly) · gold set:",
+      "mode": "view"
+    },
+    {
+      "name": "cmd-texts-cli-align-gold-score",
+      "title": "texts-cli align gold score",
+      "subtitle": "clfly",
+      "description": "Run texts-cli align gold score (clfly) · gold set:",
+      "mode": "view"
+    },
+    {
+      "name": "cmd-texts-cli-align-job-run",
+      "title": "texts-cli align job run",
+      "subtitle": "clfly",
+      "description": "fetch + align from audiobooks/jobs/*.job.json.",
       "mode": "view",
       "arguments": [
         {
-          "name": "command",
+          "name": "a0",
           "type": "text",
-          "placeholder": "command…",
-          "required": false
+          "placeholder": "job",
+          "required": true
         }
       ]
+    },
+    {
+      "name": "cmd-texts-cli-align-progress",
+      "title": "texts-cli align progress",
+      "subtitle": "clfly",
+      "description": "poll alignment progress from a status JSON file",
+      "mode": "view"
+    },
+    {
+      "name": "cmd-texts-cli-align-qa",
+      "title": "texts-cli align qa",
+      "subtitle": "clfly",
+      "description": "offline alignment QA (monotonicity, gaps, rates, corpus hash)",
+      "mode": "view"
+    },
+    {
+      "name": "cmd-texts-cli-align-screenplay",
+      "title": "texts-cli align screenplay",
+      "subtitle": "clfly",
+      "description": "align a Fountain screenplay's dialogue to a film:",
+      "mode": "view"
+    },
+    {
+      "name": "cmd-texts-cli-corpus-build",
+      "title": "texts-cli corpus build",
+      "subtitle": "clfly",
+      "description": "build corpus.json + reader + shelf JSON",
+      "mode": "view"
+    },
+    {
+      "name": "cmd-texts-cli-corpus-play",
+      "title": "texts-cli corpus play",
+      "subtitle": "clfly",
+      "description": "address a TEI play (Folger/DraCor) by FTLN line;",
+      "mode": "view",
+      "arguments": [
+        {
+          "name": "a0",
+          "type": "text",
+          "placeholder": "tei",
+          "required": true
+        }
+      ]
+    },
+    {
+      "name": "cmd-texts-cli-corpus-screenplay",
+      "title": "texts-cli corpus screenplay",
+      "subtitle": "clfly",
+      "description": "address a Fountain screenplay as (scene, block, sentence);",
+      "mode": "view",
+      "arguments": [
+        {
+          "name": "a0",
+          "type": "text",
+          "placeholder": "fountain",
+          "required": true
+        }
+      ]
+    },
+    {
+      "name": "cmd-texts-cli-corpus-stats",
+      "title": "texts-cli corpus stats",
+      "subtitle": "clfly",
+      "description": "print per-book counts",
+      "mode": "view"
+    },
+    {
+      "name": "cmd-texts-cli-transcribe-run",
+      "title": "texts-cli transcribe run",
+      "subtitle": "clfly",
+      "description": "bulk faster-whisper transcription;",
+      "mode": "view"
+    },
+    {
+      "name": "cmd-texts-cli-transcribe-status",
+      "title": "texts-cli transcribe status",
+      "subtitle": "clfly",
+      "description": "count done and pending files for a transcribe run (same inputs and model flags)",
+      "mode": "view"
     },
     {
       "name": "tree-tick",
       "title": "tick",
       "subtitle": "clfly",
       "description": "clfly tree that schedules commands (mostly other clfly commands) as launchd agents, with logs and run history.",
+      "mode": "view"
+    },
+    {
+      "name": "cmd-tick-add",
+      "title": "tick add",
+      "subtitle": "clfly",
+      "description": "Schedule a command (usually another clfly command) as a launchd agent that runs every --every or daily --at;",
       "mode": "view",
       "arguments": [
         {
-          "name": "command",
+          "name": "a0",
           "type": "text",
-          "placeholder": "command…",
-          "required": false
+          "placeholder": "name",
+          "required": true
         }
       ]
+    },
+    {
+      "name": "cmd-tick-logs",
+      "title": "tick logs",
+      "subtitle": "clfly",
+      "description": "Show a job's output from its last runs",
+      "mode": "view"
+    },
+    {
+      "name": "cmd-tick-logs--usage-sync",
+      "title": "tick logs usage-sync",
+      "subtitle": "clfly",
+      "description": "Run tick logs usage-sync (clfly) · every 15m",
+      "mode": "view"
+    },
+    {
+      "name": "cmd-tick-logs--health-check",
+      "title": "tick logs health-check",
+      "subtitle": "clfly",
+      "description": "Run tick logs health-check (clfly) · every 1h",
+      "mode": "view"
+    },
+    {
+      "name": "cmd-tick-logs--brain-backup",
+      "title": "tick logs brain-backup",
+      "subtitle": "clfly",
+      "description": "Run tick logs brain-backup (clfly) · daily 03:30",
+      "mode": "view"
+    },
+    {
+      "name": "cmd-tick-logs--brain-backup-check",
+      "title": "tick logs brain-backup-check",
+      "subtitle": "clfly",
+      "description": "Run tick logs brain-backup-check (clfly) · every 7d",
+      "mode": "view"
+    },
+    {
+      "name": "cmd-tick-logs--dash-stats",
+      "title": "tick logs dash-stats",
+      "subtitle": "clfly",
+      "description": "Run tick logs dash-stats (clfly) · every 1h",
+      "mode": "view"
+    },
+    {
+      "name": "cmd-tick-logs--clfly-memory",
+      "title": "tick logs clfly-memory",
+      "subtitle": "clfly",
+      "description": "Run tick logs clfly-memory (clfly) · every 1h",
+      "mode": "view"
+    },
+    {
+      "name": "cmd-tick-logs--usage-review",
+      "title": "tick logs usage-review",
+      "subtitle": "clfly",
+      "description": "Run tick logs usage-review (clfly) · daily 07:30",
+      "mode": "view"
+    },
+    {
+      "name": "cmd-tick-ls",
+      "title": "tick ls",
+      "subtitle": "clfly",
+      "description": "List scheduled jobs:",
+      "mode": "view"
+    },
+    {
+      "name": "cmd-tick-rm",
+      "title": "tick rm",
+      "subtitle": "clfly",
+      "description": "Unload a scheduled job and delete its launchd agent (run history and log are kept)",
+      "mode": "view"
+    },
+    {
+      "name": "cmd-tick-run",
+      "title": "tick run",
+      "subtitle": "clfly",
+      "description": "Run a scheduled job now, logging its output and recording the run;",
+      "mode": "view"
+    },
+    {
+      "name": "cmd-tick-run--usage-sync",
+      "title": "tick run usage-sync",
+      "subtitle": "clfly",
+      "description": "Run tick run usage-sync (clfly) · every 15m",
+      "mode": "view"
+    },
+    {
+      "name": "cmd-tick-run--health-check",
+      "title": "tick run health-check",
+      "subtitle": "clfly",
+      "description": "Run tick run health-check (clfly) · every 1h",
+      "mode": "view"
+    },
+    {
+      "name": "cmd-tick-run--brain-backup",
+      "title": "tick run brain-backup",
+      "subtitle": "clfly",
+      "description": "Run tick run brain-backup (clfly) · daily 03:30",
+      "mode": "view"
+    },
+    {
+      "name": "cmd-tick-run--brain-backup-check",
+      "title": "tick run brain-backup-check",
+      "subtitle": "clfly",
+      "description": "Run tick run brain-backup-check (clfly) · every 7d",
+      "mode": "view"
+    },
+    {
+      "name": "cmd-tick-run--dash-stats",
+      "title": "tick run dash-stats",
+      "subtitle": "clfly",
+      "description": "Run tick run dash-stats (clfly) · every 1h",
+      "mode": "view"
+    },
+    {
+      "name": "cmd-tick-run--clfly-memory",
+      "title": "tick run clfly-memory",
+      "subtitle": "clfly",
+      "description": "Run tick run clfly-memory (clfly) · every 1h",
+      "mode": "view"
+    },
+    {
+      "name": "cmd-tick-run--usage-review",
+      "title": "tick run usage-review",
+      "subtitle": "clfly",
+      "description": "Run tick run usage-review (clfly) · daily 07:30",
+      "mode": "view"
     },
     {
       "name": "tree-treemap",
       "title": "treemap",
       "subtitle": "clfly",
       "description": "clfly tree that renders any sized tree as a WinDirStat-style treemap page.",
+      "mode": "view"
+    },
+    {
+      "name": "cmd-treemap-dir",
+      "title": "treemap dir",
+      "subtitle": "clfly",
+      "description": "Scan a local folder (like WinDirStat / du) and render it as a treemap HTML page",
+      "mode": "view"
+    },
+    {
+      "name": "cmd-treemap-render",
+      "title": "treemap render",
+      "subtitle": "clfly",
+      "description": "Render a sized tree (JSON file, stdin, or inline object) as a WinDirStat-style treemap HTML page",
       "mode": "view",
       "arguments": [
         {
-          "name": "command",
+          "name": "a0",
           "type": "text",
-          "placeholder": "command…",
-          "required": false
+          "placeholder": "input",
+          "required": true
         }
       ]
     },
@@ -247,15 +1506,119 @@
       "title": "usage",
       "subtitle": "clfly",
       "description": "clfly tree that reports where agent tokens and time go:",
-      "mode": "view",
-      "arguments": [
-        {
-          "name": "command",
-          "type": "text",
-          "placeholder": "command…",
-          "required": false
-        }
-      ]
+      "mode": "view"
+    },
+    {
+      "name": "cmd-usage-calibrate",
+      "title": "usage calibrate",
+      "subtitle": "clfly",
+      "description": "Calibrate weekly plan limits for the dashboard:",
+      "mode": "view"
+    },
+    {
+      "name": "cmd-usage-commands",
+      "title": "usage commands",
+      "subtitle": "clfly",
+      "description": "clfly command runs from the invocation log:",
+      "mode": "view"
+    },
+    {
+      "name": "cmd-usage-cost",
+      "title": "usage cost",
+      "subtitle": "clfly",
+      "description": "Tokens and API list-price cost from Claude Code transcripts, by day, model, session, or project (subagents included)",
+      "mode": "view"
+    },
+    {
+      "name": "cmd-usage-friction",
+      "title": "usage friction",
+      "subtitle": "clfly",
+      "description": "Tool friction per task:",
+      "mode": "view"
+    },
+    {
+      "name": "cmd-usage-friction-hook",
+      "title": "usage friction hook",
+      "subtitle": "clfly",
+      "description": "Claude Code Stop hook:",
+      "mode": "view"
+    },
+    {
+      "name": "cmd-usage-friction-stats",
+      "title": "usage friction stats",
+      "subtitle": "clfly",
+      "description": "Friction numbers for the dash card (one JSON object):",
+      "mode": "view"
+    },
+    {
+      "name": "cmd-usage-habits",
+      "title": "usage habits",
+      "subtitle": "clfly",
+      "description": "Whether the token habits are improving, by week or day:",
+      "mode": "view"
+    },
+    {
+      "name": "cmd-usage-handoff-hook",
+      "title": "usage handoff hook",
+      "subtitle": "clfly",
+      "description": "Claude Code SessionStart hook:",
+      "mode": "view"
+    },
+    {
+      "name": "cmd-usage-live",
+      "title": "usage live",
+      "subtitle": "clfly",
+      "description": "Tool calls from the live PostToolUse hook ledger (hook.jsonl):",
+      "mode": "view"
+    },
+    {
+      "name": "cmd-usage-nudge",
+      "title": "usage nudge",
+      "subtitle": "clfly",
+      "description": "Session nudges the Stop hook fired (context size, short ask on big context, Fable on mechanical turns, session age witho",
+      "mode": "view"
+    },
+    {
+      "name": "cmd-usage-nudge-hook",
+      "title": "usage nudge hook",
+      "subtitle": "clfly",
+      "description": "Claude Code Stop hook:",
+      "mode": "view"
+    },
+    {
+      "name": "cmd-usage-prompts",
+      "title": "usage prompts",
+      "subtitle": "clfly",
+      "description": "Tool calls that needed a permission prompt or were blocked (rule or auto mode classifier), by tool label, from OTel tool",
+      "mode": "view"
+    },
+    {
+      "name": "cmd-usage-review",
+      "title": "usage review",
+      "subtitle": "clfly",
+      "description": "Monday review of the token-habit loop:",
+      "mode": "view"
+    },
+    {
+      "name": "cmd-usage-sync",
+      "title": "usage sync",
+      "subtitle": "clfly",
+      "description": "Rewrite the usage store's model-calls.jsonl and tool-calls.jsonl from Claude Code transcripts, then rebuild usage.db for",
+      "mode": "view"
+    },
+    {
+      "name": "cmd-usage-tasks",
+      "title": "usage tasks",
+      "subtitle": "clfly",
+      "description": "Agent tasks (one per typed prompt), newest first:",
+      "mode": "view"
+    },
+    {
+      "name": "cmd-usage-tools",
+      "title": "usage tools",
+      "subtitle": "clfly",
+      "description": "Tool calls across agent tasks:",
+      "mode": "view"
     }
   ],
   "preferences": [
@@ -290,7 +1653,9 @@
     "lint": "ray lint",
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
-    "gen-trees": "node scripts/gen-tree-commands.mjs"
+    "gen-trees": "node scripts/gen-tree-commands.mjs",
+    "predev": "npm run gen-trees",
+    "prebuild": "npm run gen-trees"
   },
   "dependencies": {
     "@clfly/core": "file:../core",
