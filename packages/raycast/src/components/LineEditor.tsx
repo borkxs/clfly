@@ -81,9 +81,19 @@ export function LineEditor({ initial = "" }: { initial?: string }) {
       });
       if (!ok) return;
     }
-    const trimmed = s.line.trim();
-    setRecent([trimmed, ...recent.filter((l) => l !== trimmed)].slice(0, 20));
+    remember(s.line);
     push(<ResultView tree={tree} route={route} params={s.params} values={s.values} />);
+  }
+
+  /**
+   * Recent lines: what ran, plus a live search when one of its hits is taken (the search
+   * itself never runs). Lines carrying a hash or id from a result (`pm add <hash>`) are
+   * one-offs and stay out; the search that found them is the line worth repeating.
+   */
+  function remember(l: string) {
+    const t = l.trim();
+    if (!t || t.split(/\s+/).some(isResultId)) return;
+    setRecent((prev) => [t, ...prev.filter((x) => x !== t)].slice(0, 20));
   }
 
   /** ↵ on a row: run the line it completes, or put it on the line. */
@@ -191,7 +201,10 @@ export function LineEditor({ initial = "" }: { initial?: string }) {
                       <Action
                         title={`${state.tree!.name} ${chain.route.path.join(" ")}`}
                         icon={Icon.ArrowRight}
-                        onAction={() => setLine(chainLine(state.tree!, chain.route, chain.arg, chain.source, value))}
+                        onAction={() => {
+                          remember(line);
+                          setLine(chainLine(state.tree!, chain.route, chain.arg, chain.source, value));
+                        }}
                       />
                     )}
                     {live.chains.slice(1).map((ch) => {
@@ -201,7 +214,10 @@ export function LineEditor({ initial = "" }: { initial?: string }) {
                           key={`${ch.route.path.join(" ")}:${ch.arg}`}
                           title={`${state.tree!.name} ${ch.route.path.join(" ")}`}
                           icon={Icon.ArrowRight}
-                          onAction={() => setLine(chainLine(state.tree!, ch.route, ch.arg, ch.source, v))}
+                          onAction={() => {
+                            remember(line);
+                            setLine(chainLine(state.tree!, ch.route, ch.arg, ch.source, v));
+                          }}
                         />
                       ) : null;
                     })}
@@ -216,6 +232,13 @@ export function LineEditor({ initial = "" }: { initial?: string }) {
       )}
     </List>
   );
+}
+
+/** A hash or transfer id from a result row: 32+ hex, or a 22-char mixed-case id with a digit. */
+function isResultId(word: string): boolean {
+  const w = word.replace(/^["']|["']$/g, "");
+  if (/^[0-9a-f]{32,}$/i.test(w)) return true;
+  return /^[A-Za-z0-9_-]{22}$/.test(w) && /[A-Z]/.test(w) && /[a-z]/.test(w) && /\d/.test(w);
 }
 
 function enterTitle(trees: Tree[], state: LineState, c: Candidate): string {
