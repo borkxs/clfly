@@ -1,5 +1,6 @@
 import { Detail, Icon, List } from "@raycast/api";
-import { isDestructive, parseTyped } from "../lib/model";
+import { isDestructive, isLiveSearch, parseTyped } from "../lib/model";
+import { LiveSearch } from "./LiveSearch";
 import { openRoute, viewAt } from "./navigate";
 import { ResultView } from "./ResultView";
 import { useTrees } from "./useTrees";
@@ -20,7 +21,12 @@ export function TreeRoot({ name, typed }: { name: string; typed?: string }) {
   if (!typed?.trim()) return viewAt(tree, [], {});
 
   const { template, params, route, values, ready } = parseTyped(tree, typed);
-  if (!route) return viewAt(tree, template, params);
+  if (!route) {
+    // Words that aren't a command go to the tree's top-level search (`pm nathan for you` → pm search).
+    const search = template.length === 0 ? tree.routes.find((r) => r.path.length === 1 && isLiveSearch(r)) : undefined;
+    if (search) return <LiveSearch tree={tree} route={search} params={{}} initialQuery={typed.trim()} />;
+    return viewAt(tree, template, params);
+  }
   const given = Object.keys(values).length > 0;
   if (ready && !isDestructive(route)) return <ResultView tree={tree} route={route} params={params} values={values} />;
   return openRoute(tree, route, params, given ? values : undefined);
