@@ -31,7 +31,10 @@ const firstSentence = (text) => (text || "").split(/(?<=[.:;])\s/)[0].slice(0, 1
 
 const commands = [];
 for (const f of readdirSync(src)) if (PREFIXES.some((p) => f.startsWith(p)) && f.endsWith(".tsx")) unlinkSync(join(src, f));
-for (const tree of trees.filter((t) => !t.error).sort((a, b) => a.name.localeCompare(b.name))) {
+// The `clfly` tree would be a second command titled "clfly" beside the line editor
+// itself; the line editor reaches it anyway.
+const own = new Set(["clfly"]);
+for (const tree of trees.filter((t) => !t.error && !own.has(t.name)).sort((a, b) => a.name.localeCompare(b.name))) {
   const name = `tree-${slug(tree.name)}`;
   writeFileSync(
     join(src, `${name}.tsx`),
