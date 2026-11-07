@@ -4,7 +4,8 @@
  * line can run. Pure, so the cases in test/fixtures/line-cases.json run under vitest,
  * and so the HTML prototype and a future `clfly serve` can share it.
  */
-import type { CompleteFrom, FlagInfo } from "@clfly/core";
+import type { CompleteFrom, FlagInfo, RowMatch, RowsMeta } from "@clfly/core";
+import { producersFor, rowMatches, rowRef, rowsOf } from "@clfly/core/rows";
 import {
   buildArgv,
   childrenAt,
@@ -18,6 +19,7 @@ import {
   parseWords,
   routeAt,
   runsBare,
+  samePath,
   sourceRunnable,
   tokenize,
   type FormValues,
@@ -29,6 +31,32 @@ export interface Choice {
   value: string;
   label?: string;
   sub?: string;
+  /** A container (a folder) to walk into: taking it keeps the word open and fetches again. */
+  open?: boolean;
+}
+
+/** An argument that takes a typed row (`pm download <path>` takes a `pm.item` file). */
+export interface TypedSlot {
+  type: string;
+  where?: RowMatch;
+}
+
+/**
+ * Where a typed slot's choices come from: a read-only producer of that row type, run with
+ * the folder part of the word typed so far when the producer itself takes that type
+ * (`pm ls <folder>`), so its containers can be walked into.
+ */
+export interface TypedSource {
+  tree: Tree;
+  route: Route;
+  argv: string[];
+  rows: RowsMeta;
+  /** Rows the slot takes (files). */
+  where?: RowMatch;
+  /** Rows to walk into (folders); undefined when the producer can't descend. */
+  open?: RowMatch;
+  /** The producer arg the folder went into, and its value. */
+  args: Record<string, string>;
 }
 
 export type Slot =
@@ -48,6 +76,8 @@ export interface Candidate {
   subtitle?: string;
   /** For `search` and quick-mode `line` rows: the whole line it switches to. */
   line?: string;
+  /** A choice to walk into: accepting it leaves the word open (no trailing space). */
+  open?: boolean;
 }
 
 export interface LineState {
@@ -61,6 +91,8 @@ export interface LineState {
   values: FormValues;
   /** A runnable `completeFrom` source to fetch choices for this slot. */
   source?: CompleteFrom;
+  /** The slot takes a typed row and has no `completeFrom`: choices come from `typedSource`. */
+  typed?: TypedSlot;
   /** Query for a live search (`pm search dune`). */
   live?: string;
   /** Required arguments still missing, by name. */
@@ -122,6 +154,7 @@ export function analyze(trees: Tree[], line: string): LineState {
     state.slot = { kind: "flagValue", flag: done.pendingFlag };
     const cf = done.pendingFlag.completeFrom;
     if (cf && sourceRunnable(tree, cf)) state.source = cf;
+    else if (done.pendingFlag.accepts) state.typed = typedSlot(done.pendingFlag);
   } else if (prefix.startsWith("-") && route) {
     state.slot = { kind: "flag" };
   } else if (done.loose.length === 0 && !Object.keys(done.values).length && hasChildren(tree, done.template)) {
@@ -132,6 +165,7 @@ export function analyze(trees: Tree[], line: string): LineState {
       ? paramCompleteFrom(tree, [...done.template, dyn.segment], paramName(dyn.segment))
       : positional?.completeFrom;
     if (cf && sourceRunnable(tree, cf)) state.source = cf;
+    else if (!dyn && positional?.accepts) state.typed = typedSlot(positional);
   } else if (route) {
     const positionals = formPositionals(route);
     const p = positionals[Math.min(done.loose.length, positionals.length - 1)];
@@ -139,6 +173,7 @@ export function analyze(trees: Tree[], line: string): LineState {
     if (p && !extra) {
       state.slot = { kind: "positional", name: p.name };
       if (p.completeFrom && sourceRunnable(tree, p.completeFrom)) state.source = p.completeFrom;
+      else if (p.accepts) state.typed = typedSlot(p);
     } else {
       state.slot = { kind: "none" };
     }
@@ -152,6 +187,8 @@ export function analyze(trees: Tree[], line: string): LineState {
 export function candidates(state: LineState, trees: Tree[], choices: Choice[] = []): Candidate[] {
   const { prefix, slot, tree } = state;
   const out: Candidate[] = [];
+  // Typed refs can start at the root (`/Heat.1995`); typing `Heat` still matches.
+  const cp = state.typed ? prefix.replace(/^\/+/, "") : prefix;
   if (state.runnable && prefix === "" && slot.kind !== "flagValue") {
     out.push({
       kind: "run",
@@ -178,11 +215,11 @@ export function candidates(state: LineState, trees: Tree[], choices: Choice[] = 
           subtitle: firstLine(c.leaf?.meta?.description) ?? `${c.count} commands`,
         });
       }
-      out.push(...choiceRows(choices, prefix));
+      out.push(...choiceRows(choices, cp));
       break;
     }
     case "positional":
-      out.push(...choiceRows(choices, prefix));
+      out.push(...choiceRows(choices, cp));
       break;
     case "none":
       // Required flags still missing (`run transcribe-batch` needs --on).
@@ -204,7 +241,7 @@ export function candidates(state: LineState, trees: Tree[], choices: Choice[] = 
       for (const e of slot.flag.enum ?? []) {
         if (startsWith(String(e), prefix)) out.push({ kind: "value", text: String(e), title: String(e) });
       }
-      out.push(...choiceRows(choices, prefix));
+      out.push(...choiceRows(choices, cp));
       break;
   }
   const search = searchRow(state);
@@ -216,8 +253,9 @@ export function candidates(state: LineState, trees: Tree[], choices: Choice[] = 
 export function accept(state: LineState, c: Candidate): string {
   if ((c.kind === "search" || c.kind === "line") && c.line) return c.line;
   if (c.kind === "run") return state.line;
-  const raw = state.prefix ? state.line.match(/\S*$/)?.[0] ?? "" : "";
-  return `${state.line.slice(0, state.line.length - raw.length)}${quote(c.text)} `;
+  // The word being replaced, a quoted one included (`"Les Miserables (2012)/"`).
+  const raw = state.prefix ? state.line.match(/"[^"]*"$|'[^']*'$|\S*$/)?.[0] ?? "" : "";
+  return `${state.line.slice(0, state.line.length - raw.length)}${quote(c.text)}${c.open ? "" : " "}`;
 }
 
 /** A line that puts `value` into argument `arg` of `route` (a chain from a result row). */
@@ -375,12 +413,89 @@ export function isQuick(state: LineState): boolean {
 export function onEnter(trees: Tree[], state: LineState, c: Candidate): { run: LineState } | { line: string } {
   if (c.kind === "run") return { run: state };
   if (c.kind === "search" || c.kind === "flag") return { line: accept(state, c) };
+  if (c.open) return { line: accept(state, c) };
   const next = c.kind === "line" ? c.line! : accept(state, c);
   const ns = analyze(trees, next);
   const more =
     (ns.slot.kind === "segment" && childrenAt(ns.tree!, templateOf(ns)).some((x) => !isDynamic(x.segment))) ||
-    ((ns.slot.kind === "segment" || ns.slot.kind === "positional") && ns.source !== undefined);
+    ((ns.slot.kind === "segment" || ns.slot.kind === "positional") && (ns.source !== undefined || ns.typed !== undefined));
   return ns.runnable && !more ? { run: ns } : { line: next };
+}
+
+// --- typed slots: choices from a producer of the row type ------------------
+
+function typedSlot(info: { accepts?: string; where?: RowMatch }): TypedSlot {
+  return { type: info.accepts!, ...(info.where ? { where: info.where } : {}) };
+}
+
+/** The folder part of a typed word: `Library/Mo` → `Library`, `Heat` → `` (leading `/` ignored). */
+export function typedDir(prefix: string): string {
+  const p = prefix.replace(/^\/+/, "");
+  const i = p.lastIndexOf("/");
+  return i > 0 ? p.slice(0, i) : "";
+}
+
+/**
+ * The producer to fetch a typed slot's choices from: read-only, not interactive, its other
+ * positionals optional; the slot's own tree first, then one that can walk into folders.
+ */
+export function typedSource(trees: Tree[], state: LineState): TypedSource | undefined {
+  const t = state.typed;
+  if (!t || !state.tree) return undefined;
+  const own = state.tree.name;
+  const found: { tree: Tree; route: Route; rows: RowsMeta; nest?: { name: string; where?: RowMatch } }[] = [];
+  for (const p of producersFor(trees.filter((x) => !x.error), t.type)) {
+    const tree = trees.find((x) => x.name === p.tree)!;
+    const route = tree.routes.find((r) => samePath(r.path, p.route));
+    if (!route || route.meta?.readOnly !== true || route.meta?.interactive) continue;
+    const nest = route.positionals.find((x) => x.accepts === t.type);
+    if (route.positionals.some((x) => x !== nest && !x.optional && x.source !== "path")) continue;
+    if (route.path.some(isDynamic)) continue;
+    found.push({ tree, route, rows: p.rows, ...(nest ? { nest } : {}) });
+  }
+  found.sort((a, b) => Number(b.tree.name === own) - Number(a.tree.name === own) || Number(!!b.nest) - Number(!!a.nest));
+  const pick = found[0];
+  if (!pick) return undefined;
+  const dir = pick.nest ? typedDir(state.prefix) : "";
+  return {
+    tree: pick.tree,
+    route: pick.route,
+    argv: [...pick.route.path, ...(dir ? [dir] : []), "--json"],
+    rows: pick.rows,
+    ...(t.where ? { where: t.where } : {}),
+    ...(pick.nest ? { open: pick.nest.where ?? {} } : {}),
+    args: dir && pick.nest ? { [pick.nest.name]: dir } : {},
+  };
+}
+
+/** A producer's output as choices for a typed slot: containers to walk into first, then what it takes. */
+export function typedChoices(output: unknown, src: TypedSource): Choice[] {
+  const open: Choice[] = [];
+  const take: Choice[] = [];
+  const seen = new Set<string>();
+  for (const row of rowsOf(output, src.rows)) {
+    if (!rowMatches(row, src.rows.when)) continue;
+    const ref = rowRef(src.rows, row, src.args)?.replace(/^\/+/, "");
+    if (!ref) continue;
+    const label = src.rows.label ? scalarAt(row, src.rows.label) : undefined;
+    const sub = src.rows.sub ? scalarAt(row, src.rows.sub) : undefined;
+    const isOpen = src.open !== undefined && rowMatches(row, src.open);
+    if (!isOpen && !rowMatches(row, src.where)) continue;
+    const value = isOpen ? `${ref}/` : ref;
+    if (seen.has(value)) continue;
+    seen.add(value);
+    (isOpen ? open : take).push({ value, ...(label ? { label } : {}), ...(sub && !isOpen ? { sub } : {}), ...(isOpen ? { open: true } : {}) });
+  }
+  return [...open, ...take];
+}
+
+function scalarAt(row: unknown, path: string): string | undefined {
+  let cur = row;
+  for (const k of path.split(".").filter(Boolean)) {
+    if (!cur || typeof cur !== "object") return undefined;
+    cur = (cur as Record<string, unknown>)[k];
+  }
+  return cur === null || cur === undefined || typeof cur === "object" ? undefined : String(cur) || undefined;
 }
 
 // --- helpers ----------------------------------------------------------------
@@ -416,8 +531,10 @@ function choiceRows(choices: Choice[], prefix: string): Candidate[] {
   return scored.map(({ c }) => ({
     kind: "choice" as const,
     text: c.value,
-    title: c.label ?? c.value,
-    subtitle: [c.label ? c.value : undefined, c.sub].filter(Boolean).join(" · ") || undefined,
+    title: c.open ? `${c.label ?? c.value.replace(/\/$/, "").split("/").pop()}/` : (c.label ?? c.value),
+    // A typed ref ends in its label (`Folder/File.mkv`): the folder is already on the line.
+    subtitle: c.open ? c.sub : [c.label && !c.value.endsWith(c.label) ? c.value : undefined, c.sub].filter(Boolean).join(" · ") || undefined,
+    ...(c.open ? { open: true } : {}),
   }));
 }
 
