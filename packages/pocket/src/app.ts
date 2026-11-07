@@ -286,6 +286,13 @@ function liveRows(): { rows: unknown[]; chains: Chain[]; query: string; loading:
 
 // --- runs --------------------------------------------------------------------
 
+/** A command run for its side effect (`dash open film` opens a browser tab): its result is noise, so the
+ *  panel gets out of the way at once and a successful run shows nothing; a failure still shows. */
+function handsOff(route?: Route): boolean {
+  const last = route ? [...route.path].reverse().find((seg) => !seg.startsWith(":")) : undefined;
+  return last === "open";
+}
+
 async function run(s: LineState, confirmed = false) {
   const { tree, route } = s;
   if (!tree || !route || !s.runnable || !s.argv) return;
@@ -302,6 +309,7 @@ async function run(s: LineState, confirmed = false) {
     watching = { id: r.id, tree, route };
     result = undefined;
     setLine("");
+    if (handsOff(route)) panel?.postMessage("hide");
     poll();
   } catch (e) {
     manifestError = e instanceof Error ? e.message : String(e);
@@ -332,6 +340,10 @@ async function showRun(id: string, tree?: Tree, route?: Route) {
   const full = await api<RunFull>(`/api/runs/${id}`);
   const t = tree ?? trees.find((x) => x.name === full.tree);
   const rt = route ?? (t ? routeFor(t, full.argv) : undefined);
+  if (full.status === "done" && handsOff(rt)) {
+    result = undefined;  // the runs list records it; there is nothing to read
+    return render();
+  }
   const shaped = full.json !== undefined ? shapeOutput(full.json) : undefined;
   result = { run: full, tree: t, route: rt, shaped, chains: t && rt && shaped ? chainsFor(t, rt, shaped) : [] };
   render();

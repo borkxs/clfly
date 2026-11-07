@@ -125,6 +125,8 @@ button.chain-btn:hover { border-color: var(--accent); color: var(--accent); }
 kbd { font: inherit; color: var(--fg-2); }
 
 /* Panel (⌥Space app): fills the window, the line stays pinned while rows scroll, no legend. */
+/* No rubber-band at the ends: the bounce showed the window's blur under the page. */
+.panel, .panel body { overscroll-behavior: none; min-height: 100%; }
 .panel main { max-width: none; padding: 0 var(--sp-24) var(--sp-16); }
 .panel .linebox { position: sticky; top: 0; z-index: 1; padding-top: var(--sp-12); background: var(--bg); }
 .panel .ghost { top: var(--sp-12); }
