@@ -616,7 +616,8 @@ input.addEventListener("keydown", (e) => {
     } else if (result) {
       result = undefined;
       render();
-    } else setLine("");
+    } else if (line === "" && panel) panel.postMessage("hide");
+    else setLine("");
   } else if (e.key === "Backspace" && (e.metaKey || e.altKey) && e.shiftKey) {
     e.preventDefault();
     setLine("");
@@ -667,6 +668,18 @@ document.addEventListener("keydown", (e) => {
     input.focus();
   }
 });
+
+// --- panel (the ⌥Space Mac app in packages/panel hosts this page with ?panel=1) ---
+
+const panel = new URLSearchParams(location.search).has("panel")
+  ? (window as unknown as { webkit?: { messageHandlers?: { clfly?: { postMessage(m: string): void } } } }).webkit?.messageHandlers?.clfly
+  : undefined;
+if (panel) document.documentElement.classList.add("panel");
+// Called by the app each time the panel opens: the line takes focus with its text selected, so typing replaces it.
+(window as unknown as { clflyPanelShown?: () => void }).clflyPanelShown = () => {
+  input.focus();
+  input.select();
+};
 
 // --- boot --------------------------------------------------------------------
 
