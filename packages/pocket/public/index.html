@@ -114,6 +114,13 @@ button.chain-btn:hover { border-color: var(--accent); color: var(--accent); }
 .keys { margin-top: var(--sp-32); font-size: var(--fs-12); color: var(--fg-3); display: flex; gap: var(--sp-16); flex-wrap: wrap; }
 kbd { font: inherit; color: var(--fg-2); }
 
+/* Panel (⌥Space app): fills the window, the line stays pinned while rows scroll, no legend. */
+.panel main { max-width: none; padding: 0 var(--sp-24) var(--sp-16); }
+.panel .linebox { position: sticky; top: 0; z-index: 1; padding-top: var(--sp-12); background: var(--bg); }
+.panel .ghost { top: var(--sp-12); }
+.panel .keys { display: none; }
+.panel #runs { margin-top: var(--sp-24); }
+
 @media (max-width: 480px) {
   main { padding-top: var(--sp-16); }
   .linebox { font-size: var(--fs-20); }

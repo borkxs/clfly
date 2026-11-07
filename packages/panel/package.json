@@ -1,0 +1,10 @@
+{
+  "name": "@clfly/panel",
+  "version": "0.1.0",
+  "private": true,
+  "description": "clfly line editor in a native ⌥Space panel (Swift NSPanel + WKWebView over the Pocket engine)",
+  "scripts": {
+    "build": "./build.sh",
+    "install-app": "./install.sh"
+  }
+}
