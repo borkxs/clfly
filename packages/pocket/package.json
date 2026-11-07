@@ -1,0 +1,22 @@
+{
+  "name": "@clfly/pocket",
+  "version": "0.1.0",
+  "private": true,
+  "description": "clfly line editor in the browser: one line with completion, history and search, served by a small local engine that runs the trees",
+  "type": "module",
+  "scripts": {
+    "build": "esbuild src/app.ts --bundle --format=esm --target=es2022 --sourcemap --outfile=public/app.js",
+    "watch": "esbuild src/app.ts --bundle --format=esm --target=es2022 --sourcemap --outfile=public/app.js --watch",
+    "start": "pnpm build && node server.mjs",
+    "serve": "node server.mjs",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@clfly/core": "workspace:*"
+  },
+  "devDependencies": {
+    "@types/node": "^22.15.3",
+    "esbuild": "^0.25.0",
+    "typescript": "^5.8.3"
+  }
+}
