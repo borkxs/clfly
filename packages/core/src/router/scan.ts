@@ -112,6 +112,7 @@ export async function loadCommandModule(
     positionals: mod.positionals,
     output: mod.output,
     complete: mod.complete,
+    accepts: mod.accepts,
     default: mod.default,
   };
 }

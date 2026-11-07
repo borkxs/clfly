@@ -5,7 +5,7 @@ import { runManifest } from "../registry/manifest.js";
 
 export const meta = {
   description:
-    "Build linked trees' routes in memory (flags, positionals, completeFrom) for launchers and UIs",
+    "Build linked trees' routes in memory (flags, positionals, completeFrom, rows/accepts) for launchers and UIs",
   readOnly: true,
 };
 

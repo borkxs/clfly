@@ -1,6 +1,7 @@
 import type { AnySchema, PositionalInfo } from "../types.js";
 import { toJsonSchema, type JsonSchema } from "./to-json-schema.js";
 import { readCompleteFrom } from "../complete/index.js";
+import { readAccepts } from "../rows/index.js";
 
 export interface ProjectPositionalsInput {
   /** Ordered names from `[segment]` directory params (manifest `":name"`). */
@@ -181,12 +182,23 @@ function projectExportPositionals(
 function completeFromOf(
   name: string,
   ...schemas: Array<JsonSchema | undefined>
-): { completeFrom?: PositionalInfo["completeFrom"] } {
+): Pick<PositionalInfo, "completeFrom" | "accepts" | "where"> {
+  const out: Pick<PositionalInfo, "completeFrom" | "accepts" | "where"> = {};
   for (const schema of schemas) {
     const cf = readCompleteFrom(schema?.completeFrom, `positional <${name}>`);
-    if (cf) return { completeFrom: cf };
+    if (cf) {
+      out.completeFrom = cf;
+      break;
+    }
   }
-  return {};
+  for (const schema of schemas) {
+    const a = readAccepts(schema?.accepts, `positional <${name}>`, schema?.where);
+    if (a) {
+      Object.assign(out, a);
+      break;
+    }
+  }
+  return out;
 }
 
 function tupleElementName(item: JsonSchema, index: number): string {

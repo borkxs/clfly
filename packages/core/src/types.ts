@@ -67,6 +67,45 @@ export interface Meta {
    * Projects to MCP `annotations.idempotentHint`.
    */
   idempotent?: boolean;
+  /**
+   * Typed rows: what this command's result rows are and how to make a
+   * reference from one, so any arg that `accepts` the type can take it.
+   * Additive in formatVersion 1.
+   */
+  rows?: RowsMeta;
+}
+
+/** A scalar a `when`/`where` match compares against (as strings). */
+export type RowScalar = string | number | boolean;
+
+/** Field path → wanted value (an array means any of). Every key must match. */
+export type RowMatch = Record<string, RowScalar | RowScalar[]>;
+
+/** Producer-side typed rows declaration (route `meta.rows`). */
+export interface RowsMeta {
+  /** Namespaced row type: `"pm.item"`, `"dash.project"`; a shared one like `"fs.path"` crosses trees. */
+  type: string;
+  /** Where the rows sit in the JSON output: a field path ending in `[]` (`"[]"`, `"hits[]"`). */
+  key: string;
+  /**
+   * Template for the value an acceptor gets: `{field}` reads the row (dot
+   * paths ok), then the producer's own args, then `defaults` (`"{path}/{name}"`).
+   */
+  ref: string;
+  /** Only rows matching this are typed (others offer no actions). */
+  when?: RowMatch;
+  /** Fallbacks for producer args a `ref` names (`{ path: "/" }` for `pm ls` run without one). */
+  defaults?: Record<string, string>;
+  /** Row field for a display label when rows are used as choices. */
+  label?: string;
+  /** Row field for a secondary line. */
+  sub?: string;
+}
+
+/** Consumer-side: an arg takes rows of type `accepts` (optionally only those matching `where`). */
+export interface Accepts {
+  accepts: string;
+  where?: RowMatch;
 }
 
 export interface Context {
@@ -127,6 +166,11 @@ export interface CommandModule<TArgs = unknown, TOutput = unknown> {
    * Wins over a `completeFrom` keyword on the same property.
    */
   complete?: Record<string, CompleteFrom>;
+  /**
+   * Per-arg typed-row acceptors keyed by arg name: a row type (`"pm.item"`)
+   * or `{ type, where? }`. Wins over an `accepts` keyword on the same property.
+   */
+  accepts?: Record<string, string | { type: string; where?: RowMatch }>;
   default: (opts: TArgs, ctx: Context) => TOutput | Promise<TOutput>;
 }
 
@@ -139,6 +183,7 @@ export interface DefineCommandInput<
   positionals?: AnySchema;
   output?: TOutputSchema;
   complete?: Record<string, CompleteFrom>;
+  accepts?: Record<string, string | { type: string; where?: RowMatch }>;
   run: (
     opts: import("@standard-schema/spec").StandardSchemaV1.InferOutput<TSchema>,
     ctx: Context,
@@ -193,6 +238,10 @@ export interface FlagInfo {
   deprecated?: boolean;
   /** Where this flag's choices come from. Additive in formatVersion 1. */
   completeFrom?: CompleteFrom;
+  /** Row type this flag takes (see {@link RowsMeta}). Additive in formatVersion 1. */
+  accepts?: string;
+  /** Only rows matching this. */
+  where?: RowMatch;
 }
 
 /**
@@ -241,6 +290,10 @@ export interface PositionalInfo {
   alsoFlag?: boolean;
   /** Where this positional's choices come from. Additive in formatVersion 1. */
   completeFrom?: CompleteFrom;
+  /** Row type this positional takes (see {@link RowsMeta}). Additive in formatVersion 1. */
+  accepts?: string;
+  /** Only rows matching this. */
+  where?: RowMatch;
 }
 
 export interface RouteSegment {

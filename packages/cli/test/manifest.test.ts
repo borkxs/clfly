@@ -35,8 +35,10 @@ beforeEach(() => {
     trees: {
       jobs: tree("jobs", {
         "package.json": JSON.stringify({ name: "jobs", description: "Job runner" }),
-        "commands/ls.ts": "export const meta = { readOnly: true };\nexport default (): string[] => [];\n",
+        "commands/ls.ts":
+          'export const meta = { readOnly: true, rows: { type: "jobs.job", key: "[]", ref: "{id}" } };\nexport default (): string[] => [];\n',
         "commands/[job]/rm.ts": `export const complete = { job: { cmd: "jobs ls", field: "[]" } };
+export const accepts = { job: "jobs.job" };
 export const meta = { destructive: true };
 export default () => null;
 `,
@@ -52,7 +54,7 @@ afterEach(() => {
 });
 
 describe("clfly manifest", () => {
-  it("builds every linked tree, carrying completeFrom and reporting failures per tree", async () => {
+  it("builds every linked tree, carrying completeFrom, rows and accepts, and reporting failures per tree", async () => {
     const { trees } = await runManifest({ env });
     expect(trees.map((t) => t.name)).toEqual(["broken", "jobs", "nested"]);
     const [broken, jobs, nested] = trees;
@@ -63,7 +65,9 @@ describe("clfly manifest", () => {
     expect(jobs!.bin).toBe(join(tmp, "jobs", "bin", "jobs.mjs"));
     const rm = jobs!.routes.find((r) => r.path.join(" ") === ":job rm")!;
     expect(rm.meta).toEqual({ destructive: true });
-    expect(rm.positionals[0]).toMatchObject({ name: "job", source: "path", completeFrom: { cmd: "jobs ls", field: "[]" } });
+    expect(rm.positionals[0]).toMatchObject({ name: "job", source: "path", completeFrom: { cmd: "jobs ls", field: "[]" }, accepts: "jobs.job" });
+    const ls = jobs!.routes.find((r) => r.path.join(" ") === "ls")!;
+    expect(ls.meta?.rows).toEqual({ type: "jobs.job", key: "[]", ref: "{id}" });
     expect(rm).not.toHaveProperty("load");
   });
 

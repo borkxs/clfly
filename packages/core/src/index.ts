@@ -23,6 +23,10 @@ export {
   type PositionalInfo,
   type PositionalSource,
   type CompleteFrom,
+  type RowsMeta,
+  type RowMatch,
+  type RowScalar,
+  type Accepts,
   type RouteNode,
   type ResolvedRoute,
   type CompletionShell,
@@ -52,6 +56,19 @@ export {
   selectCompletions,
   type CompletionChoice,
 } from "./complete/index.js";
+export {
+  acceptorsFor,
+  producersFor,
+  rowChoices,
+  rowMatches,
+  rowRef,
+  rowsOf,
+  readRows,
+  readAccepts,
+  type RowAction,
+  type RowProducer,
+  type RowTree,
+} from "./rows/index.js";
 export { treeFromManifest, completionIndexFromManifest } from "./manifest/load.js";
 export { generateCompletions } from "./completions/generate.js";
 export { writeJsonResult, writeJsonError } from "./json/output.js";

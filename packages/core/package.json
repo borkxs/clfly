@@ -19,6 +19,10 @@
     "./complete": {
       "types": "./dist/complete/index.d.ts",
       "import": "./dist/complete/index.js"
+    },
+    "./rows": {
+      "types": "./dist/rows/index.d.ts",
+      "import": "./dist/rows/index.js"
     }
   },
   "files": [

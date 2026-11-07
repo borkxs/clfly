@@ -21,6 +21,7 @@ import { DEFAULT_POLICY, LiveSearcher, type LiveState } from "../lib/live";
 import {
   buildArgv,
   chainsFor,
+  runArgs,
   commandLine,
   rowAccessories,
   rowSubtitle,
@@ -61,7 +62,7 @@ export function LineEditor({ initial = "" }: { initial?: string }) {
   const { push } = useNavigation();
   const state = useMemo(() => analyze(trees, line), [trees, line]);
   const choices = useChoices(state.tree ?? NO_TREE, state.source, state.values);
-  const live = useLive(state);
+  const live = useLive(state, trees);
   const [picks, setPicks] = useCachedState<Record<string, string>>("quick-picks", {});
   const expanded = useExpansionChoices(trees);
   const lines = useMemo(() => quickLines(trees, expanded), [trees, expanded]);
@@ -177,8 +178,11 @@ export function LineEditor({ initial = "" }: { initial?: string }) {
           subtitle={`${live.rows.length}`}
         >
           {live.rows.map((row, i) => {
-            const chain = live.chains[0];
-            const value = chain?.valueOf(row);
+            // Typed-row acceptors (any tree) and completeFrom readers; ↵ takes the first this row offers.
+            const offered = live.chains.flatMap((ch) => {
+              const v = ch.valueOf(row);
+              return v ? [{ ch, v }] : [];
+            });
             return (
               <List.Item
                 key={i}
@@ -187,24 +191,14 @@ export function LineEditor({ initial = "" }: { initial?: string }) {
                 accessories={rowAccessories(row).map(([k, v]) => ({ text: v, tooltip: k }))}
                 actions={
                   <ActionPanel>
-                    {chain && value && (
+                    {offered.map(({ ch, v }) => (
                       <Action
-                        title={`${state.tree!.name} ${chain.route.path.join(" ")}`}
+                        key={`${ch.tree.name} ${ch.route.path.join(" ")}:${ch.arg}`}
+                        title={`${ch.tree.name} ${ch.route.path.join(" ")}`}
                         icon={Icon.ArrowRight}
-                        onAction={() => setLine(chainLine(state.tree!, chain.route, chain.arg, chain.source, value))}
+                        onAction={() => setLine(chainLine(ch.tree, ch.route, ch.arg, ch.source, v))}
                       />
-                    )}
-                    {live.chains.slice(1).map((ch) => {
-                      const v = ch.valueOf(row);
-                      return v ? (
-                        <Action
-                          key={`${ch.route.path.join(" ")}:${ch.arg}`}
-                          title={`${state.tree!.name} ${ch.route.path.join(" ")}`}
-                          icon={Icon.ArrowRight}
-                          onAction={() => setLine(chainLine(state.tree!, ch.route, ch.arg, ch.source, v))}
-                        />
-                      ) : null;
-                    })}
+                    ))}
                     <Action.CopyToClipboard title="Copy Title" content={rowTitle(row)} />
                     {lineActions}
                   </ActionPanel>
@@ -275,7 +269,7 @@ function sectionTitle(state: LineState): string {
 }
 
 /** Search-as-you-type under the line when it is a live search with a query (pm search dune). */
-function useLive(state: LineState) {
+function useLive(state: LineState, trees: Tree[]) {
   const { tree, route, params, values, live: query } = state;
   const key = tree && route ? `${tree.name} ${route.path.join(" ")}` : "";
   const [result, setResult] = useState<LiveState<Shaped>>({ status: "idle" });
@@ -305,6 +299,9 @@ function useLive(state: LineState) {
     loading: active && result.status === "loading",
     query: result.status === "idle" ? query : result.query,
     rows: active && shaped?.kind === "rows" ? shaped.rows : [],
-    chains: active && shaped && tree && route ? chainsFor(tree, route as Route, shaped) : [],
+    chains:
+      active && shaped && tree && route
+        ? chainsFor(tree, route as Route, shaped, { trees, args: runArgs(params, { ...values, query: query ?? "" }) })
+        : [],
   };
 }

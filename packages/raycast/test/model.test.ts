@@ -132,6 +132,57 @@ describe("output shaping and chains", () => {
   });
 });
 
+describe("typed rows", () => {
+  // pm ls rows are pm.item; folders feed ls/du, files feed download (mono PR 218 declarations).
+  const ls: Route = {
+    path: ["ls"],
+    meta: { readOnly: true, rows: { type: "pm.item", key: "[]", ref: "{path}/{name}", defaults: { path: "/" }, label: "name", sub: "type" } },
+    positionals: [{ name: "path", source: "export", optional: true, accepts: "pm.item", where: { type: "folder" } }],
+    flags: [],
+  };
+  const du: Route = { path: ["du"], positionals: [{ name: "path", source: "export", optional: true, accepts: "pm.item", where: { type: "folder" } }], flags: [] };
+  const download: Route = {
+    path: ["download"],
+    positionals: [{ name: "path", source: "export", optional: false, accepts: "pm.item", where: { type: "file" }, completeFrom: { cmd: "pm ls", field: "[].name" } }],
+    flags: [],
+  };
+  const pmRows: Tree = { name: "pm", bin: "/x/pm.mjs", root: "/x", routes: [ls, du, download] };
+  // Another tree joins by declaring accepts; no edit to pm.
+  const plex: Tree = {
+    name: "plex",
+    bin: "/p/plex.mjs",
+    root: "/p",
+    routes: [{ path: ["scan"], positionals: [], flags: [{ name: "path", type: "string", optional: true, accepts: "pm.item" }] }],
+  };
+  const folder = { id: "f1", name: "Heat.1995", type: "folder" };
+  const file = { id: "x1", name: "heat.mkv", type: "file" };
+  const offered = (chains: ReturnType<typeof chainsFor>, row: unknown) =>
+    chains.flatMap((c) => {
+      const v = c.valueOf(row);
+      return v ? [`${c.tree.name} ${c.route.path.join(" ")} ${c.source === "flag" ? `--${c.arg} ` : ""}${v}`] : [];
+    });
+
+  it("offers every acceptor of a pm ls row, filtered by where, ref templated from the run's args", () => {
+    const root = chainsFor(pmRows, ls, shapeOutput([folder, file]), { trees: [pmRows, plex] });
+    expect(offered(root, folder)).toEqual(["pm ls /Heat.1995", "pm du /Heat.1995", "plex scan --path /Heat.1995"]);
+    expect(offered(root, file)).toEqual(["pm download /heat.mkv", "plex scan --path /heat.mkv"]);
+    const inMovies = chainsFor(pmRows, ls, shapeOutput([folder]), { trees: [pmRows, plex], args: { path: "/Movies" } });
+    expect(offered(inMovies, folder)[0]).toBe("pm ls /Movies/Heat.1995");
+  });
+
+  it("does not duplicate an action both rows and completeFrom produce; the typed ref wins", () => {
+    const chains = chainsFor(pmRows, ls, shapeOutput([file]), { args: { path: "/Movies" } });
+    expect(chains.filter((c) => c.route === download)).toHaveLength(1);
+    expect(offered(chains, file)).toEqual(["pm download /Movies/heat.mkv"]);
+  });
+
+  it("offers nothing typed when the rows key is not what the output shows (completeFrom still chains)", () => {
+    const nested = { ...ls, meta: { ...ls.meta, rows: { ...ls.meta!.rows!, key: "items[]" } } };
+    const chains = chainsFor(pmRows, nested, shapeOutput([folder, file]));
+    expect(offered(chains, folder)).toEqual(["pm download Heat.1995"]);
+  });
+});
+
 describe("release titles", () => {
   it("strips quality, codec, source, group, and punctuation", () => {
     expect(normalizeReleaseTitle("Dune.Part.Two.2024.2160p.WEB-DL.DDP5.1.Atmos.DV.HDR.H.265-FLUX[T").completion).toBe("Dune Part Two 2024");
