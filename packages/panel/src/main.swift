@@ -34,7 +34,10 @@ final class App: NSObject, NSApplicationDelegate, WKScriptMessageHandler, WKNavi
     NSApp.setActivationPolicy(.accessory)  // no Dock icon, no menu bar
     buildPanel()
     registerHotKey()
-    ensureEngine { self.web.load(URLRequest(url: pageURL)) }
+    ensureEngine {
+      self.web.load(URLRequest(url: pageURL))
+      if CommandLine.arguments.contains("--show") { self.show() }  // for testing without the hotkey
+    }
   }
 
   func applicationWillTerminate(_ note: Notification) { engine?.terminate() }
@@ -60,9 +63,8 @@ final class App: NSObject, NSApplicationDelegate, WKScriptMessageHandler, WKNavi
     blur.material = .popover
     blur.blendingMode = .behindWindow
     blur.state = .active
-    blur.wantsLayer = true
-    blur.layer?.cornerRadius = 12
-    blur.layer?.masksToBounds = true
+    // The window's edge and shadow follow this mask; a layer cornerRadius alone leaves a square frame.
+    blur.maskImage = roundedMask(radius: 12)
     blur.autoresizingMask = [.width, .height]
 
     let config = WKWebViewConfiguration()
@@ -71,6 +73,9 @@ final class App: NSObject, NSApplicationDelegate, WKScriptMessageHandler, WKNavi
     web.autoresizingMask = [.width, .height]
     web.setValue(false, forKey: "drawsBackground")  // the page's own --bg shows; blur only at the corners
     web.navigationDelegate = self
+    web.wantsLayer = true
+    web.layer?.cornerRadius = 12  // clip the page's square background to the same corners
+    web.layer?.masksToBounds = true
     blur.addSubview(web)
     panel.contentView = blur
   }
@@ -87,6 +92,7 @@ final class App: NSObject, NSApplicationDelegate, WKScriptMessageHandler, WKNavi
     NSApp.activate(ignoringOtherApps: true)
     panel.makeKeyAndOrderFront(nil)
     panel.makeFirstResponder(web)
+    panel.invalidateShadow()
     web.evaluateJavaScript("window.clflyPanelShown && window.clflyPanelShown()")
   }
 
@@ -177,6 +183,19 @@ final class App: NSObject, NSApplicationDelegate, WKScriptMessageHandler, WKNavi
     if engineUp() || tries == 0 { return then() }
     DispatchQueue.main.asyncAfter(deadline: .now() + 0.25) { self.waitForEngine(tries: tries - 1, then: then) }
   }
+}
+
+/// A stretchable rounded-rect mask, the usual way to round a borderless window's corners.
+func roundedMask(radius r: CGFloat) -> NSImage {
+  let side = r * 2 + 1
+  let img = NSImage(size: NSSize(width: side, height: side), flipped: false) { rect in
+    NSColor.black.setFill()
+    NSBezierPath(roundedRect: rect, xRadius: r, yRadius: r).fill()
+    return true
+  }
+  img.capInsets = NSEdgeInsets(top: r, left: r, bottom: r, right: r)
+  img.resizingMode = .stretch
+  return img
 }
 
 func logURL() -> URL {
