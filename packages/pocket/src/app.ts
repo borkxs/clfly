@@ -176,9 +176,36 @@ function saveJSON(key: string, value: unknown) {
   }
 }
 
+/** Empty line with the tree list open (⇥ or ↓); typing or esc closes it. */
+let browse = false;
 let recent = loadJSON<Record<string, RecentEntry>>(RECENT_KEY, {});
 let picks = loadJSON<Record<string, string>>(PICKS_KEY, {});
 
+/** Newest first, like ↑ in a shell: the empty line's History. */
+function historyLines(limit = 8): string[] {
+  return Object.entries(recent)
+    .sort((a, b) => b[1].t - a[1].t)
+    .slice(0, limit)
+    .map(([l]) => l);
+}
+
+/** The engine's run log merged into Recent, so the panel, the browser and the phone share one history. */
+async function loadHistory() {
+  try {
+    const { history } = await api<{ history: { line: string; n: number; t: number }[] }>("/api/history");
+    for (const e of history) {
+      if (e.line.split(/\s+/).some(isResultId) || forgotten.has(e.line)) continue;
+      const cur = recent[e.line];
+      recent[e.line] = { n: Math.max(cur?.n ?? 0, e.n), t: Math.max(cur?.t ?? 0, e.t) };
+    }
+    saveJSON(RECENT_KEY, recent);
+    render();
+  } catch {
+    /* engine without /api/history: local Recent only */
+  }
+}
+
+/** Frecency: the palette's ranking once you type. */
 function recentLines(limit = 8): string[] {
   const now = Date.now();
   return Object.entries(recent)
@@ -198,14 +225,20 @@ function isResultId(word: string): boolean {
 function remember(l: string) {
   const t = l.trim();
   if (!t || t.split(/\s+/).some(isResultId)) return;
+  forgotten.delete(t);
   const e = recent[t] ?? { n: 0, t: 0 };
   recent[t] = { n: e.n + 1, t: Date.now() };
   saveJSON(RECENT_KEY, recent);
 }
 
+const FORGOTTEN_KEY = "clfly.pocket.forgotten";
+const forgotten = new Set(loadJSON<string[]>(FORGOTTEN_KEY, []));
+
 function forget(l: string) {
   delete recent[l];
+  forgotten.add(l);  // the run log still has it; keep it out on the next merge
   saveJSON(RECENT_KEY, recent);
+  saveJSON(FORGOTTEN_KEY, [...forgotten]);
   render();
 }
 
@@ -326,10 +359,10 @@ function sections(): Section[] {
   const out: Section[] = [];
   if (manifestError && trees.length === 0) return out;
   if (line.trim() === "") {
-    const rec = recentLines();
-    if (rec.length) out.push({ title: "Recent", items: rec.map((l) => ({ kind: "recent", line: l })) });
-    // With a result open, the result is the thing to read; the tree list waits for a keystroke.
-    if (!result) out.push({ title: "Trees", items: candidates(state, trees).map((c) => ({ kind: "cand", c })) });
+    const rec = historyLines();
+    if (rec.length) out.push({ title: "History", items: rec.map((l) => ({ kind: "recent", line: l })) });
+    // The tree list is long; it waits for ↓ or ⇥ (browse), and never covers an open result.
+    if (browse && !result) out.push({ title: "Trees", items: candidates(state, trees).map((c) => ({ kind: "cand", c })) });
     return out;
   }
   const quick = isQuick(state);
@@ -462,6 +495,8 @@ function render() {
       : `<span class="muted">⌘↵ runs the search</span>`;
   } else if (state.runnable) {
     hint.innerHTML = `<span class="muted">↵ runs${state.destructive ? " (asks first)" : ""}</span>`;
+  } else if (line === "" && !browse && !result && trees.length) {
+    hint.innerHTML = `<span class="muted">${trees.length} trees · ⇥ lists them</span>`;
   } else {
     hint.textContent = "";
   }
@@ -538,12 +573,30 @@ function renderResult() {
       })
       .join("")}</ul>${shaped.rows.length > 200 ? `<p class="muted">… ${shaped.rows.length - 200} more</p>` : ""}`;
   } else if (shaped?.kind === "value") {
-    body = `<pre>${h(JSON.stringify(shaped.value, null, 2))}</pre>`;
+    body = `<pre class="json">${jsonHTML(shaped.value)}</pre>`;
   } else {
     const text = `${r.stdout ?? ""}${r.stderr ?? ""}`.trim();
     body = text ? `<pre>${h(text)}</pre>` : `<p class="muted">no output</p>`;
   }
-  el.innerHTML = `<header><span class="t">${h(r.line)}</span>${meta}<button class="x" id="close-result" title="Close">×</button></header>${body}`;
+  const copy = r.json !== undefined
+    ? `<button class="icon" id="copy-json" title="Copy result as JSON" aria-label="Copy result as JSON">${COPY_ICON}</button>`
+    : "";
+  el.innerHTML = `<header><span class="t">${h(r.line)}</span>${meta}<span class="actions">${copy}<button class="x" id="close-result" title="Close">×</button></span></header>${body}`;
+}
+
+const COPY_ICON = `<svg viewBox="0 0 16 16" width="16" height="16" aria-hidden="true"><rect x="5" y="5" width="9" height="9" rx="1.5" fill="none" stroke="currentColor" stroke-width="1.4"/><path d="M11 5V3.5A1.5 1.5 0 0 0 9.5 2h-6A1.5 1.5 0 0 0 2 3.5v6A1.5 1.5 0 0 0 3.5 11H5" fill="none" stroke="currentColor" stroke-width="1.4"/></svg>`;
+const CHECK_ICON = `<svg viewBox="0 0 16 16" width="16" height="16" aria-hidden="true"><path d="M3 8.5l3 3 7-7" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>`;
+
+/** Pretty JSON with keys, strings and literals told apart by colour (escaped first, then tokenised). */
+function jsonHTML(value: unknown): string {
+  return h(JSON.stringify(value, null, 2)).replace(
+    /(&quot;(?:[^&]|&(?!quot;))*?&quot;)(\s*:)?|\b(true|false|null)\b|(-?\d+(?:\.\d+)?(?:[eE][+-]?\d+)?)/g,
+    (m, str, colon, lit, num) =>
+      str ? (colon ? `<span class="j-k">${str}</span>${colon}` : `<span class="j-s">${str}</span>`)
+      : lit ? `<span class="j-l">${lit}</span>`
+      : num ? `<span class="j-n">${num}</span>`
+      : m,
+  );
 }
 
 function renderRuns() {
@@ -565,6 +618,7 @@ function renderRuns() {
 
 function setLine(next: string, resetSel = true) {
   line = next;
+  browse = false;
   input.value = next;
   if (resetSel) sel = 0;
   state = analyze(trees, line);
@@ -577,6 +631,7 @@ function setLine(next: string, resetSel = true) {
 
 input.addEventListener("input", () => {
   line = input.value;
+  browse = false;
   sel = 0;
   state = analyze(trees, line);
   syncLive(state);
@@ -586,6 +641,14 @@ input.addEventListener("input", () => {
 
 input.addEventListener("keydown", (e) => {
   const items = flatItems(sections());
+  // Empty line: ⇥, or ↓ past the last row, opens the tree list.
+  const atEnd = sel >= items.length - 1;
+  if (line === "" && !browse && !result && (e.key === "Tab" || (e.key === "ArrowDown" && atEnd))) {
+    e.preventDefault();
+    browse = true;
+    if (items.length) sel = items.length;  // land on the first tree
+    return render();
+  }
   if (e.key === "ArrowDown" || (e.ctrlKey && e.key === "n")) {
     e.preventDefault();
     sel = Math.min(sel + 1, Math.max(0, items.length - 1));
@@ -613,6 +676,10 @@ input.addEventListener("keydown", (e) => {
     if (pendingConfirm) {
       pendingConfirm = undefined;
       render();
+    } else if (browse && line === "") {
+      browse = false;
+      sel = 0;
+      render();
     } else if (result) {
       result = undefined;
       render();
@@ -637,6 +704,18 @@ $("list").addEventListener("click", (e) => {
 
 $("result").addEventListener("click", (e) => {
   const t = e.target as HTMLElement;
+  const copyBtn = t.closest<HTMLElement>("#copy-json");
+  if (copyBtn && result?.run.json !== undefined) {
+    void navigator.clipboard?.writeText(JSON.stringify(result.run.json, null, 2)).then(() => {
+      copyBtn.innerHTML = CHECK_ICON;
+      copyBtn.classList.add("ok");
+      setTimeout(() => {
+        copyBtn.innerHTML = COPY_ICON;
+        copyBtn.classList.remove("ok");
+      }, 1200);
+    });
+    return;
+  }
   if (t.id === "close-result") {
     result = undefined;
     render();
@@ -701,6 +780,7 @@ async function boot() {
   else render();
   input.focus();
   void poll();
+  void loadHistory();
 }
 
 void boot();

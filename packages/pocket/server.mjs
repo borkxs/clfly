@@ -157,6 +157,35 @@ async function log(entry) {
   await appendFile(LOG, `${JSON.stringify(entry)}\n`);
 }
 
+/** Every line that ran, from the log: how often and when last, newest first. Shared by all faces. */
+async function history() {
+  let text = "";
+  try {
+    text = await readFile(LOG, "utf8");
+  } catch {
+    return [];
+  }
+  const byLine = new Map();
+  for (const raw of text.split("\n")) {
+    if (!raw) continue;
+    let e;
+    try {
+      e = JSON.parse(raw);
+    } catch {
+      continue;
+    }
+    if (typeof e.line !== "string" || !e.line.trim()) continue;
+    const line = e.line.trim();
+    const t = Date.parse(e.endedAt ?? e.startedAt ?? "") || 0;
+    const h = byLine.get(line) ?? { line, n: 0, t: 0 };
+    h.n += 1;
+    h.t = Math.max(h.t, t);
+    h.ok = e.status === "done";
+    byLine.set(line, h);
+  }
+  return [...byLine.values()].sort((a, b) => b.t - a.t);
+}
+
 // --- http --------------------------------------------------------------------
 
 const STATIC = {
@@ -202,6 +231,9 @@ const server = createServer(async (req, res) => {
     if (req.method === "GET" && url.pathname === "/api/manifest") {
       const m = await loadManifest(url.searchParams.has("refresh"));
       return send(res, m.error && !m.trees.length ? 502 : 200, { trees: m.trees, at: m.at, error: m.error });
+    }
+    if (req.method === "GET" && url.pathname === "/api/history") {
+      return send(res, 200, { history: await history() });
     }
     if (req.method === "GET" && url.pathname === "/api/runs") {
       return send(res, 200, { runs: runs.map(summary) });

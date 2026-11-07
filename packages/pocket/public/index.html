@@ -81,6 +81,16 @@ button.x:hover { color: var(--fg); }
 #result header { display: flex; align-items: baseline; gap: var(--sp-8); font-size: var(--fs-14); }
 #result header .t { font-family: var(--mono); color: var(--fg-2); }
 #result pre { margin: var(--sp-12) 0 0; padding: var(--sp-12); overflow: auto; max-height: 50vh; font: var(--fs-12)/1.5 var(--mono); color: var(--fg-2); background: color-mix(in srgb, var(--sel) 60%, transparent); border-radius: 6px; }
+#result header .actions { margin-left: auto; display: flex; align-items: center; }
+#result header .actions button.x { margin-left: 0; }
+button.icon { display: inline-flex; align-items: center; justify-content: center; min-width: 44px; min-height: 32px; border: 0; background: none; color: var(--fg-3); cursor: pointer; border-radius: 6px; }
+button.icon:hover { color: var(--fg); }
+button.icon.ok { color: var(--ok); }
+/* JSON: keys read first, values second, literals and numbers quietest. */
+#result pre.json { color: var(--fg-2); }
+.j-k { color: var(--fg); }
+.j-s { color: var(--ok); }
+.j-n, .j-l { color: var(--fg-3); }
 #result .extras { margin: var(--sp-8) 0 0; display: flex; gap: var(--sp-12); flex-wrap: wrap; }
 #result ul.rows { margin-top: var(--sp-8); }
 #result ul.rows li { min-height: 40px; position: relative; }
