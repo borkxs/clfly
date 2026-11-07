@@ -32,6 +32,7 @@ final class App: NSObject, NSApplicationDelegate, WKScriptMessageHandler, WKNavi
 
   func applicationDidFinishLaunching(_ note: Notification) {
     NSApp.setActivationPolicy(.accessory)  // no Dock icon, no menu bar
+    NSApp.mainMenu = editMenu()  // ⌘A/⌘C/⌘V/⌘X/⌘Z reach the web view only through menu items
     buildPanel()
     registerHotKey()
     ensureEngine {
@@ -183,6 +184,24 @@ final class App: NSObject, NSApplicationDelegate, WKScriptMessageHandler, WKNavi
     if engineUp() || tries == 0 { return then() }
     DispatchQueue.main.asyncAfter(deadline: .now() + 0.25) { self.waitForEngine(tries: tries - 1, then: then) }
   }
+}
+
+/// An accessory app shows no menu bar, but its main menu still routes the standard editing keys.
+func editMenu() -> NSMenu {
+  let main = NSMenu()
+  let item = NSMenuItem()
+  main.addItem(item)
+  let edit = NSMenu(title: "Edit")
+  edit.addItem(withTitle: "Undo", action: Selector(("undo:")), keyEquivalent: "z")
+  let redo = edit.addItem(withTitle: "Redo", action: Selector(("redo:")), keyEquivalent: "z")
+  redo.keyEquivalentModifierMask = [.command, .shift]
+  edit.addItem(.separator())
+  edit.addItem(withTitle: "Cut", action: #selector(NSText.cut(_:)), keyEquivalent: "x")
+  edit.addItem(withTitle: "Copy", action: #selector(NSText.copy(_:)), keyEquivalent: "c")
+  edit.addItem(withTitle: "Paste", action: #selector(NSText.paste(_:)), keyEquivalent: "v")
+  edit.addItem(withTitle: "Select All", action: #selector(NSText.selectAll(_:)), keyEquivalent: "a")
+  item.submenu = edit
+  return main
 }
 
 /// A stretchable rounded-rect mask, the usual way to round a borderless window's corners.

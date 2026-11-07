@@ -439,8 +439,11 @@ function filled(v: unknown): boolean {
   return typeof v === "string" ? v.trim() !== "" : v !== undefined;
 }
 
-function firstLine(text?: string): string | undefined {
-  return text ? text.split(/(?<=[.:;])\s/)[0] : undefined;
+/** A row subtitle from a description: its first clause, without a "clfly tree that" lead-in or end punctuation. */
+export function firstLine(text?: string): string | undefined {
+  if (!text) return undefined;
+  const clause = (text.split(/(?<=[.:;])\s/)[0] ?? "").replace(/[.:;]$/, "");
+  return clause.replace(/^clfly tree (that )?/i, "") || undefined;
 }
 
 function quote(word: string): string {
