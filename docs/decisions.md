@@ -129,3 +129,7 @@ Status: **Accepted** unless marked **Open**.
 ### Harness registration is one named entry
 
 **Accepted.** `clfly register` merges a single server into the harness file (or the harness CLI when it is on PATH). Codex uses `smol-toml` so a re-run can parse. `--self` omits `--root`; linked trees pass it. Full text: [spec/register.md](./spec/register.md).
+
+### Typed rows chain one command's output into another
+
+**Accepted 2026-11-07, not built.** Producers declare `rows: {type, ref}`, consumers declare `accepts: type`; a result row offers every acceptor across trees. ↵ on a row opens its actions. Full text: [spec/typed-rows.md](./spec/typed-rows.md).
