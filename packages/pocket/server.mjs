@@ -14,7 +14,8 @@ const here = dirname(fileURLToPath(import.meta.url));
 const PORT = Number(process.env.POCKET_PORT || 4180);
 const HOST = process.env.POCKET_HOST || "127.0.0.1";
 const CLFLY = process.env.CLFLY_BIN || "clfly";
-const MANIFEST_TTL = 60_000;
+// Short: the page asks again each time the panel opens, so a merged tree change shows up quickly.
+const MANIFEST_TTL = 15_000;
 const LOG = join(homedir(), ".local", "state", "clfly", "pocket-runs.jsonl");
 
 // --- running things ----------------------------------------------------------

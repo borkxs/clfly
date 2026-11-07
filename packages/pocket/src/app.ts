@@ -19,6 +19,8 @@ import {
   onEnter,
   quickCandidates,
   quickLines,
+  typedChoices,
+  typedSource,
   type Candidate,
   type Choice,
   type Expansion,
@@ -120,7 +122,36 @@ async function exec(tree: Tree, argv: string[]): Promise<ExecResult> {
 
 // --- choices (completeFrom sources), cached per argv -------------------------
 
+// Fetched lists go stale (the cloud changes, a dashboard is added), so a hit older than this refetches.
+const CHOICE_TTL = 60_000;
 const choiceCache = new Map<string, Choice[] | Promise<Choice[]>>();
+const choiceAt = new Map<string, number>();
+
+/** A cached list, or undefined when missing or stale (a stale one still shows while it refetches). */
+function cached(key: string): { hit?: Choice[] | Promise<Choice[]>; fresh: boolean } {
+  const hit = choiceCache.get(key);
+  return { hit, fresh: hit !== undefined && (!Array.isArray(hit) || Date.now() - (choiceAt.get(key) ?? 0) < CHOICE_TTL) };
+}
+
+function fetchChoices(key: string, tree: Tree, argv: string[], pick: (json: unknown) => Choice[]) {
+  const stale = choiceCache.get(key);
+  const p = exec(tree, argv)
+    .then((res) => {
+      if (res.code !== 0) throw new Error(res.error ?? `exited ${res.code}`);
+      return pick(res.json);
+    })
+    .catch(() => [] as Choice[])
+    .then((list) => {
+      choiceCache.set(key, list);
+      choiceAt.set(key, Date.now());
+      lines = quickLines(trees, expansionChoices);
+      render();
+      return list;
+    });
+  // Keep showing the old list while the new one loads.
+  choiceCache.set(key, Array.isArray(stale) ? stale : p);
+  if (Array.isArray(stale)) choiceAt.set(key, Date.now());
+}
 
 function choiceKey(tree: Tree, argv: string[]) {
   return `${tree.name}\0${JSON.stringify(argv)}`;
@@ -130,23 +161,35 @@ function choiceKey(tree: Tree, argv: string[]) {
 function choicesFor(tree: Tree, cf: CompleteFrom, values: FormValues): Choice[] | undefined {
   const argv = completeFromArgv(cf, tree.name, values);
   const key = choiceKey(tree, argv);
-  const hit = choiceCache.get(key);
-  if (Array.isArray(hit)) return hit;
-  if (hit) return undefined;
-  const p = exec(tree, argv)
-    .then((res) => {
-      if (res.code !== 0) throw new Error(res.error ?? `exited ${res.code}`);
-      return selectCompletions(res.json, cf) as Choice[];
-    })
-    .catch(() => [] as Choice[])
-    .then((list) => {
-      choiceCache.set(key, list);
-      lines = quickLines(trees, expansionChoices);
-      render();
-      return list;
-    });
-  choiceCache.set(key, p);
-  return undefined;
+  const { hit, fresh } = cached(key);
+  if (!fresh) fetchChoices(key, tree, argv, (json) => selectCompletions(json, cf) as Choice[]);
+  return Array.isArray(hit) ? hit : undefined;
+}
+
+/** What the word under the cursor can be: a `completeFrom` list, or typed rows (`pm download ` walks `pm ls`). */
+function slotChoices(s: LineState): Choice[] {
+  if (s.tree && s.source) return choicesFor(s.tree, s.source, s.values) ?? [];
+  const src = typedSource(trees, s);
+  if (!src) return [];
+  const key = choiceKey(src.tree, src.argv);
+  const { hit, fresh } = cached(key);
+  if (!fresh) fetchChoices(key, src.tree, src.argv, (json) => typedChoices(json, src));
+  return Array.isArray(hit) ? hit : [];
+}
+
+/** The chains a row actually offers, in order (a folder row skips `pm download`). */
+function offered(chains: Chain[], row: unknown): Chain[] {
+  return chains.filter((ch) => ch.valueOf(row) !== undefined);
+}
+
+/** A run's args by name, for typed refs that template them (`{path}` from `pm ls Library`). */
+function argsOf(tree: Tree, route: Route, argv: string[]): Record<string, string> {
+  const words = argv.filter((w) => !w.startsWith("-")).slice(route.path.length);
+  const out: Record<string, string> = {};
+  route.positionals.filter((p) => p.source !== "path").forEach((p, i) => {
+    if (words[i] !== undefined) out[p.name] = words[i]!;
+  });
+  return out;
 }
 
 const expansionChoices = (e: Expansion) => choicesFor(e.tree, e.cf, {});
@@ -280,7 +323,7 @@ function liveRows(): { rows: unknown[]; chains: Chain[]; query: string; loading:
   if (!state.live || !state.tree || !state.route) return undefined;
   const shaped = live.status === "done" ? live.value : live.status === "loading" ? live.previous : undefined;
   const rows = shaped?.kind === "rows" ? shaped.rows : [];
-  const chains = shaped ? chainsFor(state.tree, state.route, shaped) : [];
+  const chains = shaped ? chainsFor(state.tree, state.route, shaped, { trees, args: state.values }) : [];
   return { rows, chains, query: live.status === "idle" ? state.live : live.query, loading: live.status === "loading" };
 }
 
@@ -345,7 +388,7 @@ async function showRun(id: string, tree?: Tree, route?: Route) {
     return render();
   }
   const shaped = full.json !== undefined ? shapeOutput(full.json) : undefined;
-  result = { run: full, tree: t, route: rt, shaped, chains: t && rt && shaped ? chainsFor(t, rt, shaped) : [] };
+  result = { run: full, tree: t, route: rt, shaped, chains: t && rt && shaped ? chainsFor(t, rt, shaped, { trees, args: argsOf(t, rt, full.argv) }) : [] };
   render();
   window.scrollTo({ top: 0 });
 }
@@ -380,7 +423,7 @@ function sections(): Section[] {
   const quick = isQuick(state);
   const cands = quick
     ? quickCandidates(line, lines, { recent: recentLines(20), picks })
-    : candidates(state, trees, state.tree && state.source ? choicesFor(state.tree, state.source, state.values) ?? [] : []);
+    : candidates(state, trees, slotChoices(state));
   const lv = liveRows();
   // A search in progress: hits first, the words second (case 30).
   const hitSection: Section | undefined =
@@ -450,11 +493,11 @@ function enterItem(it: Item) {
 }
 
 function chainHit(it: Extract<Item, { kind: "hit" }>, which = 0) {
-  const ch = it.chains[which];
+  const ch = offered(it.chains, it.row)[which];
   const value = ch?.valueOf(it.row);
-  if (!ch || !value || !state.tree) return;
+  if (!ch || !value) return;
   remember(line);
-  setLine(chainLine(state.tree, ch.route, ch.arg, ch.source, value));
+  setLine(chainLine(ch.tree, ch.route, ch.arg, ch.source, value));
 }
 
 /** Grey completion after the caret: the highlighted word's remainder when it extends what was typed. */
@@ -501,9 +544,9 @@ function render() {
     hint.innerHTML = `<span class="muted">needs</span> ${state.hint.map((x) => (x.startsWith("--") ? h(x) : `‹${h(x)}›`)).join(" ")}`;
   } else if (items[sel]?.kind === "hit") {
     const it = items[sel] as Extract<Item, { kind: "hit" }>;
-    const ch = it.chains[0];
-    hint.innerHTML = ch && state.tree
-      ? `<span class="muted">↵</span> ${h(state.tree.name)} ${h(ch.route.path.join(" "))} ‹${h(ch.arg)}› <span class="muted">· ⌘↵ runs the search</span>`
+    const ch = offered(it.chains, it.row)[0];
+    hint.innerHTML = ch
+      ? `<span class="muted">↵</span> ${h(ch.tree.name)} ${h(ch.route.path.join(" "))} ‹${h(ch.arg)}› <span class="muted">· ⌘↵ runs the search</span>`
       : `<span class="muted">⌘↵ runs the search</span>`;
   } else if (state.runnable) {
     hint.innerHTML = `<span class="muted">↵ runs${state.destructive ? " (asks first)" : ""}</span>`;
@@ -532,8 +575,8 @@ function render() {
             .map(([k, v]) => `<span class="acc" title="${h(k)}">${h(v)}</span>`)
             .join("");
           const sub = rowSubtitle(it.row);
-          const chain = it.chains[0];
-          const label = chain && state.tree ? `${state.tree.name} ${chain.route.path.join(" ")}` : "";
+          const chain = offered(it.chains, it.row)[0];
+          const label = chain ? `${chain.tree.name} ${chain.route.path.join(" ")}` : "";
           return `<li${cls} data-i="${idx}"><span class="ic">⌕</span><span class="t">${h(rowTitle(it.row))}</span>${sub ? `<span class="s">${h(sub)}</span>` : ""}<span class="accs">${acc}</span>${label ? `<span class="chain">↵ ${h(label)}</span>` : ""}</li>`;
         })
         .join("")}</ul></section>`,
@@ -578,7 +621,7 @@ function renderResult() {
         const btns = chains
           .map((ch, ci) => {
             const v = ch.valueOf(row);
-            return v && tree ? `<button class="chain-btn" data-row="${idx}" data-chain="${ci}">${h(tree.name)} ${h(ch.route.path.join(" "))}</button>` : "";
+            return v ? `<button class="chain-btn" data-row="${idx}" data-chain="${ci}">${h(ch.tree.name)} ${h(ch.route.path.join(" "))}</button>` : "";
           })
           .join("");
         return `<li><span class="t">${h(rowTitle(row))}</span>${sub ? `<span class="s">${h(sub)}</span>` : ""}<span class="accs">${acc}</span>${btns ? `<span class="chains">${btns}</span>` : ""}</li>`;
@@ -735,11 +778,11 @@ $("result").addEventListener("click", (e) => {
     return;
   }
   const btn = t.closest<HTMLElement>("button.chain-btn");
-  if (!btn || !result?.shaped || result.shaped.kind !== "rows" || !result.tree) return;
+  if (!btn || !result?.shaped || result.shaped.kind !== "rows") return;
   const row = result.shaped.rows[Number(btn.dataset.row)];
   const ch = result.chains[Number(btn.dataset.chain)];
   const v = ch?.valueOf(row);
-  if (ch && v) setLine(chainLine(result.tree, ch.route, ch.arg, ch.source, v));
+  if (ch && v) setLine(chainLine(ch.tree, ch.route, ch.arg, ch.source, v));
 });
 
 $("runs").addEventListener("click", (e) => {
@@ -770,22 +813,45 @@ if (panel) document.documentElement.classList.add("panel");
 (window as unknown as { clflyPanelShown?: () => void }).clflyPanelShown = () => {
   input.focus();
   input.select();
+  void loadManifest();
 };
+
+// --- manifest: trees follow what is linked, without reloading the page ----------
+//
+// The panel lives for days, so the trees are fetched again each time it opens, when the tab
+// comes back, and every few minutes. The engine caches `clfly manifest` briefly, so a merged
+// change to a tree (a new command, a new `accepts`) shows up on the next open.
+
+let manifestSig = "";
+
+async function loadManifest() {
+  try {
+    const m = await api<{ trees: Tree[]; error?: string }>("/api/manifest");
+    manifestError = m.error;
+    const sig = JSON.stringify(m.trees);
+    if (sig === manifestSig) return;
+    manifestSig = sig;
+    trees = m.trees;
+    for (const e of expansions(trees)) expansionChoices(e);
+    lines = quickLines(trees, expansionChoices);
+    state = analyze(trees, line);
+    render();
+  } catch (e) {
+    manifestError = e instanceof Error ? e.message : String(e);
+  }
+}
+
+document.addEventListener("visibilitychange", () => {
+  if (document.visibilityState === "visible") void loadManifest();
+});
+setInterval(() => void loadManifest(), 5 * 60_000);
 
 // --- boot --------------------------------------------------------------------
 
 async function boot() {
-  try {
-    const m = await api<{ trees: Tree[]; error?: string }>("/api/manifest");
-    trees = m.trees;
-    manifestError = m.error;
-  } catch (e) {
-    manifestError = e instanceof Error ? e.message : String(e);
-  }
+  // Quick mode needs every short, harmless choice list (dash open film, tick run x); loadManifest fetches them.
+  await loadManifest();
   state = analyze(trees, line);
-  // Quick mode needs every short, harmless choice list (dash open film, tick run x).
-  for (const e of expansions(trees)) expansionChoices(e);
-  lines = quickLines(trees, expansionChoices);
   if (matchMedia("(max-width: 480px)").matches) input.placeholder = "pm oceans eight";
   const q = new URLSearchParams(location.search).get("q");
   if (q) setLine(q);

@@ -39,6 +39,14 @@ pnpm --filter @clfly/pocket start    # builds public/app.js, serves http://127.0
   (`GET /api/history`), so the panel, browser and phone share it. Typing ranks lines by frecency.
   One-off lines carrying a hash or id stay out; × forgets a line in this browser.
 - **Trees on demand**: the empty line hides the tree list; ⇥, or ↓ past the last row, opens it.
+- **Typed arguments browse**: an argument that `accepts` a row type and has no `completeFrom`
+  lists rows from a read-only producer of that type. When the producer takes that type itself
+  (`pm ls <folder>`), its containers come first with a trailing `/`: ↵ walks in and lists that
+  folder, so `pm download ` browses the Premiumize cloud and ↵ on a file downloads it. Result
+  rows chain into acceptors in any tree (`pm ls` folder → `pm ls`/`pm du`, file → `pm download`).
+- **Trees stay current**: the page fetches the manifest again each time the panel opens, when the
+  tab comes back, and every 5 minutes, so a merged tree change shows up without restarting.
+  Fetched choice lists refetch after 60 s (the old list shows meanwhile).
 - **JSON results** render coloured; the copy icon in the result header copies the run's JSON.
 - **Panel mode** (`?panel=1`, used by `packages/panel`): pinned line, no legend, esc on an empty
   line hides the panel.
@@ -47,7 +55,7 @@ pnpm --filter @clfly/pocket start    # builds public/app.js, serves http://127.0
 
 | Route | Does |
 |---|---|
-| `GET /api/manifest` | `clfly manifest --json`, cached 60 s (`?refresh` forces) |
+| `GET /api/manifest` | `clfly manifest --json`, cached 15 s (`?refresh` forces) |
 | `POST /api/exec {tree, argv}` | runs and waits; read-only commands only (choice sources, live search) |
 | `POST /api/run {tree, argv, line, confirmed?}` | starts a run; destructive commands need `confirmed: true` |
 | `GET /api/history` | every logged line with count and last time, newest first |
