@@ -46,6 +46,7 @@ interface Manifest {
 | `description` | `string` | no | Human/agent-facing summary. Projects into `--help`, MCP tool descriptions, and docs. |
 | `deprecated` | `boolean \| string` | no | `true` or a reason string. Projects into help, JSON Schema `deprecated`, and MCP descriptions. |
 | `interactive` | `boolean` | no | When true, command is CLI-only (TTY interaction in the body). Excluded from MCP tools and OpenAPI; noted in help. |
+| `rows` | `RowsMeta` | no | **Additive in formatVersion 1.** What this command's result rows are, for args that `accepts` them. See [Typed rows](#typed-rows). |
 
 ### `FlagInfo`
 
@@ -62,6 +63,8 @@ Derived convenience view of `args` properties that are **not** positionals (not 
 | `alias` | `string` | no | Short alias if any. |
 | `deprecated` | `boolean` | no | Flag-level deprecation. |
 | `completeFrom` | `CompleteFrom` | no | **Additive in formatVersion 1.** Where the flag's choices come from. See below. |
+| `accepts` | `string` | no | **Additive in formatVersion 1.** Row type this flag takes (`"pm.item"`). See [Typed rows](#typed-rows). |
+| `where` | `Record<string, scalar \| scalar[]>` | no | Only rows whose fields match. |
 
 ### `PositionalInfo`
 
@@ -76,6 +79,8 @@ Derived convenience view of `args` properties that are **not** positionals (not 
 | `description` | `string` | no | From args / positionals schema descriptions when available. |
 | `alsoFlag` | `boolean` | no | When true, `--name` is still accepted at parse time (same key on `args`). Help shows `(also --name)`. |
 | `completeFrom` | `CompleteFrom` | no | **Additive in formatVersion 1.** Where the positional's choices come from. See below. |
+| `accepts` | `string` | no | **Additive in formatVersion 1.** Row type this positional takes (`"pm.item"`). See [Typed rows](#typed-rows). |
+| `where` | `Record<string, scalar \| scalar[]>` | no | Only rows whose fields match. |
 
 ### `CompleteFrom`
 
@@ -109,6 +114,34 @@ export const complete = {
 
 `@clfly/core/complete` exports the dependency-free helpers consumers use: `completeFromArgv(cf, treeName, values)` builds the argv to run, and `selectCompletions(output, cf)` returns `{ value, label?, sub? }[]`.
 
+### Typed rows
+
+**Additive in formatVersion 1.** `completeFrom` is declared on the consumer and stays inside one tree. Typed rows flip it: a producer route says what its rows are (`meta.rows`), a consumer arg says what it takes (`accepts`), and a launcher offers every accepting route, in any linked tree, as an action on a result row. A new tree joins by declaring `accepts`; the producer never changes.
+
+`RowsMeta` (on `meta.rows`, validated at build):
+
+| Field | Type | Required | Description |
+|---|---|---|---|
+| `type` | `string` | yes | Namespaced row type: `"pm.item"`, `"dash.project"`; a shared one like `"fs.path"` crosses trees. |
+| `key` | `string` | yes | Where the rows sit in the JSON output, ending in `[]`: `"[]"`, `"hits[]"`. |
+| `ref` | `string` | yes | Template for the value an acceptor gets. `{field}` reads the row (dot paths ok), then the producer's own args, then `defaults`: `"{path}/{name}"`. A doubled `/` is collapsed. |
+| `when` | `Record<string, scalar \| scalar[]>` | no | Only matching rows are typed. |
+| `defaults` | `Record<string, string>` | no | Fallbacks for producer args a `ref` names (`{ path: "/" }`). |
+| `label`, `sub` | `string` | no | Row fields for a choice label / secondary line. |
+
+```ts
+// Producer: commands/ls.ts
+export const meta = {
+  readOnly: true,
+  rows: { type: "pm.item", key: "[]", ref: "{path}/{name}", defaults: { path: "/" }, label: "name", sub: "type" },
+};
+
+// Consumer: commands/du.ts. A module export keyed by arg (wins), or `.meta({ accepts, where })` on the schema.
+export const accepts = { path: { type: "pm.item", where: { type: "folder" } } };
+```
+
+`@clfly/core/rows` (also re-exported from the root) has the pure matcher: `acceptorsFor(trees, { tree, route }, row, args?)` returns `{ tree, route, arg, value, positional, description? }` for every arg accepting the row; `producersFor`, `rowChoices` (a producer's output as choices for an acceptor), `rowsOf`, `rowRef`, `rowMatches`.
+
 ## Naming projections (derived, not stored)
 
 Consumers should use these conventions so they stay aligned with core transports:
@@ -136,6 +169,7 @@ Audit against the ecosystem UI checklist (command paths, names, descriptions, de
 | Positional / path-param info | ✅ `positionals: PositionalInfo[]` (additive; older files may omit → treat as `[]`). Dynamics also remain as `":name"` in `path`. |
 | CLI binary name | ❌ Not on the manifest (comes from `createCli({ name })` / package bin). `clfly manifest <tree> --json` adds it from the registry. |
 | Choice sources for args | ✅ `completeFrom` on `FlagInfo` / `PositionalInfo` (additive) |
+| Result rows as inputs | ✅ `meta.rows` + `accepts`/`where` on `FlagInfo` / `PositionalInfo` (additive) |
 
 Gaps above are candidates for additive fields before palette/docs ship — never for coupling to core.
 

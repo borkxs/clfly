@@ -27,6 +27,7 @@ import { coreMajorFromVersion, fileUrlToPath } from "../version.js";
 import { assertUniqueToolNames } from "../mcp/tool-names.js";
 import { ClflyError } from "../errors.js";
 import { applyCompleteExport } from "../complete/index.js";
+import { applyAcceptsExport, readRows } from "../rows/index.js";
 
 export interface BuildManifestOptions {
   /** Commands directory (path or file URL). */
@@ -98,6 +99,14 @@ export async function buildManifest(
       positionals,
       `command "${labelPath.join(" ") || "(root)"}"`,
     );
+    applyAcceptsExport(
+      mod.accepts,
+      flags,
+      positionals,
+      `command "${labelPath.join(" ") || "(root)"}"`,
+    );
+    const rows = readRows(mod.meta?.rows, `command "${labelPath.join(" ") || "(root)"}"`);
+    const meta = rows ? { ...mod.meta, rows } : mod.meta;
     const inputSchema = mod.args
       ? (toJsonSchema(mod.args) as Record<string, unknown>)
       : { type: "object", properties: {} };
@@ -112,7 +121,7 @@ export async function buildManifest(
       records.push({
         path: manifestPath,
         importPath,
-        meta: mod.meta,
+        meta,
         flags,
         positionals,
         inputSchema,
@@ -123,7 +132,7 @@ export async function buildManifest(
     routes.push({
       path: manifestPath,
       ...(importPath ? { importPath } : {}),
-      meta: mod.meta,
+      meta,
       flags,
       positionals,
       inputSchema,

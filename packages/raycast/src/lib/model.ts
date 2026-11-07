@@ -4,6 +4,7 @@
  * imports, so it runs under vitest.
  */
 import type { CompleteFrom, FlagInfo, Meta, PositionalInfo } from "@clfly/core";
+import { acceptorsFor, type RowAction } from "@clfly/core/rows";
 
 export interface Route {
   path: string[];
@@ -258,48 +259,126 @@ export function formatBytes(n: number): string {
 // --- chains -----------------------------------------------------------------
 
 export interface Chain {
+  /** Tree that `route` is in: the producer's own for `completeFrom`, any linked one for typed rows. */
+  tree: Tree;
   route: Route;
   arg: string;
   /** `path` fills a path param; otherwise the form value of `arg`. */
   source: "path" | "positional" | "flag";
-  /** Value for `arg` taken from one output row. */
+  /** Value for `arg` taken from one output row (undefined: this row offers no such action). */
   valueOf: (row: unknown) => string | undefined;
 }
 
+export interface ChainOptions {
+  /** Every linked tree, so a typed row reaches acceptors outside the producer's tree. Defaults to `[tree]`. */
+  trees?: Tree[];
+  /** Args the producer ran with (`{ path: "/Movies" }` for `pm ls /Movies`), for `{path}` in a `rows.ref`. */
+  args?: Record<string, unknown>;
+}
+
+type Slot = { name: string; source: Chain["source"]; cf?: CompleteFrom; accepts?: string };
+
+function slotsOf(route: Route): Slot[] {
+  return [
+    ...route.positionals.map((p) => ({
+      name: p.name,
+      cf: p.completeFrom,
+      accepts: p.accepts,
+      source: p.source === "path" ? ("path" as const) : ("positional" as const),
+    })),
+    ...route.flags.map((f) => ({ name: f.name, cf: f.completeFrom, accepts: f.accepts, source: "flag" as const })),
+  ];
+}
+
+/** A path chain only works when this param is the route's only one. */
+const chainable = (route: Route, source: Chain["source"]) =>
+  source !== "path" || route.path.filter(isDynamic).length === 1;
+
 /**
- * Commands in `tree` whose `completeFrom` points at `from` and whose `field`
- * selects from the rows `shaped` shows. Each becomes a row action that opens
- * that command with the row's value filled in.
+ * Next commands for the rows `shaped` shows, each a row action that opens
+ * that command with the row's value filled in. Two sources:
+ * - typed rows: `from.meta.rows` names a row type, and any route in any of
+ *   `opts.trees` whose arg `accepts` it gets the row's templated `ref`
+ *   (via `acceptorsFor`, so `when`/`where` decide per row);
+ * - `completeFrom`: a route in `tree` whose `completeFrom` points at `from`
+ *   with a `field` under these rows.
+ * When both give the same tree/route/arg, the typed row wins (its ref is the
+ * full reference; a field is only one column), in the `completeFrom` slot.
  */
-export function chainsFor(tree: Tree, from: Route, shaped: Shaped): Chain[] {
+export function chainsFor(tree: Tree, from: Route, shaped: Shaped, opts: ChainOptions = {}): Chain[] {
   if (shaped.kind !== "rows") return [];
   const prefix = shaped.key === null ? "[]" : `${shaped.key}[]`;
   const out: Chain[] = [];
+  const at = new Map<string, number>();
+  const put = (c: Chain, wins: boolean) => {
+    const key = `${c.tree.name}\0${c.route.path.join(" ")}\0${c.arg}`;
+    const i = at.get(key);
+    if (i === undefined) {
+      at.set(key, out.push(c) - 1);
+    } else if (wins) out[i] = c;
+  };
+
   for (const route of tree.routes) {
-    const args: Array<{ name: string; cf?: CompleteFrom; source: Chain["source"] }> = [
-      ...route.positionals.map((p) => ({
-        name: p.name,
-        cf: p.completeFrom,
-        source: p.source === "path" ? ("path" as const) : ("positional" as const),
-      })),
-      ...route.flags.map((f) => ({ name: f.name, cf: f.completeFrom, source: "flag" as const })),
-    ];
-    for (const { name, cf, source } of args) {
+    for (const { name, cf, source } of slotsOf(route)) {
       if (!cf || !samePath(cmdPath(cf.cmd, tree.name), from.path)) continue;
       if (cf.field !== prefix && !cf.field.startsWith(`${prefix}.`)) continue;
-      // A path chain only works when this param is the route's only one.
-      if (source === "path" && route.path.filter(isDynamic).length !== 1) continue;
+      if (!chainable(route, source)) continue;
       const rest = cf.field.slice(prefix.length + 1);
-      out.push({
-        route,
-        arg: name,
-        source,
-        valueOf: (row) => {
-          const v = rest ? getPath(row, rest) : row;
-          return isScalar(v) && v !== null && v !== "" ? String(v) : undefined;
+      put(
+        {
+          tree,
+          route,
+          arg: name,
+          source,
+          valueOf: (row) => {
+            const v = rest ? getPath(row, rest) : row;
+            return isScalar(v) && v !== null && v !== "" ? String(v) : undefined;
+          },
         },
-      });
+        false
+      );
     }
+  }
+
+  const rows = from.meta?.rows;
+  if (rows && rows.key === prefix) {
+    const trees = (opts.trees ?? [tree]).filter((t) => !t.error);
+    if (!trees.some((t) => t.name === tree.name)) trees.unshift(tree);
+    const producer = { tree: tree.name, route: from.path };
+    // One acceptorsFor call per row, shared by every chain's valueOf.
+    const cache = new Map<unknown, RowAction[]>();
+    const actionsOf = (row: unknown) => {
+      let got = cache.get(row);
+      if (!got) cache.set(row, (got = acceptorsFor(trees, producer, row, opts.args ?? {})));
+      return got;
+    };
+    for (const t of trees) {
+      for (const route of t.routes) {
+        for (const { name, accepts, source } of slotsOf(route)) {
+          if (accepts !== rows.type || !chainable(route, source)) continue;
+          put(
+            {
+              tree: t,
+              route,
+              arg: name,
+              source,
+              valueOf: (row) =>
+                actionsOf(row).find((a) => a.tree === t.name && a.arg === name && samePath(a.route, route.path))?.value,
+            },
+            true
+          );
+        }
+      }
+    }
+  }
+  return out;
+}
+
+/** Producer args as they ran: path params and form values, blanks dropped. */
+export function runArgs(params: Record<string, string>, values: FormValues): Record<string, string> {
+  const out: Record<string, string> = {};
+  for (const [k, v] of Object.entries({ ...values, ...params })) {
+    if (typeof v === "string" && v.trim()) out[k] = v.trim();
   }
   return out;
 }

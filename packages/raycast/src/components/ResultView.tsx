@@ -11,6 +11,7 @@ import {
   rowAccessories,
   rowSubtitle,
   rowTitle,
+  runArgs,
   scalarFields,
   shapeOutput,
   type Chain,
@@ -20,6 +21,7 @@ import {
 } from "../lib/model";
 import { FavoriteActions } from "./FavoriteActions";
 import { openRoute } from "./navigate";
+import { useTrees } from "./useTrees";
 
 const MAX_DETAIL = 60_000;
 
@@ -40,6 +42,7 @@ export function ResultView(props: { tree: Tree; route: Route; params: Record<str
   const { pop } = useNavigation();
   const abort = useRef<AbortController>(null);
   const [showDetail, setShowDetail] = useState(false);
+  const { data: trees } = useTrees();
 
   const { data, isLoading, revalidate } = usePromise(
     async (key: string): Promise<RunResult | "cancelled"> => {
@@ -103,7 +106,7 @@ export function ResultView(props: { tree: Tree; route: Route; params: Record<str
     return <Detail isLoading={isLoading} navigationTitle={line} markdown={fence(shaped.value)} actions={<ActionPanel>{common}</ActionPanel>} />;
   }
 
-  const chains = chainsFor(tree, route, shaped);
+  const chains = chainsFor(tree, route, shaped, { trees, args: runArgs(params, values) });
   const extras = Object.entries(shaped.extras).map(([k, v]) => `${k}: ${String(v)}`).join(" · ");
   return (
     <List
@@ -122,7 +125,7 @@ export function ResultView(props: { tree: Tree; route: Route; params: Record<str
           detail={<List.Item.Detail markdown={fence(row)} />}
           actions={
             <ActionPanel>
-              <ChainActions tree={tree} chains={chains} row={row} />
+              <ChainActions chains={chains} row={row} />
               <Action.CopyToClipboard title="Copy Title" content={rowTitle(row)} />
               <Action title={showDetail ? "Hide Detail" : "Show Detail"} icon={Icon.Sidebar} shortcut={{ modifiers: ["cmd"], key: "d" }} onAction={() => setShowDetail((s) => !s)} />
               <ActionPanel.Section title="Copy">
@@ -140,9 +143,9 @@ export function ResultView(props: { tree: Tree; route: Route; params: Record<str
   );
 }
 
-/** One action per command whose `completeFrom` reads from this output. */
-export function ChainActions(props: { tree: Tree; chains: Chain[]; row: unknown }) {
-  const { tree, chains, row } = props;
+/** One action per command this row can feed: typed-row acceptors and `completeFrom` readers. */
+export function ChainActions(props: { chains: Chain[]; row: unknown }) {
+  const { chains, row } = props;
   return (
     <>
       {chains.map((c) => {
@@ -150,13 +153,13 @@ export function ChainActions(props: { tree: Tree; chains: Chain[]; row: unknown 
         if (value === undefined) return null;
         const target =
           c.source === "path"
-            ? openRoute(tree, c.route, { [c.arg]: value })
-            : openRoute(tree, c.route, {}, { [c.arg]: value });
+            ? openRoute(c.tree, c.route, { [c.arg]: value })
+            : openRoute(c.tree, c.route, {}, { [c.arg]: value });
         const name = c.route.path.map((s) => (s === `:${c.arg}` ? value : s)).join(" ");
         return (
           <Action.Push
-            key={`${c.route.path.join(" ")} ${c.arg}`}
-            title={`${tree.name} ${name}`}
+            key={`${c.tree.name} ${c.route.path.join(" ")} ${c.arg}`}
+            title={`${c.tree.name} ${name}`}
             icon={Icon.ArrowRight}
             target={target}
           />

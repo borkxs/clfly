@@ -5,6 +5,7 @@ import { DEFAULT_POLICY, LiveSearcher, type LiveState } from "../lib/live";
 import {
   buildArgv,
   chainsFor,
+  runArgs,
   commandLine,
   displayPath,
   formatBytes,
@@ -20,6 +21,7 @@ import { suggestCompletions, type Hit } from "../lib/release";
 import { CommandForm } from "./CommandForm";
 import { FavoriteActions } from "./FavoriteActions";
 import { ChainActions } from "./ResultView";
+import { useTrees } from "./useTrees";
 
 /**
  * Search-as-you-type for a read-only command whose first positional is
@@ -72,13 +74,14 @@ export function LiveSearch(props: { tree: Tree; route: Route; params: Record<str
   const titled = rows.filter((r): r is Hit => typeof (r as Hit)?.title === "string");
   const suggestions = titled.length ? suggestCompletions(titled) : [];
   const top = suggestions[0];
-  const chains = shaped ? chainsFor(tree, route, shaped) : [];
+  const { data: trees } = useTrees();
+  const chains = shaped ? chainsFor(tree, route, shaped, { trees, args: runArgs(params, { query: text }) }) : [];
   const title = [tree.name, displayPath(route.path, params)].join(" ");
   const s = searcher.stats;
 
   const rowActions = (row: unknown, query: string) => (
     <ActionPanel>
-      <ChainActions tree={tree} chains={chains} row={row} />
+      <ChainActions chains={chains} row={row} />
       {top && <Action title={`Complete to “${top.completion}”`} icon={Icon.Text} shortcut={{ modifiers: ["cmd"], key: "arrowRight" }} onAction={() => complete(top.completion)} />}
       <Action title="Search Now" icon={Icon.MagnifyingGlass} shortcut={{ modifiers: ["cmd"], key: "return" }} onAction={() => searcher.submit(text)} />
       <Action.CopyToClipboard title="Copy Title" content={rowTitle(row)} />
@@ -145,7 +148,7 @@ export function LiveSearch(props: { tree: Tree; route: Route; params: Record<str
               actions={
                 <ActionPanel>
                   <Action title={`Search “${g.completion}”`} icon={Icon.MagnifyingGlass} onAction={() => complete(g.completion)} />
-                  <ChainActions tree={tree} chains={chains} row={g.best} />
+                  <ChainActions chains={chains} row={g.best} />
                 </ActionPanel>
               }
             />

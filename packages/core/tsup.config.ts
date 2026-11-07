@@ -6,6 +6,8 @@ export default defineConfig({
     "mcp/index": "src/mcp/index.ts",
     // Dependency-free picker helpers for launchers and UIs that bundle them.
     "complete/index": "src/complete/index.ts",
+    // Typed rows matcher (acceptorsFor, rowChoices) for the same consumers.
+    "rows/index": "src/rows/index.ts",
   },
   format: ["esm"],
   dts: true,
