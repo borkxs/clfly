@@ -1,0 +1,139 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+<title>clfly</title>
+<meta name="color-scheme" content="light dark" />
+<meta name="apple-mobile-web-app-capable" content="yes" />
+<link rel="manifest" href="/manifest.webmanifest" />
+<style>
+/* Tokens: see README "Design". Type 12/14/16/20/24; space 4/8/12/16/24/32. */
+:root {
+  --bg: #ffffff; --fg: #111827; --fg-2: #4b5563; --fg-3: #6b7280;
+  --line: #e5e7eb; --sel: #eef2ff; --accent: #2563eb; --danger: #b91c1c; --ok: #15803d;
+  --fs-12: 12px; --fs-14: 14px; --fs-16: 16px; --fs-20: 20px; --fs-24: 24px;
+  --sp-4: 4px; --sp-8: 8px; --sp-12: 12px; --sp-16: 16px; --sp-24: 24px; --sp-32: 32px;
+  --mono: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+  --sans: -apple-system, BlinkMacSystemFont, "Inter", system-ui, sans-serif;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #0b0f17; --fg: #e5e7eb; --fg-2: #a3adbd; --fg-3: #8b94a3;
+    --line: #1f2937; --sel: #141c2e; --accent: #7aaeff; --danger: #f87171; --ok: #4ade80;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #0b0f17; --fg: #e5e7eb; --fg-2: #a3adbd; --fg-3: #8b94a3;
+  --line: #1f2937; --sel: #141c2e; --accent: #7aaeff; --danger: #f87171; --ok: #4ade80;
+}
+* { box-sizing: border-box; }
+html, body { margin: 0; background: var(--bg); color: var(--fg); font: var(--fs-16)/1.5 var(--sans); }
+main { max-width: 720px; margin: 0 auto; padding: var(--sp-24) var(--sp-16) calc(var(--sp-32) + env(safe-area-inset-bottom)); }
+
+/* P1: the line. */
+.linebox { position: relative; font: 500 var(--fs-24)/1.3 var(--mono); }
+.linebox input {
+  width: 100%; margin: 0; padding: var(--sp-12) 0; border: 0; border-bottom: 2px solid var(--line);
+  background: transparent; color: var(--fg); font: inherit; outline: none; caret-color: var(--accent);
+  border-radius: 0; -webkit-appearance: none;
+}
+.linebox input:focus { border-bottom-color: var(--fg); }
+.linebox input::placeholder { color: var(--fg-3); opacity: 1; }
+.ghost {
+  position: absolute; inset: 0; padding: var(--sp-12) 0; pointer-events: none; white-space: pre; overflow: hidden;
+  font: inherit; color: transparent;
+}
+.ghost #ghost-rest { color: var(--fg-3); }
+.hint { min-height: 1.5em; margin-top: var(--sp-8); font-size: var(--fs-14); color: var(--fg-2); }
+.hint b { font-weight: 600; }
+
+/* P2/P3: rows. */
+#list { margin-top: var(--sp-16); }
+section + section { margin-top: var(--sp-24); }
+h2 { margin: 0 0 var(--sp-4); font-size: var(--fs-12); font-weight: 500; letter-spacing: .04em; text-transform: uppercase; color: var(--fg-3); }
+ul { list-style: none; margin: 0; padding: 0; }
+li {
+  display: flex; align-items: baseline; gap: var(--sp-8); min-height: 44px; padding: var(--sp-8) var(--sp-8);
+  margin: 0 calc(-1 * var(--sp-8)); border-radius: 6px; cursor: default; font-size: var(--fs-16);
+}
+li .ic { flex: 0 0 1.2em; text-align: center; color: var(--fg-3); font-family: var(--mono); }
+/* The title keeps its width; the subtitle gives way first (shrinks 4x faster). */
+li .t { flex: 0 1 auto; min-width: 0; font-family: var(--mono); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+li .s { flex: 1 1 0; min-width: 0; font-size: var(--fs-14); color: var(--fg-3); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+li .accs { display: flex; gap: var(--sp-8); flex: 0 0 auto; }
+.acc { font-size: var(--fs-12); color: var(--fg-3); font-variant-numeric: tabular-nums; }
+li .chain { flex: 0 0 auto; font-size: var(--fs-12); color: var(--fg-3); font-family: var(--mono); visibility: hidden; }
+li.sel { background: var(--sel); }
+li.sel .t { color: var(--fg); }
+li.sel .ic { color: var(--accent); }
+li.sel .chain { visibility: visible; color: var(--accent); }
+li:hover:not(.sel) { background: color-mix(in srgb, var(--sel) 50%, transparent); }
+button.x { margin-left: auto; border: 0; background: none; color: var(--fg-3); font-size: var(--fs-16); cursor: pointer; padding: 0 var(--sp-8); min-width: 44px; min-height: 32px; }
+button.x:hover { color: var(--fg); }
+.empty { margin: var(--sp-16) 0; font-size: var(--fs-14); }
+.muted { color: var(--fg-3); }
+.danger { color: var(--danger); }
+.ok { color: var(--ok); }
+
+/* Result of the last run. */
+#result { margin-top: var(--sp-16); padding-bottom: var(--sp-16); border-bottom: 1px solid var(--line); }
+#result header { display: flex; align-items: baseline; gap: var(--sp-8); font-size: var(--fs-14); }
+#result header .t { font-family: var(--mono); color: var(--fg-2); }
+#result pre { margin: var(--sp-12) 0 0; padding: var(--sp-12); overflow: auto; max-height: 50vh; font: var(--fs-12)/1.5 var(--mono); color: var(--fg-2); background: color-mix(in srgb, var(--sel) 60%, transparent); border-radius: 6px; }
+#result .extras { margin: var(--sp-8) 0 0; display: flex; gap: var(--sp-12); flex-wrap: wrap; }
+#result ul.rows { margin-top: var(--sp-8); }
+#result ul.rows li { min-height: 40px; position: relative; }
+.chains { display: flex; gap: var(--sp-8); flex: 0 0 auto; }
+/* Pointer devices: chains appear over the row's right end on hover; touch keeps them in flow, wrapped. */
+@media (hover: hover) {
+  .chains { display: none; position: absolute; right: var(--sp-8); top: 50%; transform: translateY(-50%); padding-left: var(--sp-12); background: var(--sel); }
+  li:hover .chains, li:focus-within .chains { display: flex; }
+  #result ul.rows li:hover, #result ul.rows li:focus-within { background: var(--sel); }
+}
+@media (hover: none) {
+  #result ul.rows li { flex-wrap: wrap; }
+}
+button.chain-btn {
+  border: 1px solid var(--line); background: transparent; color: var(--fg-2); border-radius: 999px;
+  font: var(--fs-12)/1 var(--mono); padding: var(--sp-8) var(--sp-12); cursor: pointer; min-height: 32px;
+}
+button.chain-btn:hover { border-color: var(--accent); color: var(--accent); }
+
+/* Runs. */
+#runs { margin-top: var(--sp-32); }
+#runs li { min-height: 32px; padding: var(--sp-4) var(--sp-8); font-size: var(--fs-14); cursor: pointer; }
+#runs .t { color: var(--fg-2); }
+.dot { flex: 0 0 8px; width: 8px; height: 8px; border-radius: 50%; background: var(--fg-3); align-self: center; }
+.dot.ok { background: var(--ok); }
+.dot.bad { background: var(--danger); }
+.dot.run { background: var(--accent); animation: pulse 1s ease-in-out infinite alternate; }
+@keyframes pulse { from { opacity: .35; } to { opacity: 1; } }
+
+/* Key legend. */
+.keys { margin-top: var(--sp-32); font-size: var(--fs-12); color: var(--fg-3); display: flex; gap: var(--sp-16); flex-wrap: wrap; }
+kbd { font: inherit; color: var(--fg-2); }
+
+@media (max-width: 480px) {
+  main { padding-top: var(--sp-16); }
+  .linebox { font-size: var(--fs-20); }
+  li .accs, li .chain, .keys { display: none; }
+}
+</style>
+</head>
+<body>
+<main>
+  <div class="linebox">
+    <div class="ghost" aria-hidden="true"><span id="ghost-typed"></span><span id="ghost-rest"></span></div>
+    <input id="line" type="text" placeholder="pm oceans eight · dash open film · run ls"
+      autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" enterkeyhint="go" aria-label="command line" />
+  </div>
+  <div class="hint" id="hint"></div>
+  <div id="result" hidden></div>
+  <div id="list"></div>
+  <div id="runs"></div>
+  <p class="keys"><span><kbd>⇥</kbd> take word</span><span><kbd>↵</kbd> take or run</span><span><kbd>⌘↵</kbd> run as typed</span><span><kbd>↑↓</kbd> move</span><span><kbd>esc</kbd> clear</span><span><kbd>⌘⇧C</kbd> copy command</span></p>
+</main>
+<script type="module" src="/app.js"></script>
+</body>
+</html>
