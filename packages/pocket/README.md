@@ -35,8 +35,13 @@ pnpm --filter @clfly/pocket start    # builds public/app.js, serves http://127.0
   directly (no shell) and keeps going if the page closes. Destructive commands ask once, inline.
   The result shows as rows with chain buttons, or as text. Recent runs sit at the bottom; click
   one to see its output.
-- **Recent**: lines that ran, by frecency, in this browser. One-off lines carrying a hash or id
-  stay out; the search that found them is what repeats.
+- **History**: the empty line lists lines that ran, newest first, merged from the engine's run log
+  (`GET /api/history`), so the panel, browser and phone share it. Typing ranks lines by frecency.
+  One-off lines carrying a hash or id stay out; × forgets a line in this browser.
+- **Trees on demand**: the empty line hides the tree list; ⇥, or ↓ past the last row, opens it.
+- **JSON results** render coloured; the copy icon in the result header copies the run's JSON.
+- **Panel mode** (`?panel=1`, used by `packages/panel`): pinned line, no legend, esc on an empty
+  line hides the panel.
 
 ## Engine (`server.mjs`)
 
@@ -45,6 +50,7 @@ pnpm --filter @clfly/pocket start    # builds public/app.js, serves http://127.0
 | `GET /api/manifest` | `clfly manifest --json`, cached 60 s (`?refresh` forces) |
 | `POST /api/exec {tree, argv}` | runs and waits; read-only commands only (choice sources, live search) |
 | `POST /api/run {tree, argv, line, confirmed?}` | starts a run; destructive commands need `confirmed: true` |
+| `GET /api/history` | every logged line with count and last time, newest first |
 | `GET /api/runs`, `GET /api/runs/:id` | recent runs (summary), one run with its output |
 
 Each finished run appends a line to `~/.local/state/clfly/pocket-runs.jsonl`.
