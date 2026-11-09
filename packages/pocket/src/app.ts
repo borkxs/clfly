@@ -93,7 +93,11 @@ interface Result {
 // --- state -------------------------------------------------------------------
 
 let trees: Tree[] = [];
+// Shown in place of the list only when there are no trees to complete against (see manifest.mjs:
+// a failed refresh after a good load keeps the trees and is not an error here).
 let manifestError: string | undefined;
+// The last run that could not start (a bad tree, a refused argv); cleared when the line changes.
+let runError: string | undefined;
 let line = "";
 let sel = 0;
 let state: LineState = analyze([], "");
@@ -345,6 +349,7 @@ async function run(s: LineState, confirmed = false) {
     return;
   }
   pendingConfirm = undefined;
+  runError = undefined;
   remember(s.line);
   try {
     const r = await api<Run>("/api/run", { tree: tree.name, argv: s.argv, line: s.line.trim(), confirmed });
@@ -355,7 +360,7 @@ async function run(s: LineState, confirmed = false) {
     if (handsOff(route)) panel?.postMessage("hide");
     poll();
   } catch (e) {
-    manifestError = e instanceof Error ? e.message : String(e);
+    runError = e instanceof Error ? e.message : String(e);
     render();
   }
 }
@@ -585,7 +590,9 @@ function render() {
   const list = $("list");
   list.innerHTML =
     html ||
-    (manifestError
+    (runError
+      ? `<p class="empty danger">${h(runError)}</p>`
+      : manifestError && trees.length === 0
       ? `<p class="empty danger">${h(manifestError)}</p>`
       : line.trim()
         ? `<p class="empty muted">nothing matches</p>`
@@ -673,6 +680,7 @@ function renderRuns() {
 
 function setLine(next: string, resetSel = true) {
   line = next;
+  runError = undefined;
   browse = false;
   input.value = next;
   if (resetSel) sel = 0;
@@ -686,6 +694,7 @@ function setLine(next: string, resetSel = true) {
 
 input.addEventListener("input", () => {
   line = input.value;
+  runError = undefined;
   browse = false;
   sel = 0;
   state = analyze(trees, line);
@@ -826,8 +835,9 @@ let manifestSig = "";
 
 async function loadManifest() {
   try {
-    const m = await api<{ trees: Tree[]; error?: string }>("/api/manifest");
+    const m = await api<{ trees: Tree[]; error?: string; stale?: string }>("/api/manifest");
     manifestError = m.error;
+    if (m.stale) console.warn(`clfly pocket: manifest refresh failed, using the last good trees: ${m.stale}`);
     const sig = JSON.stringify(m.trees);
     if (sig === manifestSig) return;
     manifestSig = sig;

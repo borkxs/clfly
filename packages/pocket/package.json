@@ -9,7 +9,8 @@
     "watch": "esbuild src/app.ts --bundle --format=esm --target=es2022 --sourcemap --outfile=public/app.js --watch",
     "start": "pnpm build && node server.mjs",
     "serve": "node server.mjs",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "test": "node --test"
   },
   "dependencies": {
     "@clfly/core": "workspace:*"

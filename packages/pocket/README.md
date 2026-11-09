@@ -12,7 +12,9 @@ pnpm --filter @clfly/core build      # once; the page bundles core's complete he
 pnpm --filter @clfly/pocket start    # builds public/app.js, serves http://127.0.0.1:4180
 ```
 
-`clfly` on PATH must have the `manifest` command. `POCKET_PORT`, `POCKET_HOST` (default
+`clfly` on PATH must have the `manifest` command; one without it (an older build linked
+globally) shows "clfly has no "manifest" command … set CLFLY_BIN" in place of the list.
+`POCKET_PORT`, `POCKET_HOST` (default
 `127.0.0.1`; set `0.0.0.0` only behind Tailscale) and `CLFLY_BIN` override the defaults.
 `pnpm --filter @clfly/pocket watch` rebuilds on edit; the server reads files on each request.
 
@@ -46,7 +48,10 @@ pnpm --filter @clfly/pocket start    # builds public/app.js, serves http://127.0
   rows chain into acceptors in any tree (`pm ls` folder → `pm ls`/`pm du`, file → `pm download`).
 - **Trees stay current**: the page fetches the manifest again each time the panel opens, when the
   tab comes back, and every 5 minutes, so a merged tree change shows up without restarting.
-  Fetched choice lists refetch after 60 s (the old list shows meanwhile).
+  Fetched choice lists refetch after 60 s (the old list shows meanwhile). A refresh that fails
+  after a good load keeps the last good trees and only logs (`stale` in `/api/manifest`); the
+  error shows only when there are no trees at all. A run that can't start shows its own error
+  until the line changes.
 - **JSON results** render coloured; the copy icon in the result header copies the run's JSON.
 - **Panel mode** (`?panel=1`, used by `packages/panel`): pinned line, no legend, esc on an empty
   line hides the panel.
@@ -55,7 +60,7 @@ pnpm --filter @clfly/pocket start    # builds public/app.js, serves http://127.0
 
 | Route | Does |
 |---|---|
-| `GET /api/manifest` | `clfly manifest --json`, cached 15 s (`?refresh` forces) |
+| `GET /api/manifest` | `clfly manifest --json`, cached 15 s (`?refresh` forces); `{trees, at, error?, stale?}`, 502 only with no trees (`manifest.mjs`) |
 | `POST /api/exec {tree, argv}` | runs and waits; read-only commands only (choice sources, live search) |
 | `POST /api/run {tree, argv, line, confirmed?}` | starts a run; destructive commands need `confirmed: true` |
 | `GET /api/history` | every logged line with count and last time, newest first |
