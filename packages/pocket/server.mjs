@@ -9,6 +9,7 @@ import { createServer } from "node:http";
 import { homedir } from "node:os";
 import { delimiter, dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
+import { manifestCache } from "./manifest.mjs";
 
 const here = dirname(fileURLToPath(import.meta.url));
 const PORT = Number(process.env.POCKET_PORT || 4180);
@@ -89,18 +90,10 @@ function errorMessage(stderr) {
 
 // --- manifest ----------------------------------------------------------------
 
-let manifest = { trees: [], at: 0, error: undefined };
-
-async function loadManifest(force = false) {
-  if (!force && Date.now() - manifest.at < MANIFEST_TTL) return manifest;
-  const res = await execArgv(CLFLY, ["manifest", "--json"], { timeoutMs: 60_000 });
-  if (res.code !== 0 || !res.json?.trees) {
-    manifest = { ...manifest, at: Date.now(), error: res.error ?? "clfly manifest returned no JSON" };
-  } else {
-    manifest = { trees: res.json.trees, at: Date.now(), error: undefined };
-  }
-  return manifest;
-}
+const loadManifest = manifestCache(() => execArgv(CLFLY, ["manifest", "--json"], { timeoutMs: 60_000 }), {
+  bin: CLFLY,
+  ttlMs: MANIFEST_TTL,
+});
 
 const DESTRUCTIVE = new Set(["rm", "remove", "delete", "apply", "reset", "down", "uninstall", "unlink", "clean"]);
 
@@ -231,7 +224,8 @@ const server = createServer(async (req, res) => {
     }
     if (req.method === "GET" && url.pathname === "/api/manifest") {
       const m = await loadManifest(url.searchParams.has("refresh"));
-      return send(res, m.error && !m.trees.length ? 502 : 200, { trees: m.trees, at: m.at, error: m.error });
+      if (m.stale) console.warn(`manifest refresh failed, serving the last good trees: ${m.stale}`);
+      return send(res, m.error ? 502 : 200, { trees: m.trees, at: m.at, error: m.error, stale: m.stale });
     }
     if (req.method === "GET" && url.pathname === "/api/history") {
       return send(res, 200, { history: await history() });
