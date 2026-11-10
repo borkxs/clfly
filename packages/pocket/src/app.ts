@@ -41,6 +41,7 @@ import {
   type Shaped,
   type Tree,
 } from "../../raycast/src/lib/model";
+import { rowActions, rowKey, typedRows, type Focus, type RowKey, type RowStep } from "./rows";
 
 // --- types -------------------------------------------------------------------
 
@@ -107,6 +108,8 @@ let result: Result | undefined;
 let watching: { id: string; tree: Tree; route: Route } | undefined;
 let pollTimer: ReturnType<typeof setTimeout> | undefined;
 let lines: ReturnType<typeof quickLines> = [];
+// Where the keys go inside an open result: the line, its typed rows, or one row's actions (src/rows.ts).
+let focus: Focus = { at: "line" };
 
 const $ = <T extends HTMLElement>(id: string) => document.getElementById(id) as T;
 const input = $<HTMLInputElement>("line");
@@ -393,13 +396,32 @@ async function showRun(id: string, tree?: Tree, route?: Route) {
     return render();
   }
   const shaped = full.json !== undefined ? shapeOutput(full.json) : undefined;
+  focus = { at: "line" };
   result = { run: full, tree: t, route: rt, shaped, chains: t && rt && shaped ? chainsFor(t, rt, shaped, { trees, args: argsOf(t, rt, full.argv) }) : [] };
   render();
   window.scrollTo({ top: 0 });
 }
 
 function keepSelVisible() {
-  $("list").querySelector("li.sel")?.scrollIntoView({ block: "nearest" });
+  (focus.at === "line" ? $("list") : $("result")).querySelector("li.sel")?.scrollIntoView({ block: "nearest" });
+}
+
+/** The open result's rows, when its route declares typed rows (only those take ↓ from the line). */
+function resultRows(): unknown[] | undefined {
+  const sh = result?.shaped;
+  if (!result || sh?.kind !== "rows" || !typedRows(result.route, sh.rows)) return undefined;
+  return sh.rows.slice(0, 200);
+}
+
+/** An action taken from a row: the line is rewritten, and runs when nothing else is required. */
+function takeStep(step: RowStep) {
+  focus = step.focus;
+  if (!("take" in step)) {
+    render();
+    return keepSelVisible();
+  }
+  setLine(step.take);
+  if (state.runnable) void run(state);
 }
 
 function routeFor(tree: Tree, argv: string[]): Route | undefined {
@@ -541,6 +563,8 @@ function render() {
   const hint = $("hint");
   if (pendingConfirm) {
     hint.innerHTML = `<span class="danger">Run <b>${h(pendingConfirm.line.trim())}</b>? ↵ confirms, esc cancels</span>`;
+  } else if (focus.at !== "line" && result) {
+    hint.innerHTML = rowHint();
   } else if (state.error && !isQuick(state) && line.trim()) {
     hint.innerHTML = `<span class="muted">${h(state.error)}</span>`;
   } else if (state.interactive) {
@@ -568,7 +592,8 @@ function render() {
       (s) => `<section><h2>${h(s.title)}</h2><ul>${s.items
         .map((it) => {
           const idx = i++;
-          const cls = idx === sel ? ' class="sel"' : "";
+          // One highlighted row on screen: while focus is in the result's rows, the list shows none.
+          const cls = idx === sel && focus.at === "line" ? ' class="sel"' : "";
           if (it.kind === "cand") {
             const { c } = it;
             return `<li${cls} data-i="${idx}"><span class="ic">${ICON[c.kind]}</span><span class="t">${h(c.title)}</span>${c.subtitle ? `<span class="s">${h(c.subtitle)}</span>` : ""}</li>`;
@@ -601,6 +626,16 @@ function render() {
   renderRuns();
 }
 
+function rowHint(): string {
+  const rows = resultRows() ?? [];
+  if (focus.at === "actions") return `<span class="muted">↵ takes the action · esc back to the rows</span>`;
+  if (focus.at !== "rows") return "";
+  const acts = rowActions(result?.chains ?? [], rows[focus.sel]);
+  if (acts.length === 1) return `<span class="muted">↵</span> ${h(acts[0]!.label)} <span class="muted">· esc back to the line</span>`;
+  if (acts.length) return `<span class="muted">↵ ${acts.length} actions · esc back to the line</span>`;
+  return `<span class="muted">no actions for this row · esc back to the line</span>`;
+}
+
 function renderResult() {
   const el = $("result");
   if (!result) {
@@ -614,7 +649,18 @@ function renderResult() {
   const meta = `${status} <span class="muted">· ${r.ms ?? 0} ms</span>`;
   let body = "";
   if (r.status === "failed") body = `<pre>${h(r.error ?? r.stderr ?? "")}</pre>`;
-  else if (shaped?.kind === "rows") {
+  else if (shaped?.kind === "rows" && focus.at === "actions") {
+    // One row's actions replace the rows: route (P2, the highlighted one P1) and its one-line description (P3).
+    const { row: at, sel: pick } = focus;
+    const row = shaped.rows[at];
+    const acts = rowActions(chains, row);
+    body = `<section><h2>Actions for ${h(rowTitle(row))}</h2><ul class="rows">${acts
+      .map(
+        (a, ai) =>
+          `<li${ai === pick ? ' class="sel"' : ""} data-action="${ai}"><span class="ic">↵</span><span class="t">${h(a.label)}</span>${a.description ? `<span class="s">${h(a.description)}</span>` : ""}</li>`,
+      )
+      .join("")}</ul></section>`;
+  } else if (shaped?.kind === "rows") {
     const extras = Object.entries(shaped.extras)
       .map(([k, v]) => `<span class="acc">${h(k)} ${h(v)}</span>`)
       .join("");
@@ -631,7 +677,8 @@ function renderResult() {
             return v ? `<button class="chain-btn" data-row="${idx}" data-chain="${ci}">${h(ch.tree.name)} ${h(ch.route.path.join(" "))}</button>` : "";
           })
           .join("");
-        return `<li><span class="t">${h(rowTitle(row))}</span>${sub ? `<span class="s">${h(sub)}</span>` : ""}<span class="accs">${acc}</span>${btns ? `<span class="chains">${btns}</span>` : ""}</li>`;
+        const cls = focus.at === "rows" && focus.sel === idx ? ' class="sel"' : "";
+        return `<li${cls}><span class="t">${h(rowTitle(row))}</span>${sub ? `<span class="s">${h(sub)}</span>` : ""}<span class="accs">${acc}</span>${btns ? `<span class="chains">${btns}</span>` : ""}</li>`;
       })
       .join("")}</ul>${shaped.rows.length > 200 ? `<p class="muted">… ${shaped.rows.length - 200} more</p>` : ""}`;
   } else if (shaped?.kind === "value") {
@@ -680,6 +727,7 @@ function renderRuns() {
 
 function setLine(next: string, resetSel = true) {
   line = next;
+  focus = { at: "line" };
   runError = undefined;
   browse = false;
   input.value = next;
@@ -694,6 +742,7 @@ function setLine(next: string, resetSel = true) {
 
 input.addEventListener("input", () => {
   line = input.value;
+  focus = { at: "line" };
   runError = undefined;
   browse = false;
   sel = 0;
@@ -703,7 +752,19 @@ input.addEventListener("input", () => {
   render();
 });
 
+const ROW_KEYS: Record<string, RowKey> = { ArrowDown: "down", ArrowUp: "up", Enter: "enter", Escape: "escape" };
+
 input.addEventListener("keydown", (e) => {
+  // The result's typed rows: ↓ from an empty line goes in; ↵ / esc / ↑ walk rows → actions and back.
+  const rows = resultRows();
+  const key = e.ctrlKey && e.key === "n" ? "down" : e.ctrlKey && e.key === "p" ? "up" : ROW_KEYS[e.key];
+  if (rows && key && !pendingConfirm && !e.metaKey && (focus.at !== "line" || line === "")) {
+    const step = rowKey(focus, key, rows, result!.chains);
+    if (step) {
+      e.preventDefault();
+      return takeStep(step);
+    }
+  } else if (focus.at !== "line" && !rows) focus = { at: "line" };
   const items = flatItems(sections());
   // Empty line: ⇥, or ↓ past the last row, opens the tree list.
   const atEnd = sel >= items.length - 1;
@@ -780,7 +841,13 @@ $("result").addEventListener("click", (e) => {
     });
     return;
   }
+  const act = t.closest<HTMLElement>("li[data-action]");
+  if (act && focus.at === "actions") {
+    const rows = resultRows() ?? [];
+    return takeStep(rowKey({ ...focus, sel: Number(act.dataset.action) }, "enter", rows, result?.chains ?? [])!);
+  }
   if (t.id === "close-result") {
+    focus = { at: "line" };
     result = undefined;
     render();
     input.focus();
