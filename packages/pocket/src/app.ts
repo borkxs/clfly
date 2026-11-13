@@ -2,6 +2,9 @@
 // P1: the line — what is being typed. One per screen, largest type, full contrast.
 // P2: the rows under it (next words, search hits, result rows) and the one highlighted row.
 // P3: subtitles, section labels, the needs-hint, key legend, the runs list.
+// A run that stopped at a question (src/ask.ts), in the result region:
+//   P1: the highlighted choice.  P2: the question and the other choices.
+//   P3: the line it came from, the answers already given, the key hint.
 //
 // The browser face of the clfly line editor. Pure logic comes from the Raycast
 // package's lib (line.ts, model.ts, live.ts); this file is DOM, keys, and the
@@ -41,6 +44,7 @@ import {
   type Shaped,
   type Tree,
 } from "../../raycast/src/lib/model";
+import { answerArgv, askKey, inputRequired, type InputRequired } from "./ask";
 import { rowActions, rowKey, typedRows, type Focus, type RowKey, type RowStep } from "./rows";
 
 // --- types -------------------------------------------------------------------
@@ -50,7 +54,7 @@ interface Run {
   tree: string;
   argv: string[];
   line: string;
-  status: "running" | "done" | "failed";
+  status: "running" | "done" | "failed" | "input-required";
   startedAt: string;
   endedAt?: string;
   code?: number;
@@ -89,6 +93,10 @@ interface Result {
   route?: Route;
   shaped?: Shaped;
   chains: Chain[];
+  /** The run stopped at a question: pick a choice and the same argv reruns with the answers. */
+  ask?: InputRequired;
+  /** The destructive confirm the line already had, carried to its reruns. */
+  confirmed?: boolean;
 }
 
 // --- state -------------------------------------------------------------------
@@ -105,7 +113,7 @@ let state: LineState = analyze([], "");
 let pendingConfirm: LineState | undefined;
 let runs: Run[] = [];
 let result: Result | undefined;
-let watching: { id: string; tree: Tree; route: Route } | undefined;
+let watching: { id: string; tree: Tree; route?: Route; confirmed: boolean } | undefined;
 let pollTimer: ReturnType<typeof setTimeout> | undefined;
 let lines: ReturnType<typeof quickLines> = [];
 // Where the keys go inside an open result: the line, its typed rows, or one row's actions (src/rows.ts).
@@ -352,12 +360,17 @@ async function run(s: LineState, confirmed = false) {
     return;
   }
   pendingConfirm = undefined;
-  runError = undefined;
   remember(s.line);
+  await start(tree, route, s.argv, s.line.trim(), confirmed);
+}
+
+/** Start `argv` in `tree` and watch it; `line` is what the runs list and the history show. */
+async function start(tree: Tree, route: Route | undefined, argv: string[], line: string, confirmed = false) {
+  runError = undefined;
   try {
-    const r = await api<Run>("/api/run", { tree: tree.name, argv: s.argv, line: s.line.trim(), confirmed });
+    const r = await api<Run>("/api/run", { tree: tree.name, argv, line, confirmed });
     runs = [r, ...runs.filter((x) => x.id !== r.id)];
-    watching = { id: r.id, tree, route };
+    watching = { id: r.id, tree, route, confirmed };
     result = undefined;
     setLine("");
     if (handsOff(route)) panel?.postMessage("hide");
@@ -366,6 +379,25 @@ async function run(s: LineState, confirmed = false) {
     runError = e instanceof Error ? e.message : String(e);
     render();
   }
+}
+
+/** Words that are not a command (`pm the village`) run as a terminal runs them: the tree's search,
+ *  without --json, so its questions come back here as a picker instead of a list of hits. */
+function runSearchLine(c: Candidate) {
+  const tree = state.tree;
+  if (!tree || !c.line) return;
+  const route = tree.routes.find((r) => r.path.length === 1 && r.path[0] === c.text);
+  const query = c.line.slice(`${tree.name} ${c.text} `.length).trim();
+  if (!route || !query) return;
+  remember(line.trim());
+  void start(tree, route, [c.text, query], line.trim());
+}
+
+/** Rerun the stopped run with the answers so far (the line, tree and confirm stay the same). */
+function answer(answers: Record<string, string>) {
+  if (!result?.tree) return;
+  const { run: r, tree, route, confirmed } = result;
+  void start(tree, route, answerArgv(r.argv, answers), r.line, confirmed);
 }
 
 async function poll() {
@@ -379,7 +411,7 @@ async function poll() {
   if (watching) {
     const r = runs.find((x) => x.id === watching!.id);
     if (r && r.status !== "running") {
-      await showRun(r.id, watching.tree, watching.route);
+      await showRun(r.id, watching.tree, watching.route, watching.confirmed);
       watching = undefined;
     }
   }
@@ -387,7 +419,7 @@ async function poll() {
   if (runs.some((r) => r.status === "running") || watching) pollTimer = setTimeout(poll, 1000);
 }
 
-async function showRun(id: string, tree?: Tree, route?: Route) {
+async function showRun(id: string, tree?: Tree, route?: Route, confirmed = false) {
   const full = await api<RunFull>(`/api/runs/${id}`);
   const t = tree ?? trees.find((x) => x.name === full.tree);
   const rt = route ?? (t ? routeFor(t, full.argv) : undefined);
@@ -395,9 +427,17 @@ async function showRun(id: string, tree?: Tree, route?: Route) {
     result = undefined;  // the runs list records it; there is nothing to read
     return render();
   }
-  const shaped = full.json !== undefined ? shapeOutput(full.json) : undefined;
+  const ask = full.status === "input-required" ? inputRequired(full.json) : undefined;
+  const shaped = full.json !== undefined && !ask ? shapeOutput(full.json) : undefined;
   focus = { at: "line" };
-  result = { run: full, tree: t, route: rt, shaped, chains: t && rt && shaped ? chainsFor(t, rt, shaped, { trees, args: argsOf(t, rt, full.argv) }) : [] };
+  result = {
+    run: full,
+    tree: t,
+    route: rt,
+    shaped,
+    chains: t && rt && shaped ? chainsFor(t, rt, shaped, { trees, args: argsOf(t, rt, full.argv) }) : [],
+    ...(ask ? { ask, confirmed } : {}),
+  };
   render();
   window.scrollTo({ top: 0 });
 }
@@ -503,6 +543,7 @@ function takeItem(it: Item) {
 /** What ↵ does on the highlighted item: run when the line is complete, else take the word. */
 function enterItem(it: Item) {
   if (it.kind === "cand") {
+    if (it.c.kind === "search") return runSearchLine(it.c);
     if (isQuick(state) && it.c.kind === "line") {
       picks = { ...picks, [line.trim().toLowerCase()]: it.c.text };
       saveJSON(PICKS_KEY, picks);
@@ -563,6 +604,8 @@ function render() {
   const hint = $("hint");
   if (pendingConfirm) {
     hint.innerHTML = `<span class="danger">Run <b>${h(pendingConfirm.line.trim())}</b>? ↵ confirms, esc cancels</span>`;
+  } else if (result?.ask && (focus.at !== "line" || line === "")) {
+    hint.innerHTML = askHint();
   } else if (focus.at !== "line" && result) {
     hint.innerHTML = rowHint();
   } else if (state.error && !isQuick(state) && line.trim()) {
@@ -626,6 +669,11 @@ function render() {
   renderRuns();
 }
 
+function askHint(): string {
+  if (focus.at === "line") return `<span class="muted">↓ to choose · esc closes</span>`;
+  return `<span class="muted">↵ picks and runs again · esc back to the line</span>`;
+}
+
 function rowHint(): string {
   const rows = resultRows() ?? [];
   if (focus.at === "actions") return `<span class="muted">↵ takes the action · esc back to the rows</span>`;
@@ -645,10 +693,14 @@ function renderResult() {
   }
   el.hidden = false;
   const { run: r, shaped, chains, tree } = result;
-  const status = r.status === "failed" ? `<span class="danger">failed</span>` : `<span class="ok">done</span>`;
+  const status =
+    r.status === "failed" ? `<span class="danger">failed</span>`
+    : result.ask ? `<span class="muted">asks</span>`
+    : `<span class="ok">done</span>`;
   const meta = `${status} <span class="muted">· ${r.ms ?? 0} ms</span>`;
   let body = "";
-  if (r.status === "failed") body = `<pre>${h(r.error ?? r.stderr ?? "")}</pre>`;
+  if (result.ask) body = askHTML(result.ask);
+  else if (r.status === "failed") body = `<pre>${h(r.error ?? r.stderr ?? "")}</pre>`;
   else if (shaped?.kind === "rows" && focus.at === "actions") {
     // One row's actions replace the rows: route (P2, the highlighted one P1) and its one-line description (P3).
     const { row: at, sel: pick } = focus;
@@ -693,6 +745,30 @@ function renderResult() {
   el.innerHTML = `<header><span class="t">${h(r.line)}</span>${meta}<span class="actions">${copy}<button class="x" id="close-result" title="Close">×</button></span></header>${body}`;
 }
 
+/** The open question: its message (P2), the answers already given (P3), one row per choice. A choice
+ *  that carries a row (a `pm.hit`) renders as that result row does; the rest are a plain list. */
+function askHTML(ask: InputRequired): string {
+  const q = ask.questions[0]!;
+  const given = Object.entries(ask.answers)
+    .map(([k, v]) => `<span class="acc">${h(k)} ${h(v.length > 24 ? `${v.slice(0, 23)}…` : v)}</span>`)
+    .join("");
+  const rows = q.choices
+    .map((c, idx) => {
+      const cls = focus.at === "rows" && focus.sel === idx ? ' class="sel"' : "";
+      if (c.row !== undefined) {
+        const sub = rowSubtitle(c.row);
+        const acc = rowAccessories(c.row)
+          .map(([k, v]) => `<span class="acc" title="${h(k)}">${h(v)}</span>`)
+          .join("");
+        return `<li${cls} data-choice="${idx}"><span class="t">${h(rowTitle(c.row))}</span>${sub ? `<span class="s">${h(sub)}</span>` : ""}<span class="accs">${acc}</span></li>`;
+      }
+      const hint = c.hint ?? (c.key === q.initial ? "suggested" : undefined);
+      return `<li${cls} data-choice="${idx}"><span class="t">${h(c.label)}</span>${hint ? `<span class="s">${h(hint)}</span>` : ""}</li>`;
+    })
+    .join("");
+  return `<p class="ask">${h(q.message)}${given ? `<span class="given">${given}</span>` : ""}</p><ul class="rows">${rows}</ul>`;
+}
+
 const COPY_ICON = `<svg viewBox="0 0 16 16" width="16" height="16" aria-hidden="true"><rect x="5" y="5" width="9" height="9" rx="1.5" fill="none" stroke="currentColor" stroke-width="1.4"/><path d="M11 5V3.5A1.5 1.5 0 0 0 9.5 2h-6A1.5 1.5 0 0 0 2 3.5v6A1.5 1.5 0 0 0 3.5 11H5" fill="none" stroke="currentColor" stroke-width="1.4"/></svg>`;
 const CHECK_ICON = `<svg viewBox="0 0 16 16" width="16" height="16" aria-hidden="true"><path d="M3 8.5l3 3 7-7" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>`;
 
@@ -717,7 +793,7 @@ function renderRuns() {
   const show = runs.slice(0, 6);
   el.innerHTML = `<h2>Runs</h2><ul>${show
     .map((r) => {
-      const dot = r.status === "running" ? "run" : r.status === "failed" ? "bad" : "ok";
+      const dot = r.status === "running" ? "run" : r.status === "failed" ? "bad" : r.status === "input-required" ? "" : "ok";
       return `<li data-run="${h(r.id)}"><span class="dot ${dot}"></span><span class="t">${h(r.line)}</span><span class="s">${r.status === "running" ? "running" : `${r.ms ?? 0} ms`}</span></li>`;
     })
     .join("")}</ul>`;
@@ -758,13 +834,23 @@ input.addEventListener("keydown", (e) => {
   // The result's typed rows: ↓ from an empty line goes in; ↵ / esc / ↑ walk rows → actions and back.
   const rows = resultRows();
   const key = e.ctrlKey && e.key === "n" ? "down" : e.ctrlKey && e.key === "p" ? "up" : ROW_KEYS[e.key];
-  if (rows && key && !pendingConfirm && !e.metaKey && (focus.at !== "line" || line === "")) {
+  // A question: ↓ from an empty line goes to the suggested choice; ↵ picks it and runs the line again.
+  if (result?.ask && key && !pendingConfirm && !e.metaKey && (focus.at !== "line" || line === "")) {
+    const step = askKey(focus, key, result.ask);
+    if (step) {
+      e.preventDefault();
+      focus = step.focus;
+      if ("answers" in step) return answer(step.answers);
+      render();
+      return keepSelVisible();
+    }
+  } else if (rows && key && !pendingConfirm && !e.metaKey && (focus.at !== "line" || line === "")) {
     const step = rowKey(focus, key, rows, result!.chains);
     if (step) {
       e.preventDefault();
       return takeStep(step);
     }
-  } else if (focus.at !== "line" && !rows) focus = { at: "line" };
+  } else if (focus.at !== "line" && !rows && !result?.ask) focus = { at: "line" };
   const items = flatItems(sections());
   // Empty line: ⇥, or ↓ past the last row, opens the tree list.
   const atEnd = sel >= items.length - 1;
@@ -840,6 +926,11 @@ $("result").addEventListener("click", (e) => {
       }, 1200);
     });
     return;
+  }
+  const choice = t.closest<HTMLElement>("li[data-choice]");
+  if (choice && result?.ask) {
+    const step = askKey({ at: "rows", sel: Number(choice.dataset.choice) }, "enter", result.ask);
+    if (step && "answers" in step) return answer(step.answers);
   }
   const act = t.closest<HTMLElement>("li[data-action]");
   if (act && focus.at === "actions") {
