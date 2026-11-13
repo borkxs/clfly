@@ -5,6 +5,7 @@
 // A run that stopped at a question (src/ask.ts), in the result region:
 //   P1: the highlighted choice.  P2: the question and the other choices.
 //   P3: the line it came from, the answers already given, the key hint.
+// Phone mode keeps the same ranking: the key bar above the soft keyboard is P3 chrome (no fill, no accent).
 //
 // The browser face of the clfly line editor. Pure logic comes from the Raycast
 // package's lib (line.ts, model.ts, live.ts); this file is DOM, keys, and the
@@ -448,6 +449,7 @@ async function showRun(id: string, tree?: Tree, route?: Route, confirmed = false
   };
   render();
   window.scrollTo({ top: 0 });
+  $("scroll").scrollTop = 0;  // phone mode: the middle scrolls, not the window
 }
 
 function keepSelVisible() {
@@ -626,8 +628,8 @@ function render() {
     const it = items[sel] as Extract<Item, { kind: "hit" }>;
     const ch = offered(it.chains, it.row)[0];
     hint.innerHTML = ch
-      ? `<span class="muted">↵</span> ${h(ch.tree.name)} ${h(ch.route.path.join(" "))} ‹${h(ch.arg)}› <span class="muted">· ⌘↵ runs the search</span>`
-      : `<span class="muted">⌘↵ runs the search</span>`;
+      ? `<span class="muted">↵</span> ${h(ch.tree.name)} ${h(ch.route.path.join(" "))} ‹${h(ch.arg)}› <span class="muted">· ${runKey()} runs the search</span>`
+      : `<span class="muted">${runKey()} runs the search</span>`;
   } else if (state.runnable) {
     hint.innerHTML = `<span class="muted">↵ runs${state.destructive ? " (asks first)" : ""}</span>`;
   } else if (line === "" && !browse && !result && trees.length) {
@@ -675,6 +677,10 @@ function render() {
         : "");
   renderResult();
   renderRuns();
+  // The bar's run key is ⌘↵, which confirms a pending destructive run: say so on the key.
+  const runBtn = $("key-run");
+  runBtn.textContent = pendingConfirm ? "confirm" : "run";
+  runBtn.classList.toggle("danger", !!pendingConfirm);
 }
 
 function askHint(): string {
@@ -991,6 +997,62 @@ if (panel) document.documentElement.classList.add("panel");
   void loadManifest();
 };
 
+// --- phone (touch, or a narrow window): the page is the visible area, with a key bar above the soft keyboard ---
+
+const PHONE_QUERY = matchMedia("(hover: none) and (pointer: coarse), (max-width: 480px)");
+let phone = false;
+/** The name of the run-as-typed key in hints: the bar's key on a phone, the chord elsewhere. */
+function runKey(): string {
+  return phone ? "run" : "⌘↵";
+}
+
+/** Size the page to what is visible: the soft keyboard shrinks (and may shift) the visual viewport only. */
+function fitViewport() {
+  const root = document.documentElement;
+  const vv = window.visualViewport;
+  if (!phone || !vv) {
+    root.style.removeProperty("--vvh");  // the CSS falls back to 100dvh
+    root.style.removeProperty("--vvt");
+    root.classList.remove("kb");
+    return;
+  }
+  if (vv.scale > 1.01) return;  // pinch-zoomed: keep the last fit
+  root.style.setProperty("--vvh", `${Math.round(vv.height)}px`);
+  root.style.setProperty("--vvt", `${Math.round(vv.offsetTop)}px`);
+  root.classList.toggle("kb", window.innerHeight - vv.height > 120);
+}
+
+function syncPhone() {
+  phone = !panel && PHONE_QUERY.matches;
+  document.documentElement.classList.toggle("phone", phone);
+  fitViewport();
+}
+PHONE_QUERY.addEventListener("change", () => {
+  syncPhone();
+  render();
+});
+window.visualViewport?.addEventListener("resize", fitViewport);
+window.visualViewport?.addEventListener("scroll", fitViewport);
+syncPhone();
+
+// The bar's keys are the hardware keys: each sends the same keydown the line's handler already takes.
+$("keybar").addEventListener("click", (e) => {
+  const btn = (e.target as HTMLElement).closest<HTMLElement>("button[data-key]");
+  if (!btn) return;
+  input.focus();
+  input.dispatchEvent(new KeyboardEvent("keydown", { key: btn.dataset.key!, metaKey: "meta" in btn.dataset, bubbles: true, cancelable: true }));
+});
+
+// A tap on the bar, a row or a button must not take focus from the line (the keyboard would drop and
+// rise again). Output text stays selectable. Scrolling is unaffected: it is not a default of these events.
+for (const type of ["pointerdown", "mousedown"] as const) {
+  for (const id of ["keybar", "list", "result", "runs"]) {
+    $(id).addEventListener(type, (e) => {
+      if (phone && !(e.target as HTMLElement).closest("pre")) e.preventDefault();
+    });
+  }
+}
+
 // --- manifest: trees follow what is linked, without reloading the page ----------
 //
 // The panel lives for days, so the trees are fetched again each time it opens, when the tab
@@ -1028,7 +1090,7 @@ async function boot() {
   // Quick mode needs every short, harmless choice list (dash open film, tick run x); loadManifest fetches them.
   await loadManifest();
   state = analyze(trees, line);
-  if (matchMedia("(max-width: 480px)").matches) input.placeholder = "pm oceans eight";
+  if (phone) input.placeholder = "pm oceans eight";
   const q = new URLSearchParams(location.search).get("q");
   if (q) setLine(q);
   else render();
