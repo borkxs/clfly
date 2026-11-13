@@ -56,6 +56,29 @@ globally) shows "clfly has no "manifest" command … set CLFLY_BIN" in place of 
 - **Panel mode** (`?panel=1`, used by `packages/panel`): pinned line, no legend, esc on an empty
   line hides the panel.
 
+## Phone
+
+Phone mode is the same line, rows, result and runs, laid out for a touch screen with the soft
+keyboard up. It turns on (class `phone` on `<html>`) for a touch device
+(`(hover: none) and (pointer: coarse)`) or a window 480px wide or less, and never in panel mode.
+
+- **Fits the visible half**: the page is sized to `window.visualViewport` (height and offset, kept
+  in `--vvh` / `--vvt`; `100dvh` without it), so nothing sits under the keyboard and the document
+  does not scroll. The line is pinned on top, rows / result / runs scroll in the middle, and the
+  key bar sits on the bottom edge, directly above the keyboard. Safe-area insets are respected
+  for a home-screen (standalone) page.
+- **Key bar**: `⇥` take word, `↑`, `↓`, `esc`, and `run` (⌘↵, run as typed). Each sends the line
+  the same keydown the hardware key does, so they cannot drift apart. The keyboard's own return
+  key is ↵ (take or run). While a destructive line waits for its confirmation, `run` reads
+  `confirm`; ↵ confirms too and `esc` cancels.
+- **Taps**: a tap on a row is ↵ on that row, highlighted or not. Taps on the bar, rows and
+  buttons do not take focus from the line, so the keyboard stays up. Result text stays selectable.
+- **Density**: the line is 20px (never under 16px, which would make iOS zoom the page), rows keep
+  44px targets, and subtitles truncate. The result's text box is capped from the visible height.
+
+Not covered by an automated test; the soft keyboard cannot be emulated, so check on a device after
+changing the layout: focus the line, and the key bar should sit on the keyboard's top edge.
+
 ## Engine (`server.mjs`)
 
 | Route | Does |
@@ -82,12 +105,15 @@ Spacing scale:      4 / 8 / 12 / 16 / 24 / 32  (--sp-*)
 Text colors:        primary=--fg secondary=--fg-2 muted=--fg-3 (≥4.5:1 on --bg in both themes)
 Brand primary:      --accent — highlighted row marker, caret, running dot only
 Elevation scale:    none; grouping by spacing, one faint rule above the result
-Primitives:         li rows (44px min), button.chain-btn (pill), button.x, kbd
+Primitives:         li rows (44px min), button.chain-btn (pill), button.x, kbd, .keybar button (phone)
+Viewport (phone):   --vvh / --vvt — visible height and top offset from visualViewport, set by app.ts
 ```
 
 ## Cases
 
 `docs/launcher-cases.md` is the spec; the engine it shares with the Raycast face is
-`packages/raycast/src/lib/line.ts` and its tests. Built here: 1–6, 9–14, 16–23, 27, 30 (hits
-first). Not yet: 15 (notify when a long run ends), 24/31 (add then scan), 26 (saved lines with
-blanks), 28–29 (phone over Tailscale), 32–37.
+`packages/raycast/src/lib/line.ts` and its tests. Built here: 1–6, 9–14, 16–23, 27, 28 (phone
+mode, above), 30 (hits first). 29 in part: destructive runs confirm on the phone and every run is
+logged; reaching the engine from the phone is deployment (a private network or an authenticating
+proxy in front of it), not part of this package. Not yet: 15 (notify when a long run ends), 24/31
+(add then scan), 26 (saved lines with blanks), 32–37.
