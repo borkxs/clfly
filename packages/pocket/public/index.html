@@ -93,6 +93,9 @@ button.icon.ok { color: var(--ok); }
 .j-n, .j-l { color: var(--fg-3); }
 #result .extras { margin: var(--sp-8) 0 0; display: flex; gap: var(--sp-12); flex-wrap: wrap; }
 #result ul.rows { margin-top: var(--sp-8); }
+#result p.ask { margin: var(--sp-12) 0 0; display: flex; align-items: baseline; gap: var(--sp-12); flex-wrap: wrap; }
+#result p.ask .given { display: flex; gap: var(--sp-8); }
+#result li[data-choice] { cursor: pointer; }
 #result ul.rows li { min-height: 40px; position: relative; }
 .chains { display: flex; gap: var(--sp-8); flex: 0 0 auto; }
 /* Pointer devices: chains appear over the row's right end on hover; touch keeps them in flow, wrapped. */

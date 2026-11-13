@@ -10,6 +10,7 @@ import { homedir } from "node:os";
 import { delimiter, dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { manifestCache } from "./manifest.mjs";
+import { runStatus } from "./run-status.mjs";
 
 const here = dirname(fileURLToPath(import.meta.url));
 const PORT = Number(process.env.POCKET_PORT || 4180);
@@ -68,7 +69,7 @@ function execArgv(bin, argv, { timeoutMs = 10 * 60_000 } = {}) {
             /* text output */
           }
         }
-        if (code !== 0) out.error = errorMessage(stderr) ?? err?.message ?? `exited ${code}`;
+        if (code !== 0 && runStatus(out) !== "input-required") out.error = errorMessage(stderr) ?? err?.message ?? `exited ${code}`;
         resolve(out);
       },
     );
@@ -140,7 +141,7 @@ async function startRun({ tree, argv, line }) {
   runs.unshift(run);
   if (runs.length > MAX_RUNS) runs.length = MAX_RUNS;
   execArgv(tree.bin, argv).then((res) => {
-    Object.assign(run, res, { status: res.code === 0 ? "done" : "failed", endedAt: new Date().toISOString() });
+    Object.assign(run, res, { status: runStatus(res), endedAt: new Date().toISOString() });
     log({ ...summary(run), code: res.code, ms: res.ms }).catch(() => {});
   });
   return run;

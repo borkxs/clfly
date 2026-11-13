@@ -32,7 +32,14 @@ globally) shows "clfly has no "manifest" command … set CLFLY_BIN" in place of 
 - **Search**: a read-only command with a `query` positional (`pm search dune`), or a tree name
   followed by words that aren't a command (`pm the brave one 2007`), searches as you type with
   the pacing in `live.ts` (300 ms debounce, 3+ chars, one in flight, 1 s apart). Hits come
-  first; ↵ on a hit rewrites the line to the chained command (`pm add <hash> `).
+  first; ↵ on a hit rewrites the line to the chained command (`pm add <hash> `). ↵ on the
+  `pm search the brave one 2007` row runs the words as a terminal would (no `--json`), so the
+  command's own questions come back as a picker (next item); ⇥ takes it to the line instead.
+- **Questions**: a run that stops at a `ctx.ask` question (exit 10, an `input_required` result)
+  shows the question and its choices in place of the result. ↓ lands on the suggested choice,
+  ↵ picks it and reruns the same argv with every answer so far (`--answer key=choice`), esc goes
+  back. Choices that carry a row (`pm.hit`) render as result rows; the rest are a plain list.
+  Nothing stays alive between runs (`src/ask.ts`).
 - **Runs**: ↵ on a complete line POSTs the argv to the engine, which runs the tree's bin
   directly (no shell) and keeps going if the page closes. Destructive commands ask once, inline.
   The result shows as rows with chain buttons, or as text. Recent runs sit at the bottom; click
