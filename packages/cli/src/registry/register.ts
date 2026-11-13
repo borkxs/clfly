@@ -26,6 +26,8 @@ export interface RegisterInput {
   name?: string;
   dryRun: boolean;
   remove: boolean;
+  /** Point the entry at the shared Streamable HTTP server on this localhost port (`clfly host install`). */
+  http?: number;
   env: NodeJS.ProcessEnv;
   now: Date;
   platform?: NodeJS.Platform;
@@ -116,6 +118,9 @@ export function projectRecord(input: {
   return { name, command: node, args: [bin, ...serve] };
 }
 
+/** The URL a `clfly host` server answers on. */
+export const hostUrl = (port: number) => `http://127.0.0.1:${port}/mcp`;
+
 export async function runRegister(input: RegisterInput): Promise<RegisterResult> {
   const platform = input.platform ?? process.platform;
   const file = harnessFile({
@@ -128,7 +133,7 @@ export async function runRegister(input: RegisterInput): Promise<RegisterResult>
   const regFile = registryPath(input.env);
   const registry = readRegistry(regFile);
   const { tree, prev } = resolveTree(input, registry);
-  const record = projectRecord({
+  const stdio = projectRecord({
     tree,
     self: input.self,
     scope: input.scope,
@@ -136,6 +141,7 @@ export async function runRegister(input: RegisterInput): Promise<RegisterResult>
     name: input.name,
     executable: isExecutable(tree.bin),
   });
+  const record: ServerRecord = input.http !== undefined ? { ...stdio, url: hostUrl(input.http) } : stdio;
 
   const before = readText(file);
   const after = projectFile({

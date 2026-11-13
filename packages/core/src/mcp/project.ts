@@ -41,6 +41,8 @@ export {
   type McpServeFlags,
 } from "./parse-serve-argv.js";
 import { resolveRefArgs } from "../session/ref-args.js";
+import { acceptorsOfType, acceptsLookup, moduleRows, moduleSurface } from "../rows/args.js";
+import type { RowTree } from "../rows/index.js";
 
 export type JsonSchemaObject = {
   type?: string;
@@ -88,6 +90,11 @@ export interface CreateMcpOptions {
    * Defaults to `cwd` / process.cwd(). Sets `ctx.cwd` and enables scoping.
    */
   root?: string;
+  /**
+   * Extra directories tools may resolve paths into (`mcp serve --allow`),
+   * added to the tree's own `clfly.allow` list in package.json.
+   */
+  allow?: string[];
   /** Override spool threshold (bytes). Defaults to env / 64 KiB. */
   spoolThreshold?: number;
   /**
@@ -95,6 +102,13 @@ export interface CreateMcpOptions {
    * Defaults to `CLFLY_SESSION` or a minted id.
    */
   sessionId?: string;
+  /**
+   * Trees a typed-rows result lists acceptors from. Defaults to this tree's
+   * own routes plus `clfly manifest --json` (cached 60 s; `CLFLY_ROWS_LINKED=0` skips it).
+   */
+  rowTrees?: () => Promise<import("../rows/index.js").RowTree[]>;
+  /** Server instructions sent in the `initialize` result; resolved once at server start. */
+  instructions?: () => string | undefined | Promise<string | undefined>;
 }
 
 /** Collect MCP tool definitions from a live scan or manifest. */
@@ -118,22 +132,32 @@ export async function invokeMcpTool(
     cwd: string;
     env: NodeJS.ProcessEnv;
     scoped?: boolean;
+    /** Extra directories a scoped `ctx.resolvePath` accepts. */
+    allow?: readonly string[];
     /** When set, large results spool and return a truncation envelope. */
     sessionStore?: import("../session/store.js").SessionStore;
     sessionId?: string;
+    /** Trees to find acceptors in for a typed-rows result (own + linked). */
+    rowTrees?: () => Promise<RowTree[]>;
   },
 ): Promise<CallToolResult> {
   const mod = await tool.load();
   const pathParamNames = tool.path
     .filter((p) => p.startsWith(":"))
     .map((p) => p.slice(1));
+  const where = `command "${tool.path.join(" ")}"`;
 
   // `spool` is reserved (like the CLI flag) and never reaches the command.
   const { [MCP_SPOOL_ARG]: spoolArg, ...given } = args;
-  // `@<sessionId>/<seq>` in any argument binds that spooled result in place.
+  // `@<sessionId>/<seq>` in any argument binds that spooled result in place;
+  // `@<sessionId>/<seq>#<n>` binds row n's ref, type-checked against `accepts`.
   const store = runtime.sessionStore;
   const bound = store
-    ? resolveRefArgs(given, (ref) => store.readRefValue(ref)).args
+    ? resolveRefArgs(
+        given,
+        store,
+        acceptsLookup(moduleSurface(mod, pathParamNames, where)),
+      ).args
     : given;
 
   let opts: unknown = { ...bound };
@@ -185,16 +209,21 @@ export async function invokeMcpTool(
     stdout,
     stderr,
     scoped: runtime.scoped ?? true,
+    allow: runtime.allow,
   });
 
   const value = await mod.default(opts, ctx);
   const validatedValue = await validateOutput(mod, value);
 
+  // A typed-rows result always spools: the ref is what `@<ref>#<n>` binds.
+  const rows = moduleRows(mod, where) ?? tool.meta?.rows;
   if (
     runtime.sessionStore &&
     runtime.sessionId &&
     validatedValue !== undefined &&
-    (spoolArg === true || runtime.sessionStore.exceedsThreshold(validatedValue))
+    (rows ||
+      spoolArg === true ||
+      runtime.sessionStore.exceedsThreshold(validatedValue))
   ) {
     const spooled = runtime.sessionStore.spool({
       sessionId: runtime.sessionId,
@@ -202,8 +231,19 @@ export async function invokeMcpTool(
       argv: ["mcp", "call", tool.name],
       value: validatedValue,
       schemaRef: mod.output ? "output" : undefined,
+      ...(rows ? { rows, args: given } : {}),
     });
-    return buildToolResult(spooled.envelope, chunks.join(""), stderrChunks);
+    const envelope = spooled.envelope;
+    if (rows) {
+      if (!runtime.sessionStore.exceedsThreshold(validatedValue)) {
+        // Small enough to show whole: the agent sees every row and its index.
+        envelope.truncated = false;
+        envelope.preview = validatedValue;
+      }
+      const trees = (await runtime.rowTrees?.().catch(() => [])) ?? [];
+      envelope.acceptors = acceptorsOfType(trees, rows.type);
+    }
+    return buildToolResult(envelope, chunks.join(""), stderrChunks);
   }
 
   return buildToolResult(validatedValue, chunks.join(""), stderrChunks);
@@ -347,7 +387,7 @@ export function mergePathParamsIntoSchema(
 /** Narrow CreateCliOptions → CreateMcpOptions (without serve flags). */
 export function mcpOptionsFromCli(
   options: CreateCliOptions,
-  serve?: { root?: string },
+  serve?: { root?: string; allow?: string[] },
 ): CreateMcpOptions {
   return {
     name: options.name,
@@ -358,12 +398,67 @@ export function mcpOptionsFromCli(
     cwd: options.cwd,
     env: options.env,
     root: serve?.root,
+    allow: serve?.allow,
+    ...(options.mcpInstructions ? { instructions: options.mcpInstructions } : {}),
   };
 }
 
 export function resolveMcpRoot(options: CreateMcpOptions): string {
   const base = options.root ?? options.cwd ?? process.cwd();
   return resolve(base);
+}
+
+/**
+ * Directories outside the root that tools may resolve paths into: the tree's
+ * `clfly.allow` (package.json; relative entries against the package dir) plus
+ * `--allow`. `~` and `$VAR` / `${VAR}` expand from env; an entry naming an
+ * unset variable is dropped rather than widened to `/`.
+ */
+export function resolveMcpAllow(options: CreateMcpOptions): string[] {
+  const env = options.env ?? process.env;
+  const fromPkg: string[] = [];
+  const pkgDir = options.packageJsonPath ? dirname(options.packageJsonPath) : undefined;
+  if (options.packageJsonPath) {
+    let pkg: { clfly?: { allow?: unknown } } = {};
+    try {
+      pkg = JSON.parse(readFileSync(options.packageJsonPath, "utf8"));
+    } catch {
+      // No readable package.json: no tree-declared dirs.
+    }
+    const list = pkg.clfly?.allow;
+    if (list !== undefined) {
+      if (!Array.isArray(list) || !list.every((d) => typeof d === "string")) {
+        throw new ClflyError(`${options.packageJsonPath}: clfly.allow must be an array of directory strings`, 2);
+      }
+      fromPkg.push(...list);
+    }
+  }
+  const out: string[] = [];
+  for (const [entry, base] of [
+    ...fromPkg.map((d) => [d, pkgDir] as const),
+    ...(options.allow ?? []).map((d) => [d, undefined] as const),
+  ]) {
+    const expanded = expandDir(entry, env);
+    if (expanded === undefined) continue;
+    const abs = resolve(base ?? options.cwd ?? process.cwd(), expanded);
+    if (!out.includes(abs)) out.push(abs);
+  }
+  return out;
+}
+
+function expandDir(entry: string, env: NodeJS.ProcessEnv): string | undefined {
+  let missing = false;
+  const withVars = entry.replace(/\$\{(\w+)\}|\$(\w+)/g, (_m, a: string | undefined, b: string | undefined) => {
+    const value = env[(a ?? b)!];
+    if (!value) missing = true;
+    return value ?? "";
+  });
+  if (missing) return undefined;
+  if (withVars === "~" || withVars.startsWith("~/")) {
+    if (!env.HOME) return undefined;
+    return env.HOME + withVars.slice(1);
+  }
+  return withVars;
 }
 
 export function resolveMcpVersion(options: CreateMcpOptions): string {

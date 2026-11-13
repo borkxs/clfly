@@ -1,4 +1,4 @@
-import { existsSync, mkdirSync, writeFileSync } from "node:fs";
+import { appendFileSync, existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { dirname, join, relative } from "node:path";
 import {
   ClflyError,
@@ -11,6 +11,17 @@ import {
 import { readProjectValidator } from "./detect.js";
 import { renderCommandStub } from "./template.js";
 import { ensureClflyGitignore } from "./gitignore.js";
+import {
+  currentBranch,
+  findRepoRoot,
+  insertReadmeBullet,
+  loadSpec,
+  readSiblingShape,
+  relImport,
+  renderSpecCommand,
+  renderTestBlock,
+  type CommandSpec,
+} from "./spec.js";
 
 export interface AddOptions {
   paths: string[];
@@ -18,6 +29,12 @@ export interface AddOptions {
   output?: boolean;
   /** Commands directory relative to cwd (default: commands). */
   commandsDir?: string;
+  /** `@file` or inline JSON: { summary, args: ["name:type=default:desc", ...], readme? }. */
+  spec?: string;
+  summary?: string;
+  /** Inline args, `name[?]:type[=default][:desc]`. */
+  arg?: string[];
+  readme?: string;
 }
 
 export interface AddResult {
@@ -36,14 +53,31 @@ interface PlannedFile {
 
 export async function runAdd(
   opts: AddOptions,
-  ctx: Pick<Context, "cwd" | "stdout" | "stderr" | "json" | "resolvePath">,
+  ctx: Pick<Context, "cwd" | "stdout" | "stderr" | "json" | "resolvePath"> & { env?: NodeJS.ProcessEnv },
 ): Promise<AddResult> {
   const paths = opts.paths ?? [];
   if (paths.length === 0) {
     throw new ClflyError("add requires at least one path (e.g. user/:id/report)", 2);
   }
 
-  const commandsDir = ctx.resolvePath(opts.commandsDir ?? "commands");
+  const commandsRel =
+    opts.commandsDir ??
+    (!existsSync(ctx.resolvePath("commands")) && existsSync(ctx.resolvePath(join("src", "commands")))
+      ? join("src", "commands")
+      : "commands");
+  const commandsDir = ctx.resolvePath(commandsRel);
+  let spec: CommandSpec | null;
+  try {
+    spec = loadSpec(opts, ctx.resolvePath);
+  } catch (err) {
+    throw new ClflyError(`add: ${err instanceof Error ? err.message : String(err)}`, 2);
+  }
+  if (spec && paths.length !== 1) {
+    throw new ClflyError("add with a spec takes exactly one path", 2);
+  }
+  if (spec && readProjectValidator(ctx.cwd) !== "zod") {
+    throw new ClflyError("add with a spec writes zod args; this tree uses another validator", 2);
+  }
   const force = opts.force ?? false;
   const withOutput = opts.output ?? false;
   const validator = readProjectValidator(ctx.cwd);
@@ -54,7 +88,7 @@ export async function runAdd(
   for (const input of paths) {
     try {
       const parsed = parseCommandPathDsl(input);
-      const relFile = join("commands", ...parsed.diskSegments) + ".ts";
+      const relFile = join(commandsRel, ...parsed.diskSegments) + ".ts";
       const absFile = ctx.resolvePath(relFile);
       const toolName = toolNameFromPath(parsed.manifestPath);
       planned.push({
@@ -150,10 +184,13 @@ export async function runAdd(
           p.input;
     writeFileSync(
       p.absFile,
-      renderCommandStub({ description, validator, withOutput }),
+      spec
+        ? renderSpecCommand(spec, readSiblingShape(p.absFile, commandsDir))
+        : renderCommandStub({ description, validator, withOutput }),
       "utf8",
     );
     created.push(p.relFile);
+    if (spec) created.push(...writeSpecExtras(p, spec, ctx));
   }
 
   // Idempotent when a project already has (or lacks) .gitignore.
@@ -164,6 +201,76 @@ export async function runAdd(
   }
 
   return { created };
+}
+
+function treeName(cwd: string): string {
+  try {
+    const pkg = JSON.parse(readFileSync(join(cwd, "package.json"), "utf8")) as {
+      name?: string;
+      bin?: Record<string, string> | string;
+    };
+    if (pkg.bin && typeof pkg.bin === "object" && Object.keys(pkg.bin)[0]) return Object.keys(pkg.bin)[0]!;
+    if (pkg.name) return pkg.name.replace(/^@[^/]+\//, "");
+  } catch {
+    /* no package.json */
+  }
+  return "tree";
+}
+
+/** Test stub, README bullet and changes/<branch>.md for a spec'd command; returns paths written. */
+function writeSpecExtras(
+  p: PlannedFile,
+  spec: CommandSpec,
+  ctx: Pick<Context, "cwd" | "resolvePath"> & { env?: NodeJS.ProcessEnv },
+): string[] {
+  const written: string[] = [];
+  const rel = (f: string) => relative(ctx.cwd, f).replace(/\\/g, "/");
+  const tree = treeName(ctx.cwd);
+  const cmdName = [tree, ...p.manifestPath.map((s) => (s.startsWith(":") ? `<${s.slice(1)}>` : s))].join(" ");
+  const words = p.manifestPath.filter((s) => !s.startsWith(":"));
+
+  // Test: append to test/<module>.test.ts when it exists, else a new test/<path>.test.ts.
+  const testFile = ctx.resolvePath(join("test", `${words.join("-") || "index"}.test.ts`));
+  const alias = `cmd_${words.join("_").replace(/[^a-zA-Z0-9_]/g, "_") || "index"}`;
+  const block = (standalone: boolean) =>
+    renderTestBlock({ cmdName, importPath: relImport(testFile, p.absFile), spec, alias, standalone });
+  if (existsSync(testFile)) {
+    const text = readFileSync(testFile, "utf8");
+    if (!text.includes(`import ${alias},`)) {
+      appendFileSync(testFile, `\n${block(false)}`, "utf8");
+      written.push(rel(testFile));
+    }
+  } else {
+    mkdirSync(dirname(testFile), { recursive: true });
+    writeFileSync(testFile, block(true), "utf8");
+    written.push(rel(testFile));
+  }
+
+  // Docs: one bullet under the tree's command list; skipped silently when there is none.
+  const bullet = `- \`${cmdName}\` — ${spec.readme ?? spec.summary}`;
+  const readmeFile = ctx.resolvePath("README.md");
+  if (existsSync(readmeFile)) {
+    const text = readFileSync(readmeFile, "utf8");
+    const next = text.includes(`\`${cmdName}\``) ? null : insertReadmeBullet(text, tree, bullet);
+    if (next !== null) {
+      writeFileSync(readmeFile, next, "utf8");
+      written.push(rel(readmeFile));
+    }
+  }
+
+  // changes/<branch>.md so `pnpm check:changelog` passes; `#PR` is filled in by the fold.
+  const root = findRepoRoot(ctx.cwd);
+  const branch = root ? currentBranch(ctx.cwd, ctx.env) : null;
+  if (root && branch && existsSync(join(root, "changes"))) {
+    const frag = join(root, "changes", `${branch.replace(/[^a-zA-Z0-9._-]/g, "-")}.md`);
+    const line = `- \`${cmdName}\` — ${spec.summary} (#PR)\n`;
+    const prev = existsSync(frag) ? readFileSync(frag, "utf8") : "";
+    if (!prev.includes(`\`${cmdName}\``)) {
+      writeFileSync(frag, prev && !prev.endsWith("\n") ? `${prev}\n${line}` : prev + line, "utf8");
+      written.push(rel(frag));
+    }
+  }
+  return written;
 }
 
 export interface ParsedCommandPath {
