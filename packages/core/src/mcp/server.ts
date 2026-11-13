@@ -17,6 +17,7 @@ import {
   type McpToolDef,
   invokeMcpTool,
   listMcpTools,
+  resolveMcpAllow,
   resolveMcpRoot,
   resolveMcpVersion,
   toolError,
@@ -32,6 +33,7 @@ import {
   resultReadInputSchema,
 } from "./session-tools.js";
 import { watchCommandTree } from "./watch.js";
+import { rowTreesProvider } from "./row-trees.js";
 import { invocationVia, logInvocation } from "../invocation-log.js";
 import type { Readable, Writable } from "node:stream";
 import type { JSONRPCMessage } from "@modelcontextprotocol/sdk/types.js";
@@ -44,6 +46,7 @@ export async function createMcpServer(
   const byName = new Map(state.tools.map((t) => [t.name, t]));
   const version = resolveMcpVersion(options);
   const root = resolveMcpRoot(options);
+  const allow = resolveMcpAllow(options);
   const env = options.env ?? process.env;
   const threshold = resolveThreshold(
     env,
@@ -53,10 +56,20 @@ export async function createMcpServer(
   const store = createSessionStore({ root, threshold });
   store.evict();
   const sessionId = options.sessionId ?? resolveSessionId(env);
+  const rowTrees =
+    options.rowTrees ?? rowTreesProvider(options.name, () => state.tools, env);
 
+  let instructions: string | undefined;
+  try {
+    instructions = (await options.instructions?.()) || undefined;
+  } catch (err) {
+    // Instructions are a convenience; a failure must not stop the server.
+    const message = err instanceof Error ? err.message : String(err);
+    process.stderr.write(`clfly: mcp instructions failed: ${message}\n`);
+  }
   const server = new Server(
     { name: options.name, version },
-    { capabilities: { tools: { listChanged: true } } },
+    { capabilities: { tools: { listChanged: true } }, ...(instructions ? { instructions } : {}) },
   );
 
   const replaceTools = (next: McpToolDef[]) => {
@@ -143,8 +156,10 @@ export async function createMcpServer(
         cwd: root,
         env,
         scoped: true,
+        allow,
         sessionStore: store,
         sessionId,
+        rowTrees,
       });
       return logged(result, result.isError ? 1 : 0);
     } catch (err) {

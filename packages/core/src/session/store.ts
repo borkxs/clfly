@@ -11,6 +11,7 @@ import {
 } from "node:fs";
 import { join } from "node:path";
 import { ClflyError } from "../errors.js";
+import { rowMatches, rowRef, rowsOf } from "../rows/index.js";
 import { isInsideRoot, resolveUnderRoot } from "../fs/resolve-under-root.js";
 import {
   assertSessionId,
@@ -111,6 +112,8 @@ export class SessionStore {
       bytes,
       exit: input.exit ?? 0,
       ...(input.schemaRef ? { schemaRef: input.schemaRef } : {}),
+      ...(input.rows ? { rows: input.rows } : {}),
+      ...(input.rows && input.args ? { args: jsonSafe(input.args) } : {}),
     };
     this.appendManifest(dir, entry);
 
@@ -122,6 +125,13 @@ export class SessionStore {
       path: filePath,
       schemaRef: input.schemaRef,
     });
+    if (input.rows) {
+      envelope.rows = {
+        type: input.rows.type,
+        key: input.rows.key,
+        count: rowsOf(input.value, input.rows).length,
+      };
+    }
 
     return {
       entry,
@@ -152,6 +162,37 @@ export class SessionStore {
       throw new ClflyError(`Spool file missing for ref: ${ref}`, 2);
     }
     return { path: filePath, entry, sessionId };
+  }
+
+  /**
+   * Row `n` of a typed-rows result as its `ref` value (the producer's
+   * `meta.rows.ref` filled from the row, then the producer's args, then
+   * `defaults`), with the row itself for `where` checks.
+   */
+  readRowRef(ref: string, n: number): { value: string; type: string; row: unknown } {
+    const { entry } = this.resolveRefPath(ref);
+    if (!entry.rows) {
+      throw new ClflyError(
+        `Result ${ref} has no typed rows (its command declares no meta.rows); bind it whole with @${ref}`,
+        2,
+      );
+    }
+    const all = rowsOf(this.readRefValue(ref), entry.rows);
+    if (n >= all.length) {
+      throw new ClflyError(
+        `Row #${n} is out of range: ${ref} has ${all.length} ${entry.rows.type} row${all.length === 1 ? "" : "s"} (#0..#${all.length - 1})`,
+        2,
+      );
+    }
+    const row = all[n];
+    if (!rowMatches(row, entry.rows.when)) {
+      throw new ClflyError(`Row #${n} of ${ref} is not a typed ${entry.rows.type} row (fails meta.rows.when)`, 2);
+    }
+    const value = rowRef(entry.rows, row, entry.args ?? {});
+    if (value === undefined) {
+      throw new ClflyError(`Row #${n} of ${ref} lacks a field for ref template ${JSON.stringify(entry.rows.ref)}`, 2);
+    }
+    return { value, type: entry.rows.type, row };
   }
 
   readRefValue(ref: string): unknown {
@@ -303,6 +344,14 @@ export class SessionStore {
       }
     }
     return { bytes, entries: entries.length };
+  }
+}
+
+function jsonSafe(args: Record<string, unknown>): Record<string, unknown> | undefined {
+  try {
+    return JSON.parse(JSON.stringify(args)) as Record<string, unknown>;
+  } catch {
+    return undefined;
   }
 }
 

@@ -1,0 +1,9 @@
+{
+  "name": "demo-cli",
+  "version": "1.2.3",
+  "private": true,
+  "type": "module",
+  "bin": {
+    "demo": "./bin/demo.ts"
+  }
+}

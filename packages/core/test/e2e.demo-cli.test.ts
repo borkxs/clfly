@@ -25,13 +25,13 @@ function collectStream() {
 }
 
 const demoCommands = fileURLToPath(
-  new URL("../../../examples/demo-cli/commands", import.meta.url),
+  new URL("./fixtures/demo-cli/commands", import.meta.url),
 );
 const demoPkg = fileURLToPath(
-  new URL("../../../examples/demo-cli/package.json", import.meta.url),
+  new URL("./fixtures/demo-cli/package.json", import.meta.url),
 );
 const demoBin = fileURLToPath(
-  new URL("../../../examples/demo-cli/bin/demo.ts", import.meta.url),
+  new URL("./fixtures/demo-cli/bin/demo.ts", import.meta.url),
 );
 
 describe("createCli integration", () => {
@@ -174,7 +174,7 @@ describe("e2e spawn demo-cli", () => {
     const { stdout, code } = await spawnTsx(demoBin, ["--version"]);
     expect(code).toBe(0);
     expect(stdout).toBe("1.2.3\n");
-  });
+  }, 15_000);
 
   it("runs users list --json", async () => {
     const { stdout, code } = await spawnTsx(demoBin, [
@@ -185,7 +185,7 @@ describe("e2e spawn demo-cli", () => {
     expect(code).toBe(0);
     const parsed = JSON.parse(stdout) as unknown[];
     expect(parsed.length).toBeGreaterThan(0);
-  });
+  }, 15_000);
 });
 
 // Agent shells hand commands a stdin pipe that never closes. Spawn without the

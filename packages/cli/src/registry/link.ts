@@ -135,11 +135,18 @@ function samePath(file: string): string {
 /**
  * A package inside a pnpm workspace has no lockfile of its own (or a stray
  * one), so look for the workspace first and fall back to the package dir.
+ * A pnpm workspace on a machine whose pnpm only runs through corepack (no
+ * `pnpm` on PATH) links with npm: `npm link` needs no pnpm global bin dir and
+ * puts the shim in npm's global prefix, which is already on PATH.
  */
-export function linkPackageManager(dir: string, env: NodeJS.ProcessEnv): PackageManager {
+export function linkPackageManager(
+  dir: string,
+  env: NodeJS.ProcessEnv,
+  whichFn: (name: string, env: NodeJS.ProcessEnv) => string | null = which,
+): PackageManager {
   let cur = dir;
   while (true) {
-    if (existsSync(join(cur, "pnpm-workspace.yaml"))) return "pnpm";
+    if (existsSync(join(cur, "pnpm-workspace.yaml"))) return whichFn("pnpm", env) ? "pnpm" : "npm";
     const parent = dirname(cur);
     if (parent === cur) break;
     cur = parent;

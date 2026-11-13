@@ -9,6 +9,7 @@ export {
   createMcpServer,
   serveMcpStdio,
 } from "./server.js";
+export { serveMcpHttp, type McpHttpOptions, type McpHttpHandle } from "./http.js";
 export {
   listMcpTools,
   invokeMcpTool,

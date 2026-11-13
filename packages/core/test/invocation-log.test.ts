@@ -5,9 +5,11 @@ import { describe, expect, it } from "vitest";
 import {
   commandPathFromArgv,
   countingStream,
+  invocationCaller,
   invocationLogPath,
   invocationVia,
   logInvocation,
+  withParent,
 } from "../src/invocation-log.js";
 import type { RouteNode } from "../src/types.js";
 
@@ -30,6 +32,29 @@ describe("invocation log", () => {
     expect(invocationLogPath({ CLFLY_USAGE_LOG: "off" })).toBeUndefined();
     expect(invocationVia({}, false)).toBe("cli");
     expect(invocationVia({}, true)).toBe("mcp");
+  });
+
+  it("tags who started a run that nobody typed", () => {
+    expect(invocationCaller({}, 4242)).toBeUndefined();
+    expect(invocationCaller({ CLFLY_CALLER: "tick" }, 1)).toBe("tick");
+    expect(invocationCaller({ VITEST: "true" }, 4242)).toBe("test");
+    expect(invocationCaller({ CI: "true" }, 4242)).toBe("test");
+    expect(invocationCaller({}, 1)).toBe("launchd");
+    const file = join(mkdtempSync(join(tmpdir(), "clfly-log-")), "inv.jsonl");
+    logInvocation({ CLFLY_USAGE_LOG: file, CLFLY_CALLER: "tick" }, { tree: "usage", command: "sync", via: "cli", ms: 1, outBytes: 0, exitCode: 0 });
+    expect(JSON.parse(readFileSync(file, "utf8").trim())).toMatchObject({ via: "cli", caller: "tick" });
+  });
+
+  it("passes the running command to its children as their parent", () => {
+    const env: NodeJS.ProcessEnv = { CLFLY_PARENT: "tick run" };
+    const undo = withParent([env, env], "usage sync");
+    expect(env.CLFLY_PARENT).toBe("usage sync");
+    expect(invocationCaller(env, 4242)).toBe("spawned");
+    undo();
+    expect(env.CLFLY_PARENT).toBe("tick run");
+    const file = join(mkdtempSync(join(tmpdir(), "clfly-log-")), "inv.jsonl");
+    logInvocation({ CLFLY_USAGE_LOG: file, CLFLY_PARENT: "cl start" }, { tree: "loop", command: "ls", via: "cli", ms: 1, outBytes: 0, exitCode: 0 });
+    expect(JSON.parse(readFileSync(file, "utf8").trim())).toMatchObject({ caller: "spawned", parent: "cl start" });
   });
 
   it("counts bytes without hiding the target's properties", () => {

@@ -27,6 +27,11 @@ export const args = z.object({
     .default(false)
     .describe("Print the file diff and change nothing"),
   remove: z.boolean().default(false).describe("Delete the entry instead of writing it"),
+  http: z.coerce
+    .number()
+    .int()
+    .optional()
+    .describe("Point the entry at the shared server on 127.0.0.1:<port> (clfly host install) instead of a stdio command"),
 });
 
 export default async function (opts: z.infer<typeof args>, ctx: Context) {
@@ -39,6 +44,7 @@ export default async function (opts: z.infer<typeof args>, ctx: Context) {
     name: opts.name,
     dryRun: opts["dry-run"],
     remove: opts.remove,
+    http: opts.http,
     env: ctx.env,
     now: new Date(),
   });

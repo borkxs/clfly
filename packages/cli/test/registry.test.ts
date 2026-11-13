@@ -71,9 +71,14 @@ describe("link / unlink / ls", () => {
   it("uses pnpm for a package inside a pnpm workspace, even with a stray lockfile", () => {
     writeFileSync(join(project, "pnpm-workspace.yaml"), "packages:\n  - packages/*\n");
     writeFileSync(join(tree, "package-lock.json"), "{}");
-    expect(linkPackageManager(tree, {})).toBe("pnpm");
+    expect(linkPackageManager(tree, {}, () => "/bin/pnpm")).toBe("pnpm");
     rmSync(join(project, "pnpm-workspace.yaml"));
-    expect(linkPackageManager(tree, {})).toBe("npm");
+    expect(linkPackageManager(tree, {}, () => "/bin/pnpm")).toBe("npm");
+  });
+
+  it("links a pnpm workspace package with npm when pnpm is not on PATH (corepack only)", () => {
+    writeFileSync(join(project, "pnpm-workspace.yaml"), "packages:\n  - packages/*\n");
+    expect(linkPackageManager(tree, {}, () => null)).toBe("npm");
   });
 
   it("refuses a second tree with the same name", async () => {

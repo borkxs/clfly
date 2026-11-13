@@ -17,18 +17,41 @@ export function isMcpArgv(argv: string[]): boolean {
 export interface McpServeFlags {
   /** Absolute or relative root directory for scoped filesystem access. */
   root?: string;
+  /** Extra directories tools may resolve paths into (`--allow`, repeatable). */
+  allow: string[];
+  /** Serve Streamable HTTP on this localhost port instead of stdio (`--http <port>`). */
+  http?: number;
   help: boolean;
 }
 
-/** Extract `--root` (and help) from `mcp serve` argv. */
+/** Extract `--root`, `--allow` (and help) from `mcp serve` argv. */
 export function parseMcpServeFlags(argv: string[]): McpServeFlags {
   let root: string | undefined;
+  const allow: string[] = [];
   let help = false;
+  let http: number | undefined;
 
   for (let i = 0; i < argv.length; i++) {
     const t = argv[i]!;
     if (t === "--help" || t === "-h") {
       help = true;
+      continue;
+    }
+    if (t === "--allow" || t.startsWith("--allow=")) {
+      const value = t === "--allow" ? argv[++i] : t.slice("--allow=".length);
+      if (!value || value.startsWith("-")) {
+        throw new ClflyError("mcp serve --allow requires a directory argument", 2);
+      }
+      allow.push(value);
+      continue;
+    }
+    if (t === "--http" || t.startsWith("--http=")) {
+      const value = t === "--http" ? argv[++i] : t.slice("--http=".length);
+      const port = Number(value);
+      if (!value || !Number.isInteger(port) || port < 0 || port > 65535) {
+        throw new ClflyError("mcp serve --http requires a port number", 2);
+      }
+      http = port;
       continue;
     }
     if (t === "--root") {
@@ -54,7 +77,7 @@ export function parseMcpServeFlags(argv: string[]): McpServeFlags {
     }
   }
 
-  return { root, help };
+  return { root, allow, help, ...(http !== undefined ? { http } : {}) };
 }
 
 function pathTokens(argv: string[]): string[] {
@@ -71,11 +94,11 @@ function pathTokens(argv: string[]): string[] {
     ) {
       continue;
     }
-    if (t === "--root") {
+    if (t === "--root" || t === "--allow" || t === "--http") {
       i++; // skip value
       continue;
     }
-    if (t.startsWith("--root=")) continue;
+    if (t.startsWith("--root=") || t.startsWith("--allow=") || t.startsWith("--http=")) continue;
     out.push(t);
   }
   return out;

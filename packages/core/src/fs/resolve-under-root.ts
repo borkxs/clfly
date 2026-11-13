@@ -25,6 +25,28 @@ export function resolveUnderRoot(root: string, userPath: string): string {
   return candidate;
 }
 
+/**
+ * Resolve `userPath` against `root` (relative paths) and accept it when it
+ * lands under `root` or under any `allow` directory (`mcp serve --allow`,
+ * `clfly.allow` in the tree's package.json). Same symlink checks as
+ * {@link resolveUnderRoot}.
+ */
+export function resolveUnderRoots(
+  root: string,
+  allow: readonly string[],
+  userPath: string,
+): string {
+  const rootAbs = resolve(root);
+  const candidate = resolve(rootAbs, userPath);
+  const candidateReal = safeRealpath(candidate);
+  for (const dir of [rootAbs, ...allow.map((d) => resolve(d))]) {
+    if (isInsideRoot(dir, candidate) && isInsideRoot(safeRealpath(dir), candidateReal)) {
+      return candidate;
+    }
+  }
+  throw escapeError(userPath, rootAbs, allow);
+}
+
 /** True when `candidate` is `root` or a path beneath it. */
 export function isInsideRoot(root: string, candidate: string): boolean {
   const rootAbs = resolve(root);
@@ -55,10 +77,12 @@ function safeRealpath(path: string): string {
   return realpathSync(path);
 }
 
-function escapeError(userPath: string, root: string): ClflyError {
+function escapeError(userPath: string, root: string, allow: readonly string[] = []): ClflyError {
+  const inside = allow.length ? `${root} or an allowed dir (${allow.join(", ")})` : root;
   return new ClflyError(
     `Path escapes root: ${userPath}\n` +
-      `Resolved paths must stay inside ${root}.`,
+      `Resolved paths must stay inside ${inside}.\n` +
+      `A tree that needs another directory lists it in package.json "clfly": { "allow": [...] }.`,
     2,
   );
 }

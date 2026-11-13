@@ -6,6 +6,8 @@ export {
   PREVIEW_KEYS,
   type ManifestEntry,
   type TruncationEnvelope,
+  type EnvelopeRows,
+  type EnvelopeAcceptor,
   type SessionStoreOptions,
   type SpoolInput,
   type SpoolResult,
@@ -25,4 +27,4 @@ export {
   resolveThreshold,
 } from "./ref.js";
 export { SessionStore, createSessionStore } from "./store.js";
-export { parseRefArg, resolveRefArgs } from "./ref-args.js";
+export { parseRefArg, parseRowRefArg, resolveRefArgs } from "./ref-args.js";

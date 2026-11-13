@@ -33,6 +33,7 @@ import {
   resolvePackageVersion,
 } from "./version.js";
 import { treeFromManifest } from "./manifest/load.js";
+import { acceptsLookup, moduleRows, moduleSurface } from "./rows/args.js";
 import { writeJsonError, writeJsonResult } from "./json/output.js";
 import {
   isMcpArgv,
@@ -44,6 +45,7 @@ import {
 import { assertUniqueToolNames } from "./mcp/tool-names.js";
 import { assignRestPositionals } from "./parse/rest-positionals.js";
 import { createContext } from "./context.js";
+import { extractAnswers, formatInputRequired, InputRequiredError } from "./ask.js";
 import {
   createSessionStore,
   DEFAULT_SPOOL_THRESHOLD,
@@ -64,6 +66,7 @@ import {
   countingStream,
   invocationVia,
   logInvocation,
+  withParent,
 } from "./invocation-log.js";
 
 export interface Cli {
@@ -128,8 +131,20 @@ export function createCli(options: CreateCliOptions): Cli {
     async run(argv = process.argv.slice(2)): Promise<RunResult> {
       const started = Date.now();
       const counted = countingStream(stdout);
-      const command = commandPathFromArgv(tree, argv);
-      const result = await cli.runUnlogged(argv, counted.stream);
+      let command: string | undefined;
+      try {
+        command = commandPathFromArgv(tree, extractAnswers(argv).argv);
+      } catch {
+        command = commandPathFromArgv(tree, argv);
+      }
+      // Commands this one starts log it as their parent, so a spawned run is not counted as typed.
+      const restore = command ? withParent([env, process.env], `${options.name} ${command}`) : () => {};
+      let result: RunResult;
+      try {
+        result = await cli.runUnlogged(argv, counted.stream);
+      } finally {
+        restore();
+      }
       // Help, version and builtins have no command path; only real runs count.
       if (command && !argv.includes("--help") && !argv.includes("-h")) {
         logInvocation(env, {
@@ -143,11 +158,14 @@ export function createCli(options: CreateCliOptions): Cli {
       }
       return result;
     },
-    async runUnlogged(argv: string[], stdout: NodeJS.WritableStream): Promise<RunResult> {
-      const json = wantsJson(argv);
-      const spool = wantsSpool(argv);
+    async runUnlogged(rawArgv: string[], stdout: NodeJS.WritableStream): Promise<RunResult> {
+      const json = wantsJson(rawArgv);
+      const spool = wantsSpool(rawArgv);
       try {
+        // `--answer key=value` feeds ctx.ask; the command never sees it.
+        const { argv, answers } = extractAnswers(rawArgv);
         return await runCli({
+          answers,
           name: options.name,
           tree,
           commandsDir,
@@ -162,6 +180,13 @@ export function createCli(options: CreateCliOptions): Cli {
           cliOptions: options,
         });
       } catch (err) {
+        if (err instanceof InputRequiredError) {
+          // Off a terminal the result is the question: JSON on stdout for the
+          // caller that reruns with --answer, a readable hint on stderr.
+          writeJsonResult(stdout, err.result);
+          if (!json) stderr.write(formatInputRequired(err.result));
+          return { exitCode: err.exitCode, inputRequired: err.result };
+        }
         if (err instanceof ValidationError) {
           if (json) {
             writeJsonError(stderr, "Invalid arguments", err.issues);
@@ -193,6 +218,7 @@ export function createCli(options: CreateCliOptions): Cli {
 }
 
 async function runCli(ctx: {
+  answers: Record<string, string>;
   name: string;
   tree: RouteNode;
   commandsDir?: string;
@@ -220,23 +246,36 @@ async function runCli(ctx: {
     const flags = parseMcpServeFlags(ctx.argv);
     if (flags.help || wantsHelp(ctx.argv)) {
       ctx.stdout.write(
-        `Usage: ${ctx.name} mcp serve [--root <dir>]\n\n` +
-          `Expose every command as an MCP tool over stdio.\n` +
+        `Usage: ${ctx.name} mcp serve [--root <dir>] [--allow <dir>]... [--http <port>]\n\n` +
+          `Expose every command as an MCP tool over stdio (or Streamable HTTP with --http).\n` +
           `Tool names come from the command path; inputSchema from the args JSON Schema.\n` +
-          `Large results spool under .clfly/sessions/ (see docs/spec/session-store.md).\n` +
+          `Large results spool under .clfly/sessions/ (see packages/clfly-core/docs/session-store.md).\n` +
           `\nOptions:\n` +
-          `  --root <dir>  Filesystem root for tool invocations (default: cwd)\n`,
+          `  --root <dir>   Filesystem root for tool invocations (default: cwd)\n` +
+          `  --allow <dir>  Also accept paths under <dir> (repeatable); adds to package.json "clfly": { "allow": [...] }\n` +
+          `  --http <port>  Serve Streamable HTTP on 127.0.0.1:<port>/mcp, one process for every session\n`,
       );
       return { exitCode: 0 };
     }
-    // stderr only — stdout is the MCP JSON-RPC channel.
     const root = flags.root ?? ctx.cwd;
+    if (flags.http !== undefined) {
+      const { serveMcpHttp } = await import("./mcp/http.js");
+      const handle = await serveMcpHttp(mcpOptionsFromCli(ctx.cliOptions, { root, allow: flags.allow }), {
+        port: flags.http,
+      });
+      ctx.stderr.write(`${ctx.name} mcp serve listening on ${handle.url} (${ctx.version}) root=${root}\n`);
+      // Serve until killed: the listening socket keeps the process alive.
+      await new Promise<void>((resolve) => handle.http.once("close", () => resolve()));
+      return { exitCode: 0 };
+    }
+    // stderr only — stdout is the MCP JSON-RPC channel.
     ctx.stderr.write(
-      `${ctx.name} mcp serve listening on stdio (${ctx.version}) root=${root}\n`,
+      `${ctx.name} mcp serve listening on stdio (${ctx.version}) root=${root}` +
+        (flags.allow.length ? ` allow=${flags.allow.join(",")}` : "") + `\n`,
     );
     // Lazy-load SDK only when serving — keeps createCli import graph free of it.
     const { serveMcpStdio } = await import("./mcp/server.js");
-    await serveMcpStdio(mcpOptionsFromCli(ctx.cliOptions, { root }));
+    await serveMcpStdio(mcpOptionsFromCli(ctx.cliOptions, { root, allow: flags.allow }));
     return { exitCode: 0 };
   }
 
@@ -403,9 +442,17 @@ async function runCli(ctx: {
   }
 
   // `@<sessionId>/<seq>` in any argument binds that spooled result in place
-  // (docs/spec/session-store.md); the store is the one `--spool` writes under cwd.
-  const bound = resolveRefArgs(assembled.args, (ref) =>
-    createSessionStore({ root: ctx.cwd }).readRefValue(ref),
+  // (docs/session-store.md); the store is the one `--spool` writes under cwd.
+  // `@<ref>#<n>` binds row n's ref, type-checked against the arg's `accepts`.
+  const where = `command "${labelPath.join(" ") || "(root)"}"`;
+  const bound = resolveRefArgs(
+    assembled.args,
+    createSessionStore({ root: ctx.cwd }),
+    acceptsLookup(
+      mod.args != null || mod.positionals != null
+        ? moduleSurface(mod, pathParamNames, where)
+        : { flags, positionals },
+    ),
   );
 
   let opts: unknown = bound.args;
@@ -444,6 +491,11 @@ async function runCli(ctx: {
       stdout: ctx.stdout,
       stderr: ctx.stderr,
       scoped: false,
+      answers: ctx.answers,
+      interactive:
+        ctx.cliOptions.interactive ??
+        (!ctx.json && (ctx.cliOptions.stdinIsTTY ?? process.stdin.isTTY === true)),
+      prompt: ctx.cliOptions.prompt,
     }),
   );
 
@@ -455,6 +507,8 @@ async function runCli(ctx: {
       : result;
 
   if (ctx.spool && value !== undefined) {
+    const rows =
+      moduleRows(mod, where) ?? resolved.node.manifestMeta?.rows;
     const threshold = resolveThreshold(
       ctx.env,
       undefined,
@@ -470,11 +524,15 @@ async function runCli(ctx: {
       argv: ctx.argv,
       value,
       schemaRef: mod.output ? "output" : undefined,
+      ...(rows ? { rows, args: assembled.args } : {}),
     });
 
     if (ctx.json) {
       if (store.exceedsThreshold(value)) {
         writeJsonResult(ctx.stdout, spooled.envelope);
+      } else if (rows) {
+        // Typed rows: print the ref (for `@<ref>#<n>`) with the whole value.
+        writeJsonResult(ctx.stdout, { ...spooled.envelope, truncated: false, preview: value });
       } else {
         writeJsonResult(ctx.stdout, value);
       }

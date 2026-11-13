@@ -1,4 +1,4 @@
-import { existsSync, readFileSync } from "node:fs";
+import { existsSync, readdirSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import { buildManifest, ClflyError, type ManifestRoute } from "@clfly/core";
 import { registryPath } from "./paths.js";
@@ -48,13 +48,20 @@ export async function runManifest(input: {
   env: NodeJS.ProcessEnv;
   name?: string;
   commandsDir?: string;
+  /** Build the clfly trees under `<workspace>/packages/*` instead of the registry's (CI has no registry). */
+  workspace?: string;
 }): Promise<{ trees: TreeManifest[] }> {
-  const registry = readRegistry(registryPath(input.env));
+  const registry = input.workspace ? { trees: workspaceTrees(input.workspace) } : readRegistry(registryPath(input.env));
   let trees = Object.values(registry.trees).sort((a, b) => a.name.localeCompare(b.name));
   if (input.name) {
     const tree = registry.trees[input.name];
     if (!tree) {
-      throw new ClflyError(`No linked tree named "${input.name}". See \`clfly ls\`.`, 1);
+      throw new ClflyError(
+        input.workspace
+          ? `No clfly tree named "${input.name}" under ${input.workspace}/packages.`
+          : `No linked tree named "${input.name}". See \`clfly ls\`.`,
+        1,
+      );
     }
     trees = [tree];
   }
@@ -98,4 +105,30 @@ function descriptionOf(root: string): { description?: string } {
   } catch {
     return {};
   }
+}
+
+/**
+ * The clfly trees in a pnpm workspace: each `packages/*` whose package.json has
+ * a bin, depends on `@clfly/core`, and has a commands directory. The tree name
+ * is the first bin name, as `clfly link` would record it.
+ */
+export function workspaceTrees(workspace: string): Record<string, RegistryTree> {
+  const out: Record<string, RegistryTree> = {};
+  const dir = join(workspace, "packages");
+  const entries = existsSync(dir) ? readdirSync(dir).sort() : [];
+  for (const entry of entries) {
+    const root = join(dir, entry);
+    let pkg: { bin?: unknown; dependencies?: Record<string, string>; devDependencies?: Record<string, string> };
+    try {
+      pkg = JSON.parse(readFileSync(join(root, "package.json"), "utf8"));
+    } catch {
+      continue;
+    }
+    if (!pkg.dependencies?.["@clfly/core"] && !pkg.devDependencies?.["@clfly/core"]) continue;
+    const bins = pkg.bin && typeof pkg.bin === "object" ? Object.entries(pkg.bin as Record<string, string>) : [];
+    if (!bins.length || !findCommandsDir(root)) continue;
+    const [name, bin] = bins[0]!;
+    out[name] = { path: root, bin: join(root, bin), name, coreVersion: "", manifest: null, root, linkedAt: null, registered: {} };
+  }
+  return out;
 }

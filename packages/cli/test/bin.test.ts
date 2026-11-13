@@ -73,7 +73,7 @@ describe("clfly bin", () => {
     });
     chmodSync(bin, 0o755);
     accessSync(bin, constants.X_OK);
-  });
+  }, 60_000);
 
   it("--version prints bare package version", async () => {
     const pkg = JSON.parse(

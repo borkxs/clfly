@@ -22,6 +22,14 @@ export interface Invocation {
   session?: string;
   /** MCP client that made the call (`claude-ai`, `claude-code`, ...), from the initialize handshake. */
   client?: string;
+  /**
+   * Who started a `cli` run when it was not typed: `tick` (a tick job), `spawned`
+   * (another clfly command started it), `launchd` (any other launchd service), `test` (vitest or CI). Absent means typed by a person.
+   * `CLFLY_CALLER` sets it explicitly.
+   */
+  caller?: string;
+  /** The clfly command (`tree command`) that started this one, from `CLFLY_PARENT`. */
+  parent?: string;
 }
 
 /** `CLFLY_USAGE_LOG=off` disables; any other value is the file path. */
@@ -38,14 +46,26 @@ export function invocationVia(env: NodeJS.ProcessEnv, mcp: boolean): Invocation[
   return env.CLAUDECODE || env.AI_AGENT ? "agent-shell" : "cli";
 }
 
+/** `tick`, `spawned`, `launchd`, `test`, or undefined (typed). launchd is the parent (pid 1) of every service it starts. */
+export function invocationCaller(env: NodeJS.ProcessEnv, ppid = process.ppid): string | undefined {
+  if (env.CLFLY_CALLER) return env.CLFLY_CALLER;
+  if (env.CLFLY_PARENT) return "spawned";
+  if (env.VITEST || env.CI) return "test";
+  if (ppid === 1) return "launchd";
+  return undefined;
+}
+
 /** Never lets logging break a command. */
-export function logInvocation(env: NodeJS.ProcessEnv, entry: Omit<Invocation, "at" | "session">): void {
+export function logInvocation(env: NodeJS.ProcessEnv, entry: Omit<Invocation, "at" | "session" | "caller" | "parent">): void {
   const path = invocationLogPath(env);
   if (!path) return;
+  const caller = invocationCaller(env);
   const line: Invocation = {
     at: new Date().toISOString(),
     ...entry,
     ...(env.CLAUDE_CODE_SESSION_ID ? { session: env.CLAUDE_CODE_SESSION_ID } : {}),
+    ...(caller ? { caller } : {}),
+    ...(env.CLFLY_PARENT ? { parent: env.CLFLY_PARENT } : {}),
   };
   try {
     mkdirSync(dirname(path), { recursive: true });
@@ -53,6 +73,22 @@ export function logInvocation(env: NodeJS.ProcessEnv, entry: Omit<Invocation, "a
   } catch {
     // Unwritable state dir: skip.
   }
+}
+
+/**
+ * Sets `CLFLY_PARENT` for the length of a run so child processes inherit it
+ * (each run's parent is the command directly above it). Returns the undo,
+ * which puts back whatever was there, so the run itself still logs its own parent.
+ */
+export function withParent(envs: NodeJS.ProcessEnv[], parent: string): () => void {
+  const saved = [...new Set(envs)].map((e) => [e, e.CLFLY_PARENT] as const);
+  for (const [e] of saved) e.CLFLY_PARENT = parent;
+  return () => {
+    for (const [e, prev] of saved) {
+      if (prev === undefined) delete e.CLFLY_PARENT;
+      else e.CLFLY_PARENT = prev;
+    }
+  };
 }
 
 /** Static command path from argv (`pm search`), stopping at flags, args, or dynamic segments. */

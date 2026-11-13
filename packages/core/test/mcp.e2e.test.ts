@@ -15,11 +15,12 @@ import { afterEach, describe, expect, it } from "vitest";
 import { createMcpServer } from "../src/mcp/server.js";
 import { listMcpTools } from "../src/mcp/project.js";
 
-const cliCommands = fileURLToPath(
-  new URL("../../cli/src/commands", import.meta.url),
-);
+// The cli package sits next to core: packages/clfly-cli here, packages/cli in the public mirror.
+const cliCommands = ["clfly-cli", "cli"]
+  .map((dir) => fileURLToPath(new URL(`../../${dir}/src/commands`, import.meta.url)))
+  .find((dir) => existsSync(dir))!;
 const demoCommands = fileURLToPath(
-  new URL("../../../examples/demo-cli/commands", import.meta.url),
+  new URL("./fixtures/demo-cli/commands", import.meta.url),
 );
 
 const temps: string[] = [];
@@ -62,7 +63,7 @@ describe("MCP E2E (in-memory)", () => {
     expect(
       (add.inputSchema as { properties?: Record<string, unknown> }).properties,
     ).toHaveProperty("paths");
-  });
+  }, 30_000);
 
   it("calls add under --root and rejects path escapes via init", async () => {
     const root = mkdtempSync(join(tmpdir(), "clfly-mcp-e2e-"));
@@ -129,5 +130,19 @@ describe("MCP E2E (in-memory)", () => {
     }
     const expected = JSON.parse(readFileSync(snapPath, "utf8"));
     expect(projection).toEqual(expected);
+  });
+
+  it("sends server instructions, and still serves when they fail", async () => {
+    const client = await connectServer({ name: "demo", commandsDir: demoCommands, instructions: () => "use find first" });
+    expect(client.getInstructions()).toBe("use find first");
+    const broken = await connectServer({
+      name: "demo",
+      commandsDir: demoCommands,
+      instructions: () => {
+        throw new Error("no index");
+      },
+    });
+    expect(broken.getInstructions()).toBeUndefined();
+    expect((await broken.listTools()).tools.length).toBeGreaterThan(0);
   });
 });

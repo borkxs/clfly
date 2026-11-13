@@ -1,3 +1,4 @@
+import { createRequire } from "node:module";
 import type { ValidatorKind } from "./detect.js";
 
 export function renderTsconfig(): string {
@@ -8,6 +9,10 @@ export function renderTsconfig(): string {
         module: "NodeNext",
         moduleResolution: "NodeNext",
         strict: true,
+        // The bin runs under Node's type stripping (@clfly/core/launch): keep imports and
+        // syntax erasable so typecheck fails before the bin does.
+        verbatimModuleSyntax: true,
+        erasableSyntaxOnly: true,
         skipLibCheck: true,
         noEmit: true,
         types: ["node"],
@@ -34,13 +39,34 @@ Add commands with \`clfly add user/:id/report\`.
 `;
 }
 
-/** npm bin. Registers tsx, then loads the TypeScript entry. Node 20 can run this file. */
-export function renderBinLauncher(cliName: string): string {
-  return `#!/usr/bin/env node
+/** Whether the installed @clfly/core ships the `launch` export (published builds do not). */
+export function coreHasLaunch(): boolean {
+  try {
+    createRequire(import.meta.url).resolve("@clfly/core/launch");
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+/**
+ * npm bin. `@clfly/core/launch` runs the TypeScript entry with Node's type stripping on
+ * Node >= 22.18 (prebuilt core when fresh) and registers tsx on older Node. A core without
+ * that export gets the tsx launcher, which Node 20 can run.
+ */
+export function renderBinLauncher(cliName: string, launch: boolean = coreHasLaunch()): string {
+  if (!launch) {
+    return `#!/usr/bin/env node
 import { register } from "tsx/esm/api";
 
 register();
 await import(new URL("./${cliName}.ts", import.meta.url).href);
+`;
+  }
+  return `#!/usr/bin/env node
+import { launch } from "@clfly/core/launch";
+
+await launch(new URL("./${cliName}.ts", import.meta.url));
 `;
 }
 
