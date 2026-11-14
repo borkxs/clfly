@@ -19,6 +19,22 @@ export interface ServerRecord {
   name: string;
   command: string;
   args: string[];
+  /** Streamable HTTP endpoint of a shared server (`clfly host install`); replaces command/args in the entry. */
+  url?: string;
+}
+
+/** The harness entry for a record: stdio command, or the shared server's URL. */
+function entryFor(harness: Harness, record: ServerRecord): Record<string, unknown> {
+  if (record.url) {
+    if (harness === "claude-desktop") {
+      throw new ClflyError("claude-desktop config has no HTTP servers; register it without --http", 2);
+    }
+    if (harness === "gemini") return { httpUrl: record.url };
+    if (harness === "cursor" || harness === "codex") return { url: record.url };
+    return { type: "http", url: record.url };
+  }
+  if (harness === "vscode") return { type: "stdio", command: record.command, args: record.args };
+  return { command: record.command, args: record.args };
 }
 
 function appData(env: NodeJS.ProcessEnv, platform: NodeJS.Platform): string {
@@ -89,10 +105,7 @@ export function projectFile(input: {
     if (!(record.name in servers)) return before;
     delete servers[record.name];
   } else {
-    servers[record.name] =
-      harness === "vscode"
-        ? { type: "stdio", command: record.command, args: record.args }
-        : { command: record.command, args: record.args };
+    servers[record.name] = entryFor(harness, record);
   }
   doc[key] = servers;
   return `${JSON.stringify(doc, null, 2)}\n`;
@@ -111,7 +124,7 @@ function projectToml(file: string, before: string, record: ServerRecord, remove:
     if (!(record.name in servers)) return before;
     delete servers[record.name];
   } else {
-    servers[record.name] = { command: record.command, args: record.args };
+    servers[record.name] = entryFor("codex", record);
   }
   doc.mcp_servers = servers;
   return `${stringifyToml(doc).trimEnd()}\n`;
@@ -132,6 +145,12 @@ export function delegateArgv(input: {
   if (harness === "claude-code") {
     const rm = { args: ["mcp", "remove", record.name, "--scope", scope], mayFail: !remove };
     if (remove) return { bin: "claude", steps: [rm] };
+    if (record.url) {
+      return {
+        bin: "claude",
+        steps: [rm, { args: ["mcp", "add", "--transport", "http", "--scope", scope, record.name, record.url], mayFail: false }],
+      };
+    }
     return {
       bin: "claude",
       steps: [
@@ -143,7 +162,8 @@ export function delegateArgv(input: {
       ],
     };
   }
-  if (harness === "codex" && scope === "user") {
+  // codex's CLI flags for URL servers vary by version; the TOML edit is exact.
+  if (harness === "codex" && scope === "user" && !record.url) {
     const rm = { args: ["mcp", "remove", record.name], mayFail: !remove };
     if (remove) return { bin: "codex", steps: [rm] };
     return {

@@ -1,7 +1,21 @@
 export { createCli, resolveCommand, wantsJson, wantsSpool, type Cli } from "./run.js";
-export { invocationLogPath, logInvocation, type Invocation } from "./invocation-log.js";
+export { invocationCaller, invocationLogPath, logInvocation, type Invocation } from "./invocation-log.js";
 export { defineCommand } from "./define-command.js";
 export { createContext } from "./context.js";
+export {
+  createAsk,
+  extractAnswers,
+  formatInputRequired,
+  readlinePrompter,
+  isInputRequired,
+  InputRequiredError,
+  INPUT_REQUIRED_EXIT,
+  type AskChoice,
+  type AskQuestion,
+  type InputRequest,
+  type InputRequiredResult,
+  type Prompter,
+} from "./ask.js";
 export {
   ClflyError,
   ReportedExit,

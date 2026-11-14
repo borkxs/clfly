@@ -62,6 +62,11 @@ function readMatch(value: unknown, bad: (why: string) => Error, key: string): Ro
 
 const TYPE_RE = /^[a-z0-9][a-z0-9-]*(\.[a-z0-9][a-z0-9-]*)+$/;
 
+/** True for a namespaced row type name (`pm.item`, not `item`). */
+export function isRowType(value: string): boolean {
+  return TYPE_RE.test(value);
+}
+
 function readType(value: unknown, bad: (why: string) => Error): string {
   if (typeof value !== "string" || !TYPE_RE.test(value.trim())) {
     throw bad('`type` must be a namespaced name like "pm.item"');
@@ -90,6 +95,9 @@ export function readRows(value: unknown, where: string): RowsMeta | undefined {
   for (const key of ["label", "sub"] as const) {
     if (v[key] !== undefined && typeof v[key] !== "string") throw bad(`\`${key}\` must be a string`);
   }
+  if (v.example !== undefined && (!v.example || typeof v.example !== "object" || Array.isArray(v.example))) {
+    throw bad("`example` must be an object (one sample row)");
+  }
   const when = readMatch(v.when, bad, "when");
   let defaults: Record<string, string> | undefined;
   if (v.defaults !== undefined) {
@@ -108,6 +116,7 @@ export function readRows(value: unknown, where: string): RowsMeta | undefined {
     ...(defaults ? { defaults } : {}),
     ...(typeof v.label === "string" ? { label: v.label } : {}),
     ...(typeof v.sub === "string" ? { sub: v.sub } : {}),
+    ...(v.example ? { example: v.example as Record<string, unknown> } : {}),
   };
 }
 

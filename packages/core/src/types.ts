@@ -100,6 +100,11 @@ export interface RowsMeta {
   label?: string;
   /** Row field for a secondary line. */
   sub?: string;
+  /**
+   * A recorded sample row, for `clfly manifest --check` when the route declares
+   * no output schema (and checked against the schema when it does).
+   */
+  example?: Record<string, unknown>;
 }
 
 /** Consumer-side: an arg takes rows of type `accepts` (optionally only those matching `where`). */
@@ -128,6 +133,18 @@ export interface Context {
    * Under MCP (`scoped`), rejects escapes outside the root.
    */
   resolvePath: (userPath: string) => string;
+  /**
+   * Ask a question mid-run; resolves to the chosen choice key. An answer given
+   * with `--answer <key>=<choice>` (still among the choices) wins; otherwise a
+   * terminal prompts and any other caller gets an input-required result
+   * (docs/ask.md). Always set by `createCli` / `createContext`; optional only so
+   * contexts built by hand in tests still typecheck.
+   */
+  ask?: (question: import("./ask.js").AskQuestion) => Promise<string>;
+  /** True when `ask` can prompt (stdin is a TTY and `--json` is off). */
+  interactive?: boolean;
+  /** Answers this run was given with `--answer`. */
+  answers?: Readonly<Record<string, string>>;
 }
 
 /**
@@ -217,6 +234,15 @@ export interface CreateCliOptions {
    * `stdinText` is not provided; when `stdinText` is provided, defaults to false.
    */
   stdinIsTTY?: boolean;
+  /**
+   * Server instructions for `mcp serve` (the MCP `initialize` result's
+   * `instructions`), computed once when the server starts.
+   */
+  mcpInstructions?: () => string | undefined | Promise<string | undefined>;
+  /** Terminal prompt behind `ctx.ask` (default: a numbered readline list on stderr). */
+  prompt?: import("./ask.js").Prompter;
+  /** Whether `ctx.ask` may prompt. Default: stdin is a TTY and `--json` is off. */
+  interactive?: boolean;
 }
 
 export interface RunResult {
@@ -225,6 +251,8 @@ export interface RunResult {
   value?: unknown;
   /** Validated args object passed to the command (CLI path). */
   args?: unknown;
+  /** Set when the run stopped at a question (exit {@link INPUT_REQUIRED_EXIT}). */
+  inputRequired?: import("./ask.js").InputRequiredResult;
 }
 
 export interface FlagInfo {

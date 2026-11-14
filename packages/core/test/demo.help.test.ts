@@ -23,10 +23,10 @@ function collectStream() {
 }
 
 const demoCommands = fileURLToPath(
-  new URL("../../../examples/demo-cli/commands", import.meta.url),
+  new URL("./fixtures/demo-cli/commands", import.meta.url),
 );
 const demoPkg = fileURLToPath(
-  new URL("../../../examples/demo-cli/package.json", import.meta.url),
+  new URL("./fixtures/demo-cli/package.json", import.meta.url),
 );
 
 const tempDirs: string[] = [];
