@@ -138,6 +138,47 @@ kbd { font: inherit; color: var(--fg-2); }
   .linebox { font-size: var(--fs-20); }
   li .accs, li .chain, .keys { display: none; }
 }
+
+/* Phone (html.phone, set in app.ts: touch, or ≤480px wide; never with .panel). The page is exactly the
+   visible area (--vvh/--vvt follow window.visualViewport, so the soft keyboard is excluded): line pinned
+   on top, rows/result/runs scroll in the middle, key bar pinned on the bottom edge above the keyboard.
+   Hierarchy is unchanged: the line is P1, rows P2, the hint and the key bar P3 chrome (no fill, no accent). */
+.keybar { display: none; }
+html.phone, html.phone body { height: 100%; overflow: hidden; overscroll-behavior: none; }
+html.phone body { position: fixed; left: 0; right: 0; top: var(--vvt, 0px); height: var(--vvh, 100dvh); -webkit-text-size-adjust: 100%; }
+html.phone main {
+  display: flex; flex-direction: column; height: 100%; max-width: none;
+  padding: calc(var(--sp-4) + env(safe-area-inset-top)) max(var(--sp-12), env(safe-area-inset-right)) 0 max(var(--sp-12), env(safe-area-inset-left));
+}
+html.phone .linebox { flex: none; font-size: var(--fs-20); }
+html.phone .linebox input, html.phone .ghost { padding: var(--sp-8) 0; }
+html.phone .hint { flex: none; margin-top: var(--sp-4); }
+html.phone #scroll { flex: 1 1 0; min-height: 0; overflow-y: auto; overscroll-behavior: contain; -webkit-overflow-scrolling: touch; padding-bottom: var(--sp-8); }
+html.phone #list { margin-top: var(--sp-4); }
+html.phone #result { margin-top: var(--sp-4); padding-bottom: var(--sp-8); }
+html.phone #result pre { margin-top: var(--sp-8); padding: var(--sp-8); max-height: max(96px, calc(var(--vvh, 100dvh) - 208px)); }
+html.phone section + section, html.phone #runs { margin-top: var(--sp-12); }
+html.phone li .accs, html.phone li .chain, html.phone .keys { display: none; }
+html.phone #runs li { min-height: 44px; padding: var(--sp-12) var(--sp-8); }
+/* 44px targets that do not make their row taller: × fills the row; a chain pill keeps its 32px look and
+   takes 6px more above and below its border (44px in all; rows are 16px apart, so neighbours do not overlap). */
+html.phone button.x, html.phone button.icon { min-height: 44px; }
+html.phone li button.x { align-self: stretch; margin-block: calc(-1 * var(--sp-8)); }
+html.phone button.chain-btn { position: relative; }
+html.phone button.chain-btn::after { content: ""; position: absolute; inset: -7px 0; }
+html.phone .keybar {
+  flex: none; display: flex; margin: 0 calc(-1 * var(--sp-12)); padding: 0 var(--sp-4) env(safe-area-inset-bottom);
+  border-top: 1px solid var(--line); background: var(--bg);
+}
+/* Keyboard up: the home-indicator inset is under the keyboard, not under the bar. */
+html.phone.kb .keybar { padding-bottom: 0; }
+.keybar button {
+  flex: 1 1 0; min-width: 44px; min-height: 44px; margin: 0; padding: 0; border: 0; border-radius: 6px; background: none;
+  color: var(--fg-2); font: var(--fs-16)/1 var(--mono); cursor: pointer; touch-action: manipulation; -webkit-tap-highlight-color: transparent;
+}
+.keybar button:active { background: var(--sel); color: var(--fg); }
+.keybar button.word { font-size: var(--fs-14); }
+.keybar button.danger { color: var(--danger); }
 </style>
 </head>
 <body>
@@ -148,10 +189,19 @@ kbd { font: inherit; color: var(--fg-2); }
       autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" enterkeyhint="go" aria-label="command line" />
   </div>
   <div class="hint" id="hint"></div>
+  <div id="scroll">
   <div id="result" hidden></div>
   <div id="list"></div>
   <div id="runs"></div>
   <p class="keys"><span><kbd>⇥</kbd> take word</span><span><kbd>↵</kbd> take or run</span><span><kbd>⌘↵</kbd> run as typed</span><span><kbd>↑↓</kbd> move</span><span><kbd>esc</kbd> clear</span><span><kbd>⌘⇧C</kbd> copy command</span></p>
+  </div>
+  <div class="keybar" id="keybar" role="toolbar" aria-label="keys">
+    <button type="button" data-key="Tab" aria-label="take word">⇥</button>
+    <button type="button" data-key="ArrowUp" aria-label="up">↑</button>
+    <button type="button" data-key="ArrowDown" aria-label="down">↓</button>
+    <button type="button" class="word" data-key="Escape" aria-label="escape">esc</button>
+    <button type="button" class="word" data-key="Enter" data-meta id="key-run" aria-label="run as typed">run</button>
+  </div>
 </main>
 <script type="module" src="/app.js"></script>
 </body>
