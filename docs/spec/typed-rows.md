@@ -31,6 +31,20 @@ Every pairing is written by hand, stays inside one tree, and can only copy a fie
 description); ↵ on an action rewrites the line (`pm ls "/Heat.1995…"`) and runs it when nothing else is required;
 esc goes back to the rows, then to the line. One action only: ↵ on the row takes it.
 
+## Agents (MCP)
+An agent reaches rows through the spool, not the panel (borkxs-mono PR 353):
+- **Envelope.** A command with `meta.rows` always spools over MCP, since the ref is what `#n` binds. The envelope gains
+  `rows: {type, key, count}` and `acceptors: [{tree, route, arg, where?}]`, one entry per accepting arg (not per row),
+  from this tree's routes plus every linked tree (`clfly manifest --json`, spawned lazily, cached 60 s, best-effort;
+  `CLFLY_ROWS_LINKED=0` skips it). Under the spool threshold `truncated` is `false` and `preview` is the whole value, so
+  the agent sees every row and its index. On the CLI, `cmd --json --spool` prints the envelope (without acceptors).
+- **`#n` binding.** `@<sessionId>/<seq>#<n>` (CLI and MCP) binds row n's `ref`, templated from the row, then the
+  producer's args (recorded in the spool manifest), then `defaults`, the same as the panel's `rowRef`. Plain `@<ref>`
+  still binds the whole result.
+- **Checks.** When the target arg declares `accepts`, the row's type and the arg's `where` are checked; a mismatch is a
+  usage error (a tool error over MCP) naming both types. Out-of-range n, a row failing `rows.when`, or a ref with no
+  typed rows errors too. An arg without `accepts` takes the string unchecked.
+
 ## Where it lands
 - clfly core: `rows`/`accepts` in `types.ts` + manifest output; `chainsFor` in `packages/raycast/src/lib/model.ts` matches on them.
 - borkxs-mono: `rows`/`accepts` on the pm, dash, run trees (next to their `completeFrom` comments).
