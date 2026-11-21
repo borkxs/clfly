@@ -30,6 +30,7 @@ import {
   type LineState,
 } from "../../raycast/src/lib/line";
 import { DEFAULT_POLICY, LiveSearcher, type LiveState } from "../../raycast/src/lib/live";
+import { isRemoteHost, remoteUrl } from "./remote";
 import {
   buildArgv,
   chainsFor,
@@ -344,6 +345,9 @@ function liveRows(): { rows: unknown[]; chains: Chain[]; query: string; loading:
 
 // --- runs --------------------------------------------------------------------
 
+/** This page is on another device than the engine (the phone over the tailnet): runs say so. */
+const remote = isRemoteHost(location.hostname);
+
 /** A command run for its side effect (`dash open film` opens a browser tab): its result is noise, so the
  *  panel gets out of the way at once and a successful run shows nothing; a failure still shows. */
 function handsOff(route?: Route): boolean {
@@ -368,7 +372,7 @@ async function run(s: LineState, confirmed = false) {
 async function start(tree: Tree, route: Route | undefined, argv: string[], line: string, confirmed = false) {
   runError = undefined;
   try {
-    const r = await api<Run>("/api/run", { tree: tree.name, argv, line, confirmed });
+    const r = await api<Run>("/api/run", { tree: tree.name, argv, line, confirmed, remote });
     runs = [r, ...runs.filter((x) => x.id !== r.id)];
     watching = { id: r.id, tree, route, confirmed };
     result = undefined;
@@ -411,7 +415,7 @@ async function poll() {
   if (watching) {
     const r = runs.find((x) => x.id === watching!.id);
     if (r && r.status !== "running") {
-      await showRun(r.id, watching.tree, watching.route, watching.confirmed);
+      await showRun(r.id, watching.tree, watching.route, watching.confirmed, true);
       watching = undefined;
     }
   }
@@ -419,10 +423,14 @@ async function poll() {
   if (runs.some((r) => r.status === "running") || watching) pollTimer = setTimeout(poll, 1000);
 }
 
-async function showRun(id: string, tree?: Tree, route?: Route, confirmed = false) {
+async function showRun(id: string, tree?: Tree, route?: Route, confirmed = false, fresh = false) {
   const full = await api<RunFull>(`/api/runs/${id}`);
   const t = tree ?? trees.find((x) => x.name === full.tree);
   const rt = route ?? (t ? routeFor(t, full.argv) : undefined);
+  // On a phone: the run just finished on the Mac and named a URL this device can load (`dash open film`).
+  // Only the run being watched navigates; reading an old run from the list does not.
+  const go = fresh && remote && full.status === "done" ? remoteUrl(full.json) : undefined;
+  if (go) location.assign(go);
   if (full.status === "done" && handsOff(rt)) {
     result = undefined;  // the runs list records it; there is nothing to read
     return render();

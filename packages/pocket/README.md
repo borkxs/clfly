@@ -44,6 +44,11 @@ globally) shows "clfly has no "manifest" command … set CLFLY_BIN" in place of 
   directly (no shell) and keeps going if the page closes. Destructive commands ask once, inline.
   The result shows as rows with chain buttons, or as text. Recent runs sit at the bottom; click
   one to see its output.
+- **On another device**: when the page is not on localhost (a phone over Tailscale), runs carry
+  `remote: true` and the engine sets `CLFLY_REMOTE=1` for the command. A command that would open
+  something on the host can answer `{ "remote": true, "url": "https://…" }` instead, and the
+  page goes to that URL when the run finishes (`src/remote.ts`). Only http(s) URLs, and only the
+  run just started, not an old one read from the list.
 - **History**: the empty line lists lines that ran, newest first, merged from the engine's run log
   (`GET /api/history`), so the panel, browser and phone share it. Typing ranks lines by frecency.
   One-off lines carrying a hash or id stay out; × forgets a line in this browser.

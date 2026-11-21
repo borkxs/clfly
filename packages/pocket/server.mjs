@@ -45,7 +45,7 @@ function searchPath() {
 }
 
 /** Run an executable with an argv array. `.js`/`.mjs` bins go through node. */
-function execArgv(bin, argv, { timeoutMs = 10 * 60_000 } = {}) {
+function execArgv(bin, argv, { timeoutMs = 10 * 60_000, remote = false } = {}) {
   const viaNode = /\.(c|m)?js$/.test(bin);
   const started = Date.now();
   return new Promise((resolve) => {
@@ -54,7 +54,9 @@ function execArgv(bin, argv, { timeoutMs = 10 * 60_000 } = {}) {
       viaNode ? [bin, ...argv] : argv,
       {
         cwd: homedir(),
-        env: { ...process.env, PATH: searchPath(), NO_COLOR: "1", FORCE_COLOR: "0" },
+        // CLFLY_REMOTE: the page is on another device (a phone over the tailnet), so a command that
+        // opens something answers with a URL that device can load instead of opening it here.
+        env: { ...process.env, PATH: searchPath(), NO_COLOR: "1", FORCE_COLOR: "0", ...(remote ? { CLFLY_REMOTE: "1" } : {}) },
         maxBuffer: 64 * 1024 * 1024,
         timeout: timeoutMs,
       },
@@ -129,7 +131,7 @@ function summary(run) {
   return { ...rest, hasJson: json !== undefined, hasText: Boolean(stdout?.trim() || stderr?.trim()) };
 }
 
-async function startRun({ tree, argv, line }) {
+async function startRun({ tree, argv, line, remote = false }) {
   const run = {
     id: randomUUID().slice(0, 8),
     tree: tree.name,
@@ -140,7 +142,7 @@ async function startRun({ tree, argv, line }) {
   };
   runs.unshift(run);
   if (runs.length > MAX_RUNS) runs.length = MAX_RUNS;
-  execArgv(tree.bin, argv).then((res) => {
+  execArgv(tree.bin, argv, { remote }).then((res) => {
     Object.assign(run, res, { status: runStatus(res), endedAt: new Date().toISOString() });
     log({ ...summary(run), code: res.code, ms: res.ms }).catch(() => {});
   });
@@ -253,7 +255,7 @@ const server = createServer(async (req, res) => {
       if (isDestructive(route) && b.confirmed !== true) {
         return send(res, 409, { error: "destructive command needs confirmed: true", destructive: true });
       }
-      return send(res, 202, summary(await startRun({ tree, argv: b.argv, line: b.line })));
+      return send(res, 202, summary(await startRun({ tree, argv: b.argv, line: b.line, remote: b.remote === true })));
     }
     send(res, 404, { error: "not found" });
   } catch (e) {
