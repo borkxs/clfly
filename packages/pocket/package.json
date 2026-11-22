@@ -1,6 +1,6 @@
 {
   "name": "@clfly/pocket",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "private": true,
   "description": "clfly line editor in the browser: one line with completion, history and search, served by a small local engine that runs the trees",
   "type": "module",
